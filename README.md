@@ -244,6 +244,8 @@ OPENAI_API_KEY=
   fallback.
 * The external adapter is **untested end to end** here because the AI package has not been merged.
   See [`docs/ai-review.md`](docs/ai-review.md).
+* Once the AI PR is merged, run `python scripts/check_ai_integration.py`. It exercises all six
+  operations with the mock provider and prints `6/6 operations passed`, or exits non-zero.
 
 ---
 
@@ -319,4 +321,5 @@ identity. It is not attributed to M Doran.
 | [`docs/git-report.md`](docs/git-report.md) | Branch, commits, push status |
 | [`docs/pr-description.md`](docs/pr-description.md) | Ready-to-use pull request description |
 | [`docs/contributor-actions.md`](docs/contributor-actions.md) | Actions for Sai and Mahidhar |
+| [`docs/pr-changes.md`](docs/pr-changes.md) | Exact file-level changes and commands per contributor |
 | [`docs/milestone-readiness.md`](docs/milestone-readiness.md) | What can be demonstrated |
