@@ -1,0 +1,12 @@
+# Runtime dependencies for the SalesGenie AI backend.
+# Versions below are the exact set used for the verification run recorded in
+# docs/test-report.md (Python 3.10 and 3.11).
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+SQLAlchemy==2.0.55
+alembic==1.20.1
+psycopg[binary]==3.3.6
+pydantic==2.14.1
+python-dotenv==1.2.4
+PyJWT==2.15.1
+python-multipart==0.0.32
