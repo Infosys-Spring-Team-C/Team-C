@@ -1,0 +1,47 @@
+# Schema parity check - generated init_schema.sql vs Alembic migration
+
+Executed: 2026-10-26
+Working directory: C:\projects\infosys\Team-C
+PostgreSQL: PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit
+
+Method:
+1. Create two empty databases.
+2. Apply salesgenie-db-workspace/init_schema.sql to the first.
+3. Apply alembic upgrade head to the second.
+4. Compare information_schema.columns, foreign keys and pg_indexes.
+
+## Apply generated SQL
+  statements executed: 31
+  errors: 0
+
+## Apply Alembic migration
+  INFO  [alembic.runtime.migration] Running upgrade  -> 0001_canonical_schema, Canonical SalesGenie AI schema (eight tables).
+
+## Counts
+  generated SQL  columns=110 foreign_keys=6 indexes=31
+  Alembic        columns=110 foreign_keys=6 indexes=31
+
+## Column differences
+  none
+
+## Foreign keys (generated SQL)
+  company_insights|lead_id|leads|id|CASCADE
+  crm_sync_logs|lead_id|leads|id|SET NULL
+  lead_scores|lead_id|leads|id|CASCADE
+  leads|owner_id|users|id|SET NULL
+  outreach_campaigns|lead_id|leads|id|CASCADE
+  sales_interactions|lead_id|leads|id|CASCADE
+
+## Foreign-key differences
+  none
+
+## Index differences
+  none
+
+## Verdict
+  The generated DDL and the Alembic migration produce the same eight tables,
+  the same six foreign keys with the same delete rules, and the same index set.
+  The only object present in the Alembic database and absent from the generated
+  DDL is alembic_version, which is Alembic's own bookkeeping table.
+
+Scratch databases dropped.

@@ -16,20 +16,9 @@
       flex-direction: column;
       align-items: center;
     }
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    h1 {
-      margin: 0 0 8px 0;
-      color: #0f172a;
-      font-size: 26px;
-    }
-    .subtitle {
-      color: #64748b;
-      font-size: 15px;
-      margin-bottom: 4px;
-    }
+    .header { text-align: center; margin-bottom: 24px; }
+    h1 { margin: 0 0 8px 0; color: #0f172a; font-size: 26px; }
+    .subtitle { color: #64748b; font-size: 15px; margin-bottom: 4px; }
     .badge {
       display: inline-block;
       background: #e0e7ff;
@@ -38,129 +27,175 @@
       font-weight: 600;
       padding: 4px 12px;
       border-radius: 9999px;
-      margin-top: 8px;
     }
-    .diagram-container {
+    .card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-      padding: 30px;
-      max-width: 95vw;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      max-width: 1200px;
+      width: 100%;
       overflow-x: auto;
-      display: flex;
-      justify-content: center;
     }
-    .footer {
-      margin-top: 24px;
-      font-size: 13px;
-      color: #94a3b8;
-      text-align: center;
-    }
+    .footer { margin-top: 20px; color: #64748b; font-size: 13px; text-align: center; }
   </style>
 </head>
 <body>
-
   <div class="header">
-    <h1>SalesGenie AI – Database ER Diagram</h1>
-    <div class="subtitle">Infosys Virtual Internship 7.0 | Project: SalesGenie AI</div>
-    <div class="badge">Eight-Table PostgreSQL Relational Schema</div>
+    <h1>SalesGenie AI - Entity-Relationship Diagram</h1>
+    <div class="subtitle">Canonical eight-table schema used by the FastAPI backend</div>
+    <div class="badge">Generated from backend/db.py</div>
   </div>
 
-  <div class="diagram-container">
+  <div class="card">
     <div class="mermaid">
 erDiagram
-    Users ||--o{ Sales_Analytics : "analyzed_in"
-    Leads ||--o{ Lead_Scores : "evaluated_by"
-    Leads ||--o{ Company_Insights : "analyzed_for"
-    Leads ||--o{ Outreach_Campaigns : "targeted_in"
-    Leads ||--o{ Sales_Interactions : "participates_in"
-    Leads ||--o{ CRM_Sync_Logs : "synchronized_in"
-
-    Users {
-        int user_id PK
-        string name
-        string email
-        string role
-        string department
-        timestamp created_at
-    }
-
-    Leads {
-        int lead_id PK
-        string company_name
-        string industry
-        string contact_name
-        string email
-        string phone
-        string lead_status
-        timestamp created_at
-    }
-
-    Lead_Scores {
-        int score_id PK
-        int lead_id FK
-        float lead_score
-        float conversion_probability
-        timestamp generated_at
-    }
-
-    Company_Insights {
-        int insight_id PK
-        int lead_id FK
-        text business_needs
-        text opportunities
-        text industry_analysis
-        timestamp generated_at
-    }
-
-    Outreach_Campaigns {
-        int campaign_id PK
-        int lead_id FK
-        string email_subject
-        text email_content
-        string campaign_status
-        timestamp created_at
-    }
-
-    Sales_Interactions {
-        int interaction_id PK
-        int lead_id FK
-        string interaction_type
-        text summary
-        text action_items
-        timestamp interaction_date
-    }
-
-    CRM_Sync_Logs {
-        int sync_id PK
-        int lead_id FK
-        string crm_platform
-        string sync_status
-        timestamp timestamp
-    }
-
-    Sales_Analytics {
-        int analytics_id PK
-        int user_id FK
-        float conversion_rate
-        decimal pipeline_value
-        timestamp generated_at
-    }
+        SALES_ANALYTICS {
+            int id PK
+            timestamp metric_date
+            int total_leads
+            int qualified_leads
+            int converted_leads
+            float conversion_rate
+            decimal pipeline_value
+            float average_lead_score
+            timestamp created_at
+        }
+        USERS {
+            int id PK
+            string email UK
+            string full_name
+            string password_hash
+            string role
+            bool is_active
+            timestamp created_at
+            timestamp updated_at
+        }
+        LEADS {
+            int id PK
+            string company_name
+            string industry
+            string contact_name
+            string email
+            string email_key UK
+            string phone
+            string website
+            string company_size
+            string annual_revenue
+            string funding_stage
+            text tech_stack
+            text company_description
+            string prospect_role
+            text engagement_history
+            text explicit_needs
+            text response_behavior
+            text user_research
+            text pain_points
+            string lead_source
+            string lifecycle_stage
+            int owner_id FK
+            timestamp created_at
+            timestamp updated_at
+        }
+        COMPANY_INSIGHTS {
+            int id PK
+            int lead_id FK
+            json business_needs
+            json opportunities
+            json pain_points
+            text industry_context
+            json qualification
+            text recommended_value_proposition
+            json discovery_questions
+            json missing_information
+            json supporting_evidence
+            string provider
+            string model
+            timestamp created_at
+        }
+        CRM_SYNC_LOGS {
+            int id PK
+            int lead_id FK
+            string provider
+            string entity_type
+            string operation
+            string external_record_id
+            string status
+            json request_metadata
+            json response_metadata
+            text error_message
+            int attempt_count
+            timestamp created_at
+            timestamp updated_at
+        }
+        LEAD_SCORES {
+            int id PK
+            int lead_id FK
+            int score
+            float conversion_probability
+            string priority_level
+            int fit_score
+            int intent_score
+            int engagement_score
+            int decision_readiness_score
+            json factors
+            text explanation
+            text recommended_next_action
+            string model_version
+            timestamp created_at
+        }
+        OUTREACH_CAMPAIGNS {
+            int id PK
+            int lead_id FK
+            string subject
+            text body
+            string channel
+            string tone
+            string length
+            string outreach_type
+            string goal
+            text industry_context
+            json pain_points_used
+            string status
+            string provider
+            string model
+            timestamp created_at
+            timestamp updated_at
+        }
+        SALES_INTERACTIONS {
+            int id PK
+            int lead_id FK
+            string interaction_type
+            timestamp interaction_date
+            text transcript
+            text summary
+            json key_points
+            json action_items
+            timestamp follow_up_date
+            string sentiment
+            timestamp created_at
+            timestamp updated_at
+        }
+        USERS ||--o{ LEADS : sets null
+        LEADS ||--o{ COMPANY_INSIGHTS : cascades
+        LEADS ||--o{ CRM_SYNC_LOGS : sets null
+        LEADS ||--o{ LEAD_SCORES : cascades
+        LEADS ||--o{ OUTREACH_CAMPAIGNS : cascades
+        LEADS ||--o{ SALES_INTERACTIONS : cascades
     </div>
   </div>
 
   <div class="footer">
-    Role: Database DevOps Engineer | Generated for Infosys Springboard Virtual Internship 7.0
+    GENERATED FILE - regenerate with <code>python scripts/render_db_workspace.py</code>.
+    Authoritative source: <code>backend/db.py</code>.
   </div>
 
   <script>
     mermaid.initialize({
       startOnLoad: true,
       theme: 'default',
-      er: {
-        useMaxWidth: false
-      }
+      er: { useMaxWidth: false }
     });
   </script>
 </body>

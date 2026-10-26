@@ -1,23 +1,39 @@
+# SalesGenie AI - database-only development stack.
+#
+# This file exists so the database baseline in this folder can be exercised on
+# its own: PostgreSQL 16 plus the generated init_schema.sql. It does NOT start
+# the API. For the full application use ../docker-compose.yml, which applies the
+# same schema through Alembic.
+#
+# Usage:
+#   $env:POSTGRES_PASSWORD = "<local password>"
+#   docker compose up -d
+#   docker compose exec db psql -U salesgenie -d salesgenie -c "\dt"
+#
+# The password intentionally has no default: a checked-in fallback password is
+# a credential leak waiting to happen.
+
 services:
   db:
     image: postgres:16-alpine
-    container_name: salesgenie_postgres
-    restart: always
+    container_name: salesgenie_db_baseline
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
-      POSTGRES_DB: ${POSTGRES_DB:-salesgenie_db}
+      POSTGRES_DB: ${POSTGRES_DB:-salesgenie}
+      POSTGRES_USER: ${POSTGRES_USER:-salesgenie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD before starting}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - salesgenie_baseline_pgdata:/var/lib/postgresql/data
+      # Executed only when the data directory is empty (first startup).
       - ./init_schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-salesgenie_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-salesgenie} -d ${POSTGRES_DB:-salesgenie}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
+  salesgenie_baseline_pgdata:
     driver: local

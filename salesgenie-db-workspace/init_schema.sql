@@ -1,97 +1,183 @@
--- ====================================================================
--- SalesGenie AI - PostgreSQL Database Schema Initialization
--- Eight-Table Relational Schema based on Project Architecture
--- ====================================================================
+-- ============================================================================
+-- SalesGenie AI - PostgreSQL schema baseline (canonical, eight tables)
+--
+-- GENERATED FILE - do not edit by hand.
+-- Source of truth : backend/db.py (SQLAlchemy models)
+-- Regenerate      : python scripts/render_db_workspace.py
+-- Verify          : python scripts/render_db_workspace.py --check
+--
+-- The migration that builds the same schema in an existing database is
+-- alembic/versions/0001_canonical_schema.py. This file is the portable
+-- equivalent for a brand-new database (for example the Docker entrypoint).
+-- ============================================================================
 
--- 1. Users Table
-CREATE TABLE IF NOT EXISTS users (
-    user_id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    role VARCHAR(50) NOT NULL,
-    department VARCHAR(50),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_users_email ON users(email);
-
--- 2. Leads Table (Central Entity)
-CREATE TABLE IF NOT EXISTS leads (
-    lead_id SERIAL PRIMARY KEY,
-    company_name VARCHAR(150) NOT NULL,
-    industry VARCHAR(100),
-    contact_name VARCHAR(100),
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    lead_status VARCHAR(50) DEFAULT 'New' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_leads_company_name ON leads(company_name);
-CREATE INDEX IF NOT EXISTS ix_leads_industry ON leads(industry);
-CREATE INDEX IF NOT EXISTS ix_leads_lead_status ON leads(lead_status);
-
--- 3. Lead_Scores Table (Assigned Responsibility)
-CREATE TABLE IF NOT EXISTS lead_scores (
-    score_id SERIAL PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
-    lead_score DOUBLE PRECISION NOT NULL,
-    conversion_probability DOUBLE PRECISION NOT NULL,
-    generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_lead_scores_lead_id ON lead_scores(lead_id);
-CREATE INDEX IF NOT EXISTS ix_lead_scores_lead_score ON lead_scores(lead_score);
-CREATE INDEX IF NOT EXISTS ix_lead_scores_score_prob ON lead_scores(lead_score, conversion_probability);
-
--- 4. Company_Insights Table
-CREATE TABLE IF NOT EXISTS company_insights (
-    insight_id SERIAL PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
-    business_needs TEXT,
-    opportunities TEXT,
-    industry_analysis TEXT,
-    generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_company_insights_lead_id ON company_insights(lead_id);
-
--- 5. Outreach_Campaigns Table (Assigned Responsibility)
-CREATE TABLE IF NOT EXISTS outreach_campaigns (
-    campaign_id SERIAL PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
-    email_subject VARCHAR(255) NOT NULL,
-    email_content TEXT NOT NULL,
-    campaign_status VARCHAR(50) DEFAULT 'Draft' NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_outreach_campaigns_lead_id ON outreach_campaigns(lead_id);
-CREATE INDEX IF NOT EXISTS ix_outreach_campaigns_status ON outreach_campaigns(campaign_status);
-CREATE INDEX IF NOT EXISTS ix_outreach_lead_status ON outreach_campaigns(lead_id, campaign_status);
-
--- 6. Sales_Interactions Table
-CREATE TABLE IF NOT EXISTS sales_interactions (
-    interaction_id SERIAL PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
-    interaction_type VARCHAR(50) NOT NULL,
-    summary TEXT,
-    action_items TEXT,
-    interaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_sales_interactions_lead_id ON sales_interactions(lead_id);
-
--- 7. CRM_Sync_Logs Table
-CREATE TABLE IF NOT EXISTS crm_sync_logs (
-    sync_id SERIAL PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
-    crm_platform VARCHAR(50) NOT NULL,
-    sync_status VARCHAR(50) DEFAULT 'Pending' NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-CREATE INDEX IF NOT EXISTS ix_crm_sync_logs_lead_id ON crm_sync_logs(lead_id);
-
--- 8. Sales_Analytics Table
 CREATE TABLE IF NOT EXISTS sales_analytics (
-    analytics_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    conversion_rate DOUBLE PRECISION DEFAULT 0.0 NOT NULL,
-    pipeline_value NUMERIC(15, 2) DEFAULT 0.00 NOT NULL,
-    generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+	id SERIAL NOT NULL, 
+	metric_date TIMESTAMP WITH TIME ZONE NOT NULL, 
+	total_leads INTEGER NOT NULL, 
+	qualified_leads INTEGER NOT NULL, 
+	converted_leads INTEGER NOT NULL, 
+	conversion_rate FLOAT, 
+	pipeline_value NUMERIC(15, 2), 
+	average_lead_score FLOAT, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS ix_sales_analytics_user_id ON sales_analytics(user_id);
+CREATE INDEX IF NOT EXISTS ix_sales_analytics_metric_date ON sales_analytics (metric_date);
+
+CREATE TABLE IF NOT EXISTS users (
+	id SERIAL NOT NULL, 
+	email VARCHAR(320) NOT NULL, 
+	full_name VARCHAR(200) NOT NULL, 
+	password_hash VARCHAR(255) NOT NULL, 
+	role VARCHAR(20) NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_users_email ON users (email);
+
+CREATE TABLE IF NOT EXISTS leads (
+	id SERIAL NOT NULL, 
+	company_name VARCHAR(240) NOT NULL, 
+	industry VARCHAR(160) NOT NULL, 
+	contact_name VARCHAR(200) NOT NULL, 
+	email VARCHAR(320) NOT NULL, 
+	email_key VARCHAR(320), 
+	phone VARCHAR(80) NOT NULL, 
+	website VARCHAR(500) NOT NULL, 
+	company_size VARCHAR(100) NOT NULL, 
+	annual_revenue VARCHAR(100) NOT NULL, 
+	funding_stage VARCHAR(100) NOT NULL, 
+	tech_stack TEXT NOT NULL, 
+	company_description TEXT NOT NULL, 
+	prospect_role VARCHAR(120) NOT NULL, 
+	engagement_history TEXT NOT NULL, 
+	explicit_needs TEXT NOT NULL, 
+	response_behavior TEXT NOT NULL, 
+	user_research TEXT NOT NULL, 
+	pain_points TEXT NOT NULL, 
+	lead_source VARCHAR(120) NOT NULL, 
+	lifecycle_stage VARCHAR(32) NOT NULL, 
+	owner_id INTEGER, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(owner_id) REFERENCES users (id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_leads_company_contact ON leads (company_name, contact_name);
+CREATE INDEX IF NOT EXISTS ix_leads_company_name ON leads (company_name);
+CREATE UNIQUE INDEX IF NOT EXISTS ix_leads_email_key ON leads (email_key);
+CREATE INDEX IF NOT EXISTS ix_leads_industry ON leads (industry);
+CREATE INDEX IF NOT EXISTS ix_leads_lifecycle_stage ON leads (lifecycle_stage);
+CREATE INDEX IF NOT EXISTS ix_leads_owner_id ON leads (owner_id);
+CREATE INDEX IF NOT EXISTS ix_leads_stage_created ON leads (lifecycle_stage, created_at);
+
+CREATE TABLE IF NOT EXISTS company_insights (
+	id SERIAL NOT NULL, 
+	lead_id INTEGER NOT NULL, 
+	business_needs JSON NOT NULL, 
+	opportunities JSON NOT NULL, 
+	pain_points JSON NOT NULL, 
+	industry_context TEXT NOT NULL, 
+	qualification JSON NOT NULL, 
+	recommended_value_proposition TEXT NOT NULL, 
+	discovery_questions JSON NOT NULL, 
+	missing_information JSON NOT NULL, 
+	supporting_evidence JSON NOT NULL, 
+	provider VARCHAR(60) NOT NULL, 
+	model VARCHAR(120) NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(lead_id) REFERENCES leads (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_company_insights_lead_created ON company_insights (lead_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_company_insights_lead_id ON company_insights (lead_id);
+
+CREATE TABLE IF NOT EXISTS crm_sync_logs (
+	id SERIAL NOT NULL, 
+	lead_id INTEGER, 
+	provider VARCHAR(40) NOT NULL, 
+	entity_type VARCHAR(80) NOT NULL, 
+	operation VARCHAR(40) NOT NULL, 
+	external_record_id VARCHAR(240) NOT NULL, 
+	status VARCHAR(32) NOT NULL, 
+	request_metadata JSON NOT NULL, 
+	response_metadata JSON NOT NULL, 
+	error_message TEXT NOT NULL, 
+	attempt_count INTEGER NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(lead_id) REFERENCES leads (id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS ix_crm_sync_logs_lead_id ON crm_sync_logs (lead_id);
+CREATE INDEX IF NOT EXISTS ix_crm_sync_logs_status ON crm_sync_logs (status);
+CREATE INDEX IF NOT EXISTS ix_crm_sync_provider_status ON crm_sync_logs (provider, status);
+
+CREATE TABLE IF NOT EXISTS lead_scores (
+	id SERIAL NOT NULL, 
+	lead_id INTEGER NOT NULL, 
+	score INTEGER NOT NULL, 
+	conversion_probability FLOAT, 
+	priority_level VARCHAR(20) NOT NULL, 
+	fit_score INTEGER NOT NULL, 
+	intent_score INTEGER NOT NULL, 
+	engagement_score INTEGER NOT NULL, 
+	decision_readiness_score INTEGER NOT NULL, 
+	factors JSON NOT NULL, 
+	explanation TEXT NOT NULL, 
+	recommended_next_action TEXT NOT NULL, 
+	model_version VARCHAR(80) NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(lead_id) REFERENCES leads (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_lead_scores_lead_created ON lead_scores (lead_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_lead_scores_lead_id ON lead_scores (lead_id);
+CREATE INDEX IF NOT EXISTS ix_lead_scores_score ON lead_scores (score);
+CREATE INDEX IF NOT EXISTS ix_lead_scores_score_prob ON lead_scores (score, conversion_probability);
+
+CREATE TABLE IF NOT EXISTS outreach_campaigns (
+	id SERIAL NOT NULL, 
+	lead_id INTEGER NOT NULL, 
+	subject VARCHAR(500) NOT NULL, 
+	body TEXT NOT NULL, 
+	channel VARCHAR(60) NOT NULL, 
+	tone VARCHAR(60) NOT NULL, 
+	length VARCHAR(40) NOT NULL, 
+	outreach_type VARCHAR(60) NOT NULL, 
+	goal VARCHAR(200) NOT NULL, 
+	industry_context TEXT NOT NULL, 
+	pain_points_used JSON NOT NULL, 
+	status VARCHAR(32) NOT NULL, 
+	provider VARCHAR(60) NOT NULL, 
+	model VARCHAR(120) NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(lead_id) REFERENCES leads (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_outreach_campaigns_lead_id ON outreach_campaigns (lead_id);
+CREATE INDEX IF NOT EXISTS ix_outreach_campaigns_status ON outreach_campaigns (status);
+CREATE INDEX IF NOT EXISTS ix_outreach_lead_status ON outreach_campaigns (lead_id, status);
+
+CREATE TABLE IF NOT EXISTS sales_interactions (
+	id SERIAL NOT NULL, 
+	lead_id INTEGER NOT NULL, 
+	interaction_type VARCHAR(60) NOT NULL, 
+	interaction_date TIMESTAMP WITH TIME ZONE NOT NULL, 
+	transcript TEXT NOT NULL, 
+	summary TEXT NOT NULL, 
+	key_points JSON NOT NULL, 
+	action_items JSON NOT NULL, 
+	follow_up_date TIMESTAMP WITH TIME ZONE, 
+	sentiment VARCHAR(40) NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(lead_id) REFERENCES leads (id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS ix_sales_interactions_lead_date ON sales_interactions (lead_id, interaction_date);
+CREATE INDEX IF NOT EXISTS ix_sales_interactions_lead_id ON sales_interactions (lead_id);

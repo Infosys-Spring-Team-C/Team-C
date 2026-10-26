@@ -3,8 +3,8 @@
 **Date:** 26 October 2026
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
-**Open defects:** 7 (0 Critical, 2 High, 2 Medium, 3 Low)
-**Closed defects:** 6
+**Open defects:** 5 (0 Critical, 2 High, 1 Medium, 2 Low)
+**Closed defects:** 8
 
 **Severity** - Critical: cannot start / data loss · High: a Must requirement unmet or the
 system states something untrue · Medium: a Should requirement unmet or a degraded
@@ -25,8 +25,8 @@ workflow · Low: cosmetic, documentation or no user-visible impact.
 | BUG-006 | Recommendation has no channel field (FR-032) | Medium | P2 | Open | Backend |
 | BUG-007 | External AI adapter used the wrong request keys | High | P1 | Fixed | AI integration |
 | BUG-008 | `ai.*` package absent from the integrated repository | High | P1 | Open | AI (Mahidhar) |
-| BUG-009 | Database owner's ER description contradicts her `init_schema.sql` | Medium | P2 | Open | Database (Sai) |
-| BUG-010 | `VARCHAR(15)` phone column is too short | Low | P3 | Open | Database |
+| BUG-009 | Database owner's ER description contradicts her `init_schema.sql` | Medium | P2 | Closed (merge reconciliation) | Database (Sai) / Lead |
+| BUG-010 | `VARCHAR(15)` phone column is too short | Low | P3 | Closed (merge reconciliation) | Database |
 | BUG-011 | No `PATCH /api/v1/follow-ups/{id}` endpoint | Low | P3 | Open | Backend |
 | BUG-012 | Docker image and Compose stack never verified | High | P1 | Open | DevOps / Lead |
 | BUG-013 | `StarletteDeprecationWarning` from `TestClient` | Low | P3 | Open | Backend |
@@ -105,57 +105,6 @@ integrated build.
 package the moment it is merged.
 
 **Resolution.** Merge the AI contributor's package, then run the gate and confirm `6/6`.
-
----
-
-### BUG-009 - ER description contradicts the SQL script
-
-| Field | Value |
-|---|---|
-| Severity / Priority | Medium / P2 |
-| Status | Open |
-| Requirement | SRS D-02 |
-| Found by | Database review |
-| Owner | Database contributor (Sai) |
-
-**Description.** The written ER specification and `init_schema.sql` disagree. Examples:
-
-| Item | Written specification | Actual SQL |
-|---|---|---|
-| `users.email` | `VARCHAR(100)`, no unique constraint | `VARCHAR(255) UNIQUE` |
-| `leads.company_name` | `VARCHAR(100)` | `VARCHAR(150)` |
-| `leads.industry` | `VARCHAR(50)` | `VARCHAR(100)` |
-| `leads.phone` | `VARCHAR(15)` | `VARCHAR(50)` |
-| `outreach_campaigns.email_subject` | `VARCHAR(200)` | `VARCHAR(255)` |
-| Foreign keys | no cascade stated | 5 × `ON DELETE CASCADE` |
-| `conversion_probability` | nullable implied | `NOT NULL` |
-| Timestamps | `TIMESTAMP` | `TIMESTAMP WITH TIME ZONE` |
-
-**Impact.** Whichever artefact is merged, one of them is wrong. A reviewer cannot tell which
-is authoritative, and the cascade and uniqueness decisions have real data-integrity
-consequences.
-
-**Resolution.** The owner states which artefact is authoritative and updates the other.
-
----
-
-### BUG-010 - `VARCHAR(15)` phone column is too short
-
-| Field | Value |
-|---|---|
-| Severity / Priority | Low / P3 |
-| Status | Open |
-| Requirement | FR-001, FR-007 |
-| Found by | Database review |
-| Owner | Database |
-
-**Description.** The proposed schema sizes `phone` at 15 characters. International formats
-with a country code, spaces and an extension exceed this, for example
-`+44 20 7946 0958 ext 204`.
-
-**Impact.** Import rows and manual entries are truncated or rejected.
-
-**Suggested fix.** `VARCHAR(32)` or wider. The current implementation uses 80.
 
 ---
 
@@ -345,6 +294,45 @@ failure is wrapped in `IntelligenceError`. **Verified:** `tests/test_external_ad
 
 ---
 
+### BUG-009 - ER description contradicts the SQL script
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Medium / P2 |
+| Status | Closed in the database-merge reconciliation |
+| Found by | Database review |
+| Verified by | `tests/test_db_workspace.py`, `docs/qa/evidence/2026-10-26-schema-parity.txt` |
+
+**Description.** The database contributor's written ER specification and her
+`init_schema.sql` disagreed on several column sizes, on whether `users.email` was unique, on
+the cascade rules and on the nullability of `conversion_probability`.
+
+**Resolution.** Both artefacts are now **generated from one source** (`backend/db.py`) by
+`scripts/render_db_workspace.py`. The contradiction cannot recur: `--check` fails on any
+drift and `tests/test_db_workspace.py` runs that check in the suite. The generated DDL and the
+Alembic migration were compared on a real PostgreSQL 16 instance and are identical across all
+110 columns, 6 foreign keys and 31 indexes.
+
+---
+
+### BUG-010 - `VARCHAR(15)` phone column is too short
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Low / P3 |
+| Status | Closed in the database-merge reconciliation |
+| Found by | Database review |
+| Verified by | `tests/test_db_workspace.py` |
+
+**Description.** The proposed schema sized `phone` at 15 characters. International formats
+with a country code, spaces and an extension exceed this, for example
+`+44 20 7946 0958 ext 204`.
+
+**Resolution.** The canonical schema uses `VARCHAR(80)`, and the generated DDL carries that
+width. The value is asserted by the generated-SQL tests.
+
+---
+
 ## 4. Defect trend
 
 | Stage | Found | Closed | Open |
@@ -353,9 +341,9 @@ failure is wrapped in `IntelligenceError`. **Verified:** `tests/test_external_ad
 | Integration review | 2 | 2 | 0 |
 | Adapter review | 1 | 1 | 0 |
 | Live UAT and environment checks | 4 | 0 | 4 |
-| Database review | 2 | 0 | 2 |
+| Database review | 2 | 2 | 0 |
 | Test-tooling review | 1 | 0 | 1 |
-| **Total** | **13** | **6** | **7** |
+| **Total** | **13** | **8** | **5** |
 
 No defect has been reopened. Every closed defect has a verification reference in the row
 above.

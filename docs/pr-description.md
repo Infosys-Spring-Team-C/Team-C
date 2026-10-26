@@ -24,7 +24,7 @@ E   ModuleNotFoundError: No module named 'ai'
 - **Intelligence**: `IntelligenceEngine` protocol, a deterministic offline `HeuristicEngine`
   (default), and an `ExternalAIEngine` adapter for `ai.*` that is only enabled with
   `SALES_GENIE_AI_BACKEND=external`.
-- **Tests**: 117 tests, green on SQLite and PostgreSQL 16.
+- **Tests**: 122 tests, green on SQLite and PostgreSQL 16.
 - **Packaging**: pinned requirements, `.env.example`, non-root `Dockerfile`, two-service Compose.
 - **Docs**: audit, database/AI reviews, API contract, frontend hand-off, test report,
   contributor actions, milestone readiness.
@@ -46,9 +46,9 @@ E   ModuleNotFoundError: No module named 'ai'
 
 ```powershell
 $env:JWT_SECRET = "<random>"
-python -m pytest -q                                   # 111 passed, 6 skipped
+python -m pytest -q                                   # 116 passed, 6 skipped
 $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgenie_test"
-python -m pytest -q                                   # 117 passed
+python -m pytest -q                                   # 122 passed
 docker compose config --quiet                         # exit 0
 ```
 

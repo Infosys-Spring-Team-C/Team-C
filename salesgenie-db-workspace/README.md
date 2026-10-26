@@ -1,245 +1,164 @@
-# SalesGenie AI – Database DevOps & Schema Baseline
+# SalesGenie AI - Database Deployment Baseline
 
-> **Infosys Virtual Internship 7.0**  
-> **Project:** SalesGenie AI – AI Sales Assistant & Lead Intelligence Platform  
-> **Role:** Database DevOps Engineer  
+> **Infosys Virtual Internship 7.0**
+> **Project:** SalesGenie AI - AI Sales Assistant & Lead Intelligence Platform
+> **Original author:** Marri Sai Surekha (Database DevOps Engineer)
+> **Reconciled by:** Mohamed Isharak M (Project Lead)
 
----
+This folder is the **database deployment baseline** for the application: the portable
+PostgreSQL DDL, a database-only Compose file and the entity-relationship diagram.
 
-## 1. Overview of Completed Responsibilities
+The SQLAlchemy models and the Alembic migration are **not** duplicated here. They live in
+one place only:
 
-As the Database DevOps Engineer, this repository provides the complete technical baseline:
-1. **Git Branching Workflow**: Safe, isolated branching model protecting `main`.
-2. **Docker Baseline**: One-command PostgreSQL 16 service with persistent data and automated schema initialization.
-3. **PostgreSQL Relational Schema**: Finalized 8-table architecture centered on lead intelligence.
-4. **Assigned Tables Prepared**: Detailed implementation of `Outreach_Campaigns` and `Lead_Scores` with foreign keys and performance indexes.
-5. **SQLAlchemy & Alembic**: ORM models and version-controlled migration pipeline.
+| Concern | Authoritative location |
+|---|---|
+| SQLAlchemy models | [`backend/db.py`](../backend/db.py) |
+| Versioned migration | [`alembic/versions/0001_canonical_schema.py`](../alembic/versions/0001_canonical_schema.py) |
+| Portable PostgreSQL DDL | [`init_schema.sql`](init_schema.sql) (this folder, generated) |
+| ER diagram | [`er_diagram.html`](er_diagram.html) (this folder, generated) |
 
----
-
-## 2. Safe Git Branching Strategy
-
-To ensure team collaboration remains smooth and no untested changes break the main branch, use this standard Git workflow:
-
-```
-[main]                     <-- Stable, production-ready code (Protected)
-  │
-  └── [develop]            <-- Integration branch where team features merge
-        │
-        └── [feature/db-devops-baseline]  <-- Your working branch
-```
-
-### Git Commands Step-by-Step
-
-1. **Check current branch:**
-   ```bash
-   git branch
-   ```
-
-2. **Create and switch to your feature branch:**
-   ```bash
-   git checkout -b feature/db-devops-baseline
-   ```
-
-3. **Stage your files locally:**
-   ```bash
-   git add .
-   ```
-
-4. **Commit with a descriptive message:**
-   ```bash
-   git commit -m "feat(db): establish Docker baseline, 8-table schema, and SQLAlchemy models"
-   ```
-
-5. **Push ONLY your feature branch (when you are ready):**
-   ```bash
-   git push -u origin feature/db-devops-baseline
-   ```
-   *(Your teammates can then review your Pull Request without any risk to `main`)*.
+`init_schema.sql` and `er_diagram.html` are **generated from `backend/db.py`** by
+`scripts/render_db_workspace.py`. They cannot drift: `python scripts/render_db_workspace.py
+--check` fails if either file is stale, and `tests/test_db_workspace.py` runs that check in
+the normal test suite.
 
 ---
 
-## 3. Docker PostgreSQL Development Environment
+## 1. Why this folder no longer contains its own ORM and migration
 
-We use Docker to run PostgreSQL 16 Alpine so there is no need to manually configure database servers on Windows.
+The original submission shipped a second, independent schema: `user_id` / `lead_id` /
+`score_id` primary keys, a `lead_status` free-text column, an Alembic environment of its own
+and a `src/database/` package. It was internally consistent but **incompatible with the
+application**: the backend needs credential columns for JWT/RBAC, the Module 2 inputs on the
+lead, structured intelligence, the six outreach parameters, explainable score factors, the
+conversation transcript and a durable CRM audit log.
 
-### Prerequisites
-* Install [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) (enable WSL 2 backend).
+Shipping two schemas in one repository guarantees that one of them is wrong. The application
+schema in `backend/db.py` is the one the 117-test suite and the API actually use, so it is
+the source of truth. The duplicate ORM, the second Alembic environment and the Windows
+shortcut were removed in a follow-up commit; every removed file remains in git history at
+commit `d4f7fd7`.
 
-### Starting the Database
-
-1. **Configure Environment Secrets:**
-   Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   *(On Windows PowerShell: `Copy-Item .env.example .env`)*
-
-2. **Start PostgreSQL in Background:**
-   ```bash
-   docker compose up -d
-   ```
-   *PostgreSQL will start on port `5432` and automatically execute `init_schema.sql` on first startup.*
-
-3. **Check Container Status & Logs:**
-   ```bash
-   docker compose ps
-   docker compose logs db
-   ```
-
-4. **Stop PostgreSQL:**
-   ```bash
-   docker compose down
-   ```
-   *(Your database data remains safe inside the Docker volume `postgres_data`)*.
+The full mapping from the original design to the canonical schema, including what was kept,
+widened, made nullable and added, is in
+[`docs/database-merge-notes.md`](../docs/database-merge-notes.md).
 
 ---
 
-## 4. Entity-Relationship (ER) Diagram
+## 2. The eight tables
 
-```mermaid
-erDiagram
-    Users ||--o{ Sales_Analytics : "analyzed_in"
-    Leads ||--o{ Lead_Scores : "evaluated_by"
-    Leads ||--o{ Company_Insights : "analyzed_for"
-    Leads ||--o{ Outreach_Campaigns : "targeted_in"
-    Leads ||--o{ Sales_Interactions : "participates_in"
-    Leads ||--o{ CRM_Sync_Logs : "synchronized_in"
+| # | Table | Purpose | Foreign keys |
+|---|---|---|---|
+| 1 | `users` | Authentication principals and RBAC roles | - |
+| 2 | `leads` | Prospect master record (Module 1 inputs for Modules 2-6) | `owner_id -> users.id` (`SET NULL`) |
+| 3 | `company_insights` | Stored Module 2 intelligence | `lead_id -> leads.id` (`CASCADE`) |
+| 4 | `outreach_campaigns` | Generated and edited outreach (Module 3) | `lead_id -> leads.id` (`CASCADE`) |
+| 5 | `lead_scores` | Append-only score history (Module 4) | `lead_id -> leads.id` (`CASCADE`) |
+| 6 | `sales_interactions` | Conversation summaries and notes (Module 5) | `lead_id -> leads.id` (`CASCADE`) |
+| 7 | `crm_sync_logs` | CRM synchronisation audit trail (Module 5) | `lead_id -> leads.id` (`SET NULL`) |
+| 8 | `sales_analytics` | Point-in-time KPI snapshots (Module 6) | - |
 
-    Users {
-        int user_id PK
-        string name
-        string email
-        string role
-        string department
-        timestamp created_at
-    }
+Six foreign keys in total. `sales_analytics` is deliberately not tied to a lead: a snapshot
+is a team-wide aggregate, not a per-prospect row.
 
-    Leads {
-        int lead_id PK
-        string company_name
-        string industry
-        string contact_name
-        string email
-        string phone
-        string lead_status
-        timestamp created_at
-    }
+### Delete policy
 
-    Lead_Scores {
-        int score_id PK
-        int lead_id FK
-        float lead_score
-        float conversion_probability
-        timestamp generated_at
-    }
+| Relationship | Rule | Why |
+|---|---|---|
+| Lead removed | Insights, campaigns, scores and interactions are deleted | They have no meaning without the lead |
+| Lead removed | CRM sync log survives with `lead_id = NULL` | An audit trail must outlive the record it describes |
+| User removed | Owned leads survive with `owner_id = NULL` | A prospect is company property, not personal property |
 
-    Company_Insights {
-        int insight_id PK
-        int lead_id FK
-        text business_needs
-        text opportunities
-        text industry_analysis
-        timestamp generated_at
-    }
+### Uniqueness
 
-    Outreach_Campaigns {
-        int campaign_id PK
-        int lead_id FK
-        string email_subject
-        text email_content
-        string campaign_status
-        timestamp created_at
-    }
-
-    Sales_Interactions {
-        int interaction_id PK
-        int lead_id FK
-        string interaction_type
-        text summary
-        text action_items
-        timestamp interaction_date
-    }
-
-    CRM_Sync_Logs {
-        int sync_id PK
-        int lead_id FK
-        string crm_platform
-        string sync_status
-        timestamp timestamp
-    }
-
-    Sales_Analytics {
-        int analytics_id PK
-        int user_id FK
-        float conversion_rate
-        decimal pipeline_value
-        timestamp generated_at
-    }
-```
+| Constraint | Purpose |
+|---|---|
+| `users.email` unique | One account per address |
+| `leads.email_key` unique, nullable | Duplicate detection (FR-008). Blank e-mails are stored as `NULL`, so prospects without an address never collide |
 
 ---
 
-## 5. Assigned Tables: Design & Indexing Details
+## 3. Using the baseline
 
-### A. `Outreach_Campaigns`
-* **Purpose:** Stores AI-generated email subjects, customized message bodies, and sending states.
-* **Foreign Key:** `lead_id REFERENCES leads(lead_id) ON DELETE CASCADE`.
-* **Indexes:**
-  * `ix_outreach_campaigns_lead_id`: Accelerates queries fetching all campaigns for a specific lead.
-  * `ix_outreach_campaigns_status`: Speeds up filtering campaigns by state (`Draft`, `Scheduled`, `Sent`, `Opened`).
-  * Composite index `ix_outreach_lead_status (lead_id, campaign_status)`: Optimizes simultaneous filtering by prospect and state.
-
-### B. `Lead_Scores`
-* **Purpose:** Captures the AI qualification score (0–100) and conversion probability (0.00–1.00).
-* **Foreign Key:** `lead_id REFERENCES leads(lead_id) ON DELETE CASCADE`.
-* **Indexes:**
-  * `ix_lead_scores_lead_id`: Rapid lookup of qualification history for any prospect.
-  * `ix_lead_scores_lead_score`: Enables fast sorting on the sales dashboard to highlight highest-scoring leads.
-  * Composite index `ix_lead_scores_score_prob (lead_score, conversion_probability)`: Speeds up lead prioritization algorithms.
-
----
-
-## 6. SQLAlchemy Models & Alembic Migrations
-
-### Setting Up Python Environment
-
-1. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv .venv
-   # Windows PowerShell:
-   .\.venv\Scripts\Activate.ps1
-   ```
-
-2. **Install project dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Running Database Migrations
-
-* **Apply all migrations to PostgreSQL:**
-  ```bash
-  alembic upgrade head
-  ```
-
-* **Roll back the last migration:**
-  ```bash
-  alembic downgrade -1
-  ```
-
-* **Generate a new migration if models change:**
-  ```bash
-  alembic revision --autogenerate -m "describe schema changes"
-  ```
-
----
-
-## 7. How to Copy Files into `d:\Infosys\Team-C` (When Ready)
-
-Whenever you are ready to bring these files into your team repository, you can simply copy them:
+### 3.1 Database only (Docker)
 
 ```powershell
-Copy-Item -Path "C:\Users\M Sai Surekha\.gemini\antigravity\scratch\salesgenie-db-workspace\*" -Destination "D:\Infosys\Team-C" -Recurse -Force
+cd salesgenie-db-workspace
+$env:POSTGRES_PASSWORD = "<choose a local password>"
+docker compose up -d
 ```
-*(Remember: copying files locally still touches zero remote GitHub branches until you commit and push!)*
+
+PostgreSQL 16 starts on `127.0.0.1:5432` and executes `init_schema.sql` on first startup.
+The password has no default: Compose refuses to start without `POSTGRES_PASSWORD`.
+
+To inspect:
+
+```powershell
+docker compose exec db psql -U salesgenie -d salesgenie -c "\dt"
+docker compose down          # keeps the volume
+docker compose down -v       # destroys the volume and the data
+```
+
+### 3.2 The whole application
+
+Use the root [`docker-compose.yml`](../docker-compose.yml) instead. It starts PostgreSQL and
+the API, and applies the schema with `alembic upgrade head`, which is the same schema this
+folder renders.
+
+### 3.3 Against an existing database
+
+```powershell
+python -m alembic upgrade head      # from the repository root
+```
+
+`init_schema.sql` is for a **brand-new** database (the Docker entrypoint). It uses
+`CREATE TABLE IF NOT EXISTS` and is not a migration; do not run it over a database that
+Alembic already manages.
+
+---
+
+## 4. Verifying that the baseline is current
+
+```powershell
+# 1. The generated artefacts still match backend/db.py
+python scripts/render_db_workspace.py --check
+
+# 2. The automated check inside the test suite
+python -m pytest tests/test_db_workspace.py -q
+
+# 3. The schema itself, on a real PostgreSQL instance
+$env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgenie_test"
+python -m pytest -q
+```
+
+If a model changes and the artefacts are not regenerated, step 1 and step 2 fail with a
+diff. Regenerate with:
+
+```powershell
+python scripts/render_db_workspace.py
+```
+
+---
+
+## 5. ER diagram
+
+Open [`er_diagram.html`](er_diagram.html) in a browser. It renders with Mermaid from a CDN,
+so it needs network access the first time. The diagram is generated from the same metadata
+as the DDL and lists every column with its `PK` / `UK` / `FK` marker plus the delete rule on
+each relationship.
+
+---
+
+## 6. Status
+
+| Item | Status |
+|---|---|
+| Eight tables, six foreign keys | Implemented and tested (`tests/test_schema.py`, `tests/test_postgres.py`) |
+| Migration up and down on PostgreSQL 16 | Verified |
+| DDL and ER diagram match the ORM | Enforced by `tests/test_db_workspace.py` |
+| Docker execution of this Compose file | **Not verified** - no Docker daemon was available on the test machine (BUG-012) |
+
+Nothing in this folder claims that the Compose stack has been started. The SQL is verified
+against a real PostgreSQL 16 instance through the migration and test suite; the container
+wiring is reviewed but unexecuted.

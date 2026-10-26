@@ -95,7 +95,9 @@ Team-C/
 |-- alembic/
 |   |-- env.py                  # DATABASE_URL always from settings
 |   `-- versions/0001_canonical_schema.py
-|-- tests/                      # 117 tests (111 SQLite + 6 PostgreSQL-gated)
+|-- tests/                      # 122 tests (116 SQLite + 6 PostgreSQL-gated)
+|-- scripts/                    # render_db_workspace.py, qa_uat.py, check_ai_integration.py
+|-- salesgenie-db-workspace/    # generated PostgreSQL baseline, ER diagram, DB-only Compose
 |-- docs/                       # SRS, audit, reviews, API contract, reports
 |-- requirements.txt
 |-- requirements-dev.txt
@@ -263,8 +265,8 @@ python -m pytest -q
 
 Verified results in this environment:
 
-* SQLite only: **111 passed, 6 skipped** (the PostgreSQL module skips itself).
-* With PostgreSQL 16 on `127.0.0.1:55432`: **117 passed**.
+* SQLite only: **116 passed, 6 skipped** (the PostgreSQL module skips itself).
+* With PostgreSQL 16 on `127.0.0.1:55432`: **122 passed**.
 
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
 recreates the `public` schema. Exact commands and output: [`docs/test-report.md`](docs/test-report.md).
@@ -286,6 +288,20 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 
 Verified result: **20 of 21 workflows passed, 1 partial, 0 failed** (the partial is the missing
 recommendation channel, BUG-006).
+
+### Database deployment baseline
+
+[`salesgenie-db-workspace/`](salesgenie-db-workspace/README.md) holds the portable PostgreSQL
+DDL, the ER diagram and a database-only Compose file. Both generated files are derived from
+`backend/db.py`, so they cannot drift:
+
+```powershell
+python scripts/render_db_workspace.py --check   # exits 1 if a file is stale
+```
+
+The generated DDL and the Alembic migration were applied to two empty PostgreSQL 16 databases
+and compared object by object: identical 110 columns, 6 foreign keys and 31 indexes. Evidence:
+[`docs/qa/evidence/2026-10-26-schema-parity.txt`](docs/qa/evidence/2026-10-26-schema-parity.txt).
 
 ---
 
@@ -311,13 +327,16 @@ recommendation channel, BUG-006).
 
 This repository is the only source of truth. Individual repositories are review targets:
 
-* `Infosys-Spring-Team-C/team_c_sai` - database/DevOps work, review in
-  [`docs/database-review.md`](docs/database-review.md).
-* `Infosys-Spring-Team-C/team-c-mahi` - AI/ML work, review in
+* `Infosys-Spring-Team-C/team_c_sai` - database/DevOps work. **Merged** on 26 October 2026
+  with `--no-ff` and without squashing, so commit `d4f7fd7` remains authored by
+  `saisurekha914 <saisurekha914@gmail.com>`. The canonical schema was reconciled against her
+  workspace in separate lead commits; the record is
+  [`docs/database-merge-notes.md`](docs/database-merge-notes.md).
+* `Infosys-Spring-Team-C/team-c-mahi` - AI/ML work, still to be merged, review in
   [`docs/ai-review.md`](docs/ai-review.md).
 
-Sai and Mahidhar must submit their own pull requests so the work remains attributed to them.
-This repository does not copy their code to bypass that process; it defines integration points and
+Mahidhar must submit his own pull request so the work remains attributed to him. This
+repository does not copy his code to bypass that process; it defines the integration point and
 documents the required changes in [`docs/contributor-actions.md`](docs/contributor-actions.md).
 
 The backend implementation in this repository was authored by Mohamed Isharak M under his own Git
@@ -341,6 +360,8 @@ identity. It is not attributed to M Doran.
 | [`docs/contributor-actions.md`](docs/contributor-actions.md) | Actions for Sai and Mahidhar |
 | [`docs/pr-changes.md`](docs/pr-changes.md) | Exact file-level changes and commands per contributor |
 | [`docs/milestone-readiness.md`](docs/milestone-readiness.md) | What can be demonstrated |
+| [`docs/database-merge-notes.md`](docs/database-merge-notes.md) | Merge of the database contributor's branch and the column-by-column reconciliation |
+| [`salesgenie-db-workspace/README.md`](salesgenie-db-workspace/README.md) | Database deployment baseline: DDL, ER diagram, DB-only Compose |
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
 | [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the milestone review |
 | [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 13 defects with severity, reproduction and status |

@@ -5,7 +5,8 @@
 **Report date:** 26 October 2026
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer and Project Lead
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Commit under test:** `711fee3` on `feature/backend-integration`
+**Commit under test:** merge commit `fbe1fbc` (`origin/team_c_sai` into
+`feature/backend-integration`) plus the reconciliation commit that follows it
 **Milestone:** M2 evaluation (Modules 3 and 4 demonstrated, Modules 1-6 integrated)
 
 ---
@@ -13,9 +14,10 @@
 ## 1. Executive summary
 
 The integrated backend, database and AI layer are **functionally verified and safe to
-demonstrate**. 117 automated tests pass on PostgreSQL 16 and 111 pass on SQLite, and 20 of
+demonstrate**. 122 automated tests pass on PostgreSQL 16 and 116 pass on SQLite, and 20 of
 21 live user-acceptance workflows pass end to end against a real server and a real
-database.
+database. These figures are from the runs **after** the database contributor's branch was
+merged and reconciled.
 
 There is **one partial acceptance result** - the next-best-action recommendation has no
 channel field (FR-032, BUG-006) - and **no failures**.
@@ -35,8 +37,9 @@ unavailable integrations return `501` with a reason instead of pretending to wor
 | Layer | Coverage | Result |
 |---|---|---|
 | Unit - validators, security, services, AI engine | 108 test functions across 8 files | PASS |
-| API - every documented endpoint | 117 collected tests | PASS |
+| API - every documented endpoint | 122 collected tests | PASS |
 | Database - schema, keys, constraints, migrations, dialect parity | SQLite + PostgreSQL 16 | PASS |
+| Database workspace - generated DDL and ER diagram cannot drift | 5 drift tests + parity check | PASS |
 | Integration - API↔DB, API↔AI, adapter contract | Live server + stub package | PASS, one adapter gap (BUG-008) |
 | AI quality - determinism, grounding, boundaries | 13 adversarial cases | PASS |
 | UAT - 21 user workflows | Live HTTP on PostgreSQL | 20 PASS, 1 PARTIAL |
@@ -52,10 +55,11 @@ unavailable integrations return `501` with a reason instead of pretending to wor
 
 | Environment | Command | Result |
 |---|---|---|
-| SQLite | `pytest -q` | **111 passed, 6 skipped** in 80.63 s |
-| PostgreSQL 16.15 | `pytest -q` with `TEST_DATABASE_URL` | **117 passed** in 76.78 s |
+| SQLite | `pytest -q` | **116 passed, 6 skipped** in 94.20 s |
+| PostgreSQL 16.15 | `pytest -q` with `TEST_DATABASE_URL` | **122 passed** in 88.26 s |
 
-The 6 skips are the PostgreSQL-only module, which runs in the second command.
+The 6 skips are the PostgreSQL-only module, which runs in the second command. Both runs
+include the five database-workspace drift tests added during the merge reconciliation.
 
 ### 3.2 Live user acceptance
 
@@ -81,14 +85,18 @@ The 6 skips are the PostgreSQL-only module, which runs in the second command.
 | Severity | Open | Closed |
 |---|---|---|
 | Critical | 0 | 2 |
-| High | 2 (both externally blocked) | 3 |
-| Medium | 2 | 0 |
-| Low | 3 | 0 |
-| **Total** | **7** | **6** |
+| High | 2 (both externally blocked) | 4 |
+| Medium | 1 | 1 |
+| Low | 2 | 1 |
+| **Total** | **5** | **8** |
 
 The two open High defects are **BUG-008** (the `ai.*` package is not in the integrated
 repository) and **BUG-012** (Docker was never executed). Neither is a defect in the code
 that was delivered; both are blockers on verification.
+
+The two database defects found during review, **BUG-009** (ER description contradicted the
+SQL) and **BUG-010** (`VARCHAR(15)` phone column), are closed by the merge reconciliation:
+the workspace artefacts are now generated from `backend/db.py` and a test fails on drift.
 
 ---
 
@@ -115,7 +123,9 @@ Each item below was observed in a live run, not inferred:
    `pending_definition: true`.
 10. **Database.** Eight tables, six foreign keys, cascade and `SET NULL` behaviour, unique
     e-mail key, JSON/JSONB round-trip, and a migration that upgrades **and downgrades**
-    cleanly on PostgreSQL.
+    cleanly on PostgreSQL. The portable baseline in the database workspace was applied to a
+    second empty database and produced the identical 110 columns, 6 foreign keys and 31
+    indexes.
 
 ---
 
@@ -133,7 +143,7 @@ This section is the reason the report is trustworthy.
 | 6 | No scoring accuracy figure | Metric and dataset undefined (D-13) | No accuracy percentage is claimed |
 | 7 | No performance figure | Measurement conditions undefined (D-11) | No latency compliance is claimed |
 | 8 | No UAT satisfaction score | Survey undefined (D-12) | No satisfaction percentage is claimed |
-| 9 | Schema is provisional | The database owner's work is not merged | Database tests must be re-baselined after the merge |
+| 9 | Database workspace Compose file unexecuted | No daemon on the test machine (BUG-012) | The SQL and migration paths are verified; the container entrypoint is not |
 | 10 | Restart persistence not replayed | Not automated | `FR-009` and `AC-001` are `PARTIAL` |
 | 11 | Refresh-variant behaviour not asserted | No test compares two generated drafts | `FR-021` is `NOT RUN` |
 | 12 | Recommendation has no channel | Contract gap | `FR-032` is `PARTIAL` (BUG-006) |
@@ -172,7 +182,7 @@ This section is the reason the report is trustworthy.
 | A reviewer asks to see the UI | High | High | Demonstrate the API through `/docs` and the Postman collection; state plainly that the UI is pending |
 | A reviewer asks for an accuracy figure | High | Medium | Explain D-13 and show the honest `null` probability design |
 | A reviewer asks to see Docker | Medium | High | State that it is unverified and why; do not claim otherwise |
-| The database owner's schema lands and breaks tests | High | High | Re-run the full suite and UAT immediately after the merge; database tests catch drift |
+| A future schema change leaves the generated workspace artefacts stale | Medium | Medium | `scripts/render_db_workspace.py --check` runs inside the suite, so the build fails instead of drifting |
 | The AI package lands and the adapter fails | Medium | Medium | Run `scripts/check_ai_integration.py` before merging; it must print `6/6` |
 
 ---
@@ -183,9 +193,13 @@ This section is the reason the report is trustworthy.
 |---|---|
 | Environment and versions | [`evidence/2026-10-26-environment.txt`](evidence/2026-10-26-environment.txt) |
 | Pytest, SQLite | [`evidence/2026-10-26-pytest-sqlite.txt`](evidence/2026-10-26-pytest-sqlite.txt) |
+| Pytest, SQLite (post-merge) | [`evidence/2026-10-26-pytest-sqlite-postmerge.txt`](evidence/2026-10-26-pytest-sqlite-postmerge.txt) |
 | Pytest, PostgreSQL | [`evidence/2026-10-26-pytest-postgres.txt`](evidence/2026-10-26-pytest-postgres.txt) |
+| Pytest, PostgreSQL (post-merge) | [`evidence/2026-10-26-pytest-postgres-postmerge.txt`](evidence/2026-10-26-pytest-postgres-postmerge.txt) |
+| Schema parity, generated DDL vs Alembic | [`evidence/2026-10-26-schema-parity.txt`](evidence/2026-10-26-schema-parity.txt) |
 | Live UAT, readable | [`evidence/2026-10-26-uat-live-postgres-heuristic.md`](evidence/2026-10-26-uat-live-postgres-heuristic.md) |
 | Live UAT, machine-readable | [`evidence/2026-10-26-uat-live-postgres-heuristic.json`](evidence/2026-10-26-uat-live-postgres-heuristic.json) |
+| Live UAT, post-merge | [`evidence/2026-10-26-uat-live-postmerge.md`](evidence/2026-10-26-uat-live-postmerge.md), [`evidence/2026-10-26-uat-live-postmerge.json`](evidence/2026-10-26-uat-live-postmerge.json) |
 | Test plan | [`test-plan.md`](test-plan.md) |
 | Test cases | [`test-cases.md`](test-cases.md) |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) |
@@ -209,8 +223,8 @@ Conditions:
 1. Do not claim the frontend works, because it does not exist yet.
 2. Do not claim a scoring accuracy figure, because no metric or dataset exists.
 3. Do not claim deployment, because Docker was never executed.
-4. Re-run the full suite and the live UAT after the database owner's schema merge and after
-   the AI package merge, and update this report.
+4. The database merge is complete and re-tested; re-run the full suite and the live UAT
+   again after the AI package merge, and update this report.
 5. Fix BUG-006 (recommendation channel) before the final milestone; it is small and it is
    the only partial result.
 
@@ -223,6 +237,6 @@ Conditions:
 | QA / Test Engineer | Mohamed Isharak M | Signed - 26 October 2026 |
 | Project Lead | Mohamed Isharak M | Signed - 26 October 2026 |
 | Backend owner | M Doran | Pending |
-| Database owner | Marri Sai Surekha | Pending - re-test required after schema merge |
+| Database owner | Marri Sai Surekha | Merge verified by the lead - owner sign-off pending |
 | AI owner | Mahidhar Reddy | Pending - package merge required |
 | Frontend owner | Maheksaba Akbar Shaikh | Pending - UI required before UAT can complete |

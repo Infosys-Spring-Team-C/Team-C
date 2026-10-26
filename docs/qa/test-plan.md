@@ -105,8 +105,8 @@ Exact versions are recorded in [`evidence/2026-10-26-environment.txt`](evidence/
 
 | # | Criterion | Target | Actual |
 |---|---|---|---|
-| 1 | All automated tests pass on SQLite | 100% | Met - 111 passed, 6 skipped |
-| 2 | All automated tests pass on PostgreSQL | 100% | Met - 117 passed |
+| 1 | All automated tests pass on SQLite | 100% | Met - 116 passed, 6 skipped |
+| 2 | All automated tests pass on PostgreSQL | 100% | Met - 122 passed |
 | 3 | No open Critical defects; every open High defect has an external blocker | 0 critical | Met - 0 critical; 2 High, both externally blocked (BUG-008, BUG-012) |
 | 4 | Every Must-priority FR has a verdict | 100% | Met - see traceability matrix |
 | 5 | Live UAT covers all six modules | 100% of workflows executed | Met - 21 workflows |

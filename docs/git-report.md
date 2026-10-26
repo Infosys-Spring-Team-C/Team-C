@@ -87,8 +87,10 @@ Not verified at commit time, and not claimed: Docker image build and container s
 Streamlit frontend. Full detail: [`test-report.md`](test-report.md).
 
 The counts above are the run made at `9ddc617`. After the adapter hardening in `5be7308` the suite
-is `111 passed, 6 skipped` (SQLite) and `117 passed` (with PostgreSQL); see
-[`test-report.md`](test-report.md) section 5 and 7 for the current numbers.
+was `111 passed, 6 skipped` (SQLite) and `117 passed` (with PostgreSQL). After the database
+merge and reconciliation (26 October 2026) the current baseline is `116 passed, 6 skipped` and
+`122 passed`; see [`qa/regression-suite.md`](qa/regression-suite.md) and
+[`qa/milestone-test-report.md`](qa/milestone-test-report.md).
 
 ---
 

@@ -123,7 +123,7 @@ decision and the next step", not a demonstration of a stand-in.
 | FR-049..FR-051 CRM | Dry-run + logging only | `routers/analytics.py` |
 | FR-052..FR-053 analytics | Implemented; three KPIs pending definition | `services/analytics.py` |
 | NFR-005 auth/RBAC | Implemented, tested | `security.py`, `deps.py`, `routers/auth.py` |
-| NFR-009 testing | Implemented, 117 tests | `tests/` |
+| NFR-009 testing | Implemented, 122 tests | `tests/` |
 | NFR-010 deployment | Files complete; runtime unverified | `Dockerfile`, `docker-compose.yml` |
 
 This snapshot is intentionally conservative; the detailed requirement text remains in

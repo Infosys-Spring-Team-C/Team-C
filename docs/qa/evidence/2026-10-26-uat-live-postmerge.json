@@ -1,0 +1,253 @@
+{
+  "executed_at": "2026-10-26T14:44:49.441300+00:00",
+  "base_url": "http://127.0.0.1:8011",
+  "operator": "qa.admin@example.com",
+  "passed": 20,
+  "partial": 1,
+  "failed": 0,
+  "results": [
+    {
+      "id": "UAT-01",
+      "title": "Health and readiness",
+      "requirement": "NFR-011",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 4,
+      "evidence": [
+        "health={\"ai_backend\": \"heuristic\", \"ai_status\": \"ok\", \"auth_enabled\": true, \"database\": \"ok\", \"database_dialect\": \"postgresql\", \"status\": \"ok\", \"version\": \"1.0.0\"}"
+      ]
+    },
+    {
+      "id": "UAT-02",
+      "title": "Administrator can sign in",
+      "requirement": "FR-001 / D-04",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 218,
+      "evidence": [
+        "token_type=bearer expires_in=7200",
+        "me={\"created_at\": \"2026-10-26T20:14:31.496420+05:30\", \"email\": \"qa.admin@example.com\", \"full_name\": \"QA Administrator\", \"id\": 1, \"is_active\": true, \"role\": \"admin\"}"
+      ]
+    },
+    {
+      "id": "UAT-03",
+      "title": "Wrong password is refused",
+      "requirement": "NFR-005",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 154,
+      "evidence": [
+        "body={\"detail\":\"Incorrect email or password.\",\"code\":\"invalid_credentials\",\"meta\":null}"
+      ]
+    },
+    {
+      "id": "UAT-04",
+      "title": "Unauthenticated access is refused",
+      "requirement": "NFR-005",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 7,
+      "evidence": [
+        "body={\"detail\":\"Not authenticated.\",\"code\":\"not_authenticated\",\"meta\":null}"
+      ]
+    },
+    {
+      "id": "UAT-05",
+      "title": "Create a prospect manually",
+      "requirement": "FR-001, FR-009",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 45,
+      "evidence": [
+        "created lead id=1 stage=qualified status=Active"
+      ]
+    },
+    {
+      "id": "UAT-06",
+      "title": "Duplicate detection",
+      "requirement": "FR-008",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 20,
+      "evidence": [
+        "duplicate-check={\"is_duplicate\": true, \"match_reason\": \"email\", \"matched_lead_id\": \"1\"}"
+      ]
+    },
+    {
+      "id": "UAT-07",
+      "title": "List, search and paginate prospects",
+      "requirement": "FR-002",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 34,
+      "evidence": [
+        "X-Total-Count=1 X-Page=1 X-Page-Size=5",
+        "search returned 1 row(s)"
+      ]
+    },
+    {
+      "id": "UAT-08",
+      "title": "Move a prospect between lifecycle stages",
+      "requirement": "FR-005",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 20,
+      "evidence": [
+        "stage=proposal status=Active"
+      ]
+    },
+    {
+      "id": "UAT-09",
+      "title": "Import prospects from CSV",
+      "requirement": "FR-007, FR-008",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 28,
+      "evidence": [
+        "import report={\"filename\": \"uat-leads.csv\", \"imported\": 2, \"duplicates\": 1, \"invalid\": 0, \"total_rows\": 3, \"errors\": [{\"row\": 4, \"error\": \"email already belongs to lead 1\"}], \"duplicate_rows\": [4], \"skipped\": 1}"
+      ]
+    },
+    {
+      "id": "UAT-10",
+      "title": "Invalid input is rejected cleanly",
+      "requirement": "AC-005",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 7,
+      "evidence": [
+        "body={\"detail\":\"Request validation failed.\",\"code\":\"validation_error\",\"meta\":null,\"errors\":[{\"loc\":[\"body\",\"company_name\"],\"msg\":\"String should have at least 1 character\",\"type\":\"string_too_short\"},{\"loc\":"
+      ]
+    },
+    {
+      "id": "UAT-11",
+      "title": "Company intelligence is generated and stored",
+      "requirement": "FR-011..FR-016",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 76,
+      "evidence": [
+        "provider=heuristic needs=1 opportunities=1",
+        "persisted insight rows=1"
+      ]
+    },
+    {
+      "id": "UAT-12",
+      "title": "Outreach is generated, edited and retrieved",
+      "requirement": "FR-019..FR-026",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 94,
+      "evidence": [
+        "campaign id=1 channel=Email body_chars=218",
+        "draft edit accepted",
+        "history rows=1"
+      ]
+    },
+    {
+      "id": "UAT-13",
+      "title": "Send is visibly unavailable, not faked",
+      "requirement": "FR-024 / D-05",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 16,
+      "evidence": [
+        "code=email_transport_not_configured detail=No e-mail delivery provider is configured. Outreach content can be generated, edited and exported, but this build never sends e-mail. See SRS decision D-05."
+      ]
+    },
+    {
+      "id": "UAT-14",
+      "title": "Lead score is explainable and honest",
+      "requirement": "FR-028..FR-031",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 61,
+      "evidence": [
+        "score=90 priority=hot probability=None model=heuristic:deterministic-heuristic-v1",
+        "latest score id=1"
+      ]
+    },
+    {
+      "id": "UAT-15",
+      "title": "Next-best-action recommendation",
+      "requirement": "FR-032",
+      "status": "PARTIAL",
+      "detail": "FR-032 partially met: timing and content are returned, but no explicit channel field exists (BUG-006).",
+      "duration_ms": 12,
+      "evidence": [
+        "priority=High timing='Within one business day'",
+        "deviation: response has no channel/channel_hint field"
+      ]
+    },
+    {
+      "id": "UAT-16",
+      "title": "Conversation notes are summarised and stored",
+      "requirement": "FR-036..FR-039",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 45,
+      "evidence": [
+        "summary='Call with Ada Fernandes, 24 Oct 2026. Discussed dispatch backlog and driver turnover. Ada will send the current routing ' points=4 actions=1",
+        "stored interactions=1"
+      ]
+    },
+    {
+      "id": "UAT-17",
+      "title": "CRM sync fails safely and is logged",
+      "requirement": "FR-043, FR-045",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 58,
+      "evidence": [
+        "code=crm_not_configured meta={'sync_log_id': 1}",
+        "sync log rows 0 -> 1"
+      ]
+    },
+    {
+      "id": "UAT-18",
+      "title": "Dashboard KPIs are computed or honestly withheld",
+      "requirement": "FR-046..FR-050",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 29,
+      "evidence": [
+        "total_leads=3 conversion_rate=0.0 pipeline_value=None pending=True"
+      ]
+    },
+    {
+      "id": "UAT-19",
+      "title": "Follow-up panel data",
+      "requirement": "FR-052",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 13,
+      "evidence": [
+        "rows=1 first_priority=hot"
+      ]
+    },
+    {
+      "id": "UAT-20",
+      "title": "Role-based access control",
+      "requirement": "NFR-005",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 336,
+      "evidence": [
+        "created viewer id=2",
+        "viewer write denied with 403",
+        "viewer read allowed",
+        "viewer user administration denied"
+      ]
+    },
+    {
+      "id": "UAT-21",
+      "title": "Delete a prospect",
+      "requirement": "FR-004",
+      "status": "PASS",
+      "detail": "",
+      "duration_ms": 22,
+      "evidence": [
+        "delete returned 204 and the record is gone"
+      ]
+    }
+  ]
+}

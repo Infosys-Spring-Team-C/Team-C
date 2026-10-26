@@ -8,6 +8,13 @@
 Every result below was produced by running the command shown in this environment. Nothing is
 inferred or estimated.
 
+> **Post-merge update (26 October 2026).** This report records the run at `711fee3`, before
+> the database contributor's branch was merged. The merge and reconciliation were verified
+> separately: `116 passed, 6 skipped` on SQLite and `122 passed` on PostgreSQL 16, plus a
+> schema-parity check between the generated DDL and the Alembic migration. Current numbers and
+> evidence are in [`qa/milestone-test-report.md`](qa/milestone-test-report.md) and
+> [`qa/regression-suite.md`](qa/regression-suite.md).
+
 ---
 
 ## 1. Environment

@@ -6,6 +6,11 @@
 **Workspace reviewed:** `salesgenie-db-workspace/`
 **Status:** review only. No files were modified in Sai's repository.
 
+> **Outcome (26 October 2026).** The branch was merged into Team-C with `--no-ff` and without
+> squashing, so commit `d4f7fd7` keeps its original authorship. The findings below were
+> addressed in follow-up lead commits, not by editing her repository. What was kept, widened
+> and removed is recorded in [`database-merge-notes.md`](database-merge-notes.md).
+
 This review is written so Sai can act on it in her own fork and submit a pull request to Team-C.
 It is not a request to copy her code; the canonical schema was independently derived from
 `docs/SRS.md`.

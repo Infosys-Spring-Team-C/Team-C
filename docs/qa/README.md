@@ -19,7 +19,7 @@ estimated, inferred or copied from a plan.
 | Test scenarios and acceptance criteria | [`test-scenarios.md`](test-scenarios.md) | One scenario block per module, each with acceptance criteria |
 | Unit testing | [`test-cases.md`](test-cases.md) | `TC-*` cases mapped to the automated test that proves them |
 | API testing | [`api-test-matrix.md`](api-test-matrix.md) + [`../postman/`](../../postman) | Endpoint matrix, status codes, negative cases, importable Postman collection |
-| Database testing | [`database-test-matrix.md`](database-test-matrix.md) | CRUD, keys, constraints, migrations, integrity on SQLite and PostgreSQL |
+| Database testing | [`database-test-matrix.md`](database-test-matrix.md) | CRUD, keys, constraints, migrations, generated-DDL parity, integrity on SQLite and PostgreSQL |
 | Integration testing | [`integration-test-plan.md`](integration-test-plan.md) | API↔DB, API↔AI, API↔frontend contract, container topology |
 | AI quality validation | [`ai-quality-validation.md`](ai-quality-validation.md) | Rubric, determinism, boundary and invalid-output handling |
 | Regression testing | [`regression-suite.md`](regression-suite.md) | Exact commands, expected counts, triggers, triage |
@@ -34,15 +34,20 @@ estimated, inferred or copied from a plan.
 
 | Signal | Value | Source |
 |---|---|---|
-| Automated tests, SQLite | **111 passed, 6 skipped** | `evidence/2026-10-26-pytest-sqlite.txt` |
-| Automated tests, PostgreSQL 16 | **117 passed** | `evidence/2026-10-26-pytest-postgres.txt` |
-| Live UAT workflows | **20 passed, 1 partial, 0 failed** | `evidence/2026-10-26-uat-live-postgres-heuristic.md` |
-| Defects open | 7 (0 critical, 2 high, 2 medium, 3 low) | [`bug-log.md`](bug-log.md) |
+| Automated tests, SQLite | **116 passed, 6 skipped** | `evidence/2026-10-26-pytest-sqlite-postmerge.txt` |
+| Automated tests, PostgreSQL 16 | **122 passed** | `evidence/2026-10-26-pytest-postgres-postmerge.txt` |
+| Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
+| Live UAT workflows | **20 passed, 1 partial, 0 failed** | `evidence/2026-10-26-uat-live-postmerge.md` |
+| Defects open | 5 (0 critical, 2 high, 1 medium, 2 low) | [`bug-log.md`](bug-log.md) |
 | Requirements fully verified | 33 of 53 FRs | [`traceability-matrix.md`](traceability-matrix.md) |
 
 The 6 skipped tests are the PostgreSQL-only module; they run whenever
-`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 117 instead
-of 111.
+`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 122 instead
+of 116.
+
+These are the **post-merge** figures: the database contributor's branch
+(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026 and the canonical
+schema reconciled afterwards. See [`../database-merge-notes.md`](../database-merge-notes.md).
 
 ---
 
@@ -70,10 +75,15 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 | File | Contents |
 |---|---|
 | `evidence/2026-10-26-environment.txt` | Python, package versions, PostgreSQL version, commit under test |
-| `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite |
-| `evidence/2026-10-26-pytest-postgres.txt` | Full pytest output, PostgreSQL 16 |
-| `evidence/2026-10-26-uat-live-postgres-heuristic.md` | Live UAT report, human readable |
+| `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite (pre-merge baseline) |
+| `evidence/2026-10-26-pytest-postgres.txt` | Full pytest output, PostgreSQL 16 (pre-merge baseline) |
+| `evidence/2026-10-26-pytest-sqlite-postmerge.txt` | Full pytest output, SQLite, after the database merge |
+| `evidence/2026-10-26-pytest-postgres-postmerge.txt` | Full pytest output, PostgreSQL 16, after the database merge |
+| `evidence/2026-10-26-schema-parity.txt` | Generated `init_schema.sql` vs Alembic, object by object |
+| `evidence/2026-10-26-uat-live-postgres-heuristic.md` | Live UAT report, human readable (pre-merge) |
 | `evidence/2026-10-26-uat-live-postgres-heuristic.json` | Same run, machine readable |
+| `evidence/2026-10-26-uat-live-postmerge.md` | Live UAT report, human readable, after the database merge |
+| `evidence/2026-10-26-uat-live-postmerge.json` | Same run, machine readable |
 
 ---
 

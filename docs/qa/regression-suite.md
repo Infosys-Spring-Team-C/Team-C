@@ -13,8 +13,9 @@ result differs.
 
 | Suite | Location | Tests | Time (observed) | Needs a database server |
 |---|---|---|---|---|
-| Full automated suite | `tests/` | 117 collected (111 on SQLite + 6 PostgreSQL-only) | ~65-80 s | No (PostgreSQL module skipped) |
+| Full automated suite | `tests/` | 122 collected (116 on SQLite + 6 PostgreSQL-only) | ~90 s | No (PostgreSQL module skipped) |
 | PostgreSQL module | `tests/test_postgres.py` | 6 | included | Yes |
+| Database workspace drift | `tests/test_db_workspace.py` | 5 | ~3 s | No |
 | Live UAT | `scripts/qa_uat.py` | 21 workflows | ~10 s | Yes, plus a running API |
 | External AI gate | `scripts/check_ai_integration.py` | 6 operations | seconds | No, needs the `ai` package or a stub |
 
@@ -33,7 +34,7 @@ python -m pytest -q
 Expected:
 
 ```
-111 passed, 6 skipped
+116 passed, 6 skipped
 ```
 
 The 6 skips are `tests/test_postgres.py`. They are not failures.
@@ -50,7 +51,7 @@ python -m pytest -q
 Expected:
 
 ```
-117 passed
+122 passed
 ```
 
 If the PostgreSQL port is not listening, the 6 tests error at fixture setup with
@@ -89,7 +90,8 @@ the current known state in this repository (**BUG-008**).
 
 | Date | Branch / commit | SQLite | PostgreSQL | UAT | Notes |
 |---|---|---|---|---|---|
-| 26 Oct 2026 | `feature/backend-integration` @ `711fee3` | 111 passed, 6 skipped | 117 passed | 20 passed, 1 partial | Current known-good baseline |
+| 26 Oct 2026 | `feature/backend-integration` @ merge `fbe1fbc` + reconciliation | 116 passed, 6 skipped | 122 passed | 20 passed, 1 partial | **Current known-good baseline** |
+| 26 Oct 2026 | `feature/backend-integration` @ `711fee3` | 111 passed, 6 skipped | 117 passed | 20 passed, 1 partial | Pre-merge baseline |
 | 26 Oct 2026 | `f3724a2` (baseline as committed) | collection error | not run | not run | `ModuleNotFoundError: No module named 'ai'` - BUG-001 |
 
 A regression run is compared against the most recent row. Any drop in the pass count is a
@@ -103,6 +105,7 @@ regression until proven otherwise.
 |---|---|
 | Any change to `backend/` | 2.1 and 2.2 |
 | Any change to `alembic/` or `backend/db.py` | 2.1, 2.2, plus `alembic upgrade head` and `alembic downgrade base` |
+| Any change to a database model | 2.1, 2.2, and `python scripts/render_db_workspace.py --check` |
 | Any change to `backend/intelligence/` | 2.1, 2.2, and 2.4 |
 | Any change to an API response shape | 2.1, 2.2, 2.3, and update `docs/api-contract.md` |
 | Before opening a pull request | 2.1 and 2.2 |
