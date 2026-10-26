@@ -295,7 +295,39 @@ The external adapter's failure mode **is** tested: constructing it without the p
 
 ---
 
-## 12. Reproduce everything
+## 12. Live server smoke test (uvicorn, real HTTP)
+
+The test suite uses `TestClient`, which bypasses a real socket. As an additional check, the app was
+started with uvicorn on a throw-away SQLite file and driven with real HTTP requests.
+
+```powershell
+$env:DATABASE_URL = "sqlite:///./_smoke.db"
+$env:JWT_SECRET = "smoke-test-secret-value-0123456789"
+python -m uvicorn main:app --host 127.0.0.1 --port 8123
+```
+
+| Step | Result |
+|---|---|
+| `GET /api/v1/health` | `{"status":"ok","database":"ok","database_dialect":"sqlite","auth_enabled":true,"ai_backend":"heuristic","ai_status":"ok"}` |
+| `POST /api/v1/auth/token` | `200`, JWT returned |
+| `POST /api/v1/leads` | `201`, `id=1`, `stage=qualified`, `status=Active` |
+| `POST /api/v1/leads/1/insights` | `200`, `qualification.category=Qualified`, `engine=heuristic`, 2 supported facts, 3 missing-information items |
+| `POST /api/v1/leads/1/scores` | `200`, `56/100`, 4 factors, `conversion_probability=null`, `probability_band=medium` |
+| `POST /api/v1/outreach/generate` | `200`, `status=draft`, `channel=Email`, subject generated |
+| `GET /api/v1/analytics` | `200`, `total_leads=1`, `conversion_rate=0.0`, `pipeline_value=null` with `pending_definition=true` |
+| `POST /api/v1/outreach/send` | `501`, `code=email_transport_not_configured` |
+| `GET /api/v1/leads?page=1&page_size=10` | `200` with `x-total-count: 1`, `x-page: 1`, `x-page-size: 10` |
+| `GET /api/v1/leads` without a token | `401` |
+
+Uvicorn access log confirmed the same sequence (`201 Created`, `200 OK` x6, `501 Not Implemented`,
+`401 Unauthorized`). The server was then stopped and `_smoke.db` deleted; it is git-ignored.
+
+This confirms the application runs as a real server, not only under the test harness. It does not
+add coverage of Docker, the external AI engine, e-mail delivery or the frontend.
+
+---
+
+## 13. Reproduce everything
 
 ```powershell
 cd C:\projects\infosys\Team-C
@@ -309,4 +341,9 @@ python -m pytest -q                      # 101 passed, 6 skipped
 # optional PostgreSQL
 $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres:PASSWORD@127.0.0.1:5432/salesgenie_test"
 python -m pytest -q                      # 107 passed
+
+# live server
+python -m alembic upgrade head
+python -m backend.cli create-user --email you@example.com --role admin
+python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```

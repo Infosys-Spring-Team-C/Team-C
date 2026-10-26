@@ -317,5 +317,6 @@ identity. It is not attributed to M Doran.
 | [`docs/frontend-integration.md`](docs/frontend-integration.md) | Checklist for Maheksaba |
 | [`docs/test-report.md`](docs/test-report.md) | Exact commands and results |
 | [`docs/git-report.md`](docs/git-report.md) | Branch, commits, push status |
+| [`docs/pr-description.md`](docs/pr-description.md) | Ready-to-use pull request description |
 | [`docs/contributor-actions.md`](docs/contributor-actions.md) | Actions for Sai and Mahidhar |
 | [`docs/milestone-readiness.md`](docs/milestone-readiness.md) | What can be demonstrated |
