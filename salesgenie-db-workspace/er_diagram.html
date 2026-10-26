@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SalesGenie AI - Entity-Relationship (ER) Diagram</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      color: #0f172a;
+      font-size: 26px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .badge {
+      display: inline-block;
+      background: #e0e7ff;
+      color: #4338ca;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      margin-top: 8px;
+    }
+    .diagram-container {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      padding: 30px;
+      max-width: 95vw;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+    }
+    .footer {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #94a3b8;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>SalesGenie AI – Database ER Diagram</h1>
+    <div class="subtitle">Infosys Virtual Internship 7.0 | Project: SalesGenie AI</div>
+    <div class="badge">Eight-Table PostgreSQL Relational Schema</div>
+  </div>
+
+  <div class="diagram-container">
+    <div class="mermaid">
+erDiagram
+    Users ||--o{ Sales_Analytics : "analyzed_in"
+    Leads ||--o{ Lead_Scores : "evaluated_by"
+    Leads ||--o{ Company_Insights : "analyzed_for"
+    Leads ||--o{ Outreach_Campaigns : "targeted_in"
+    Leads ||--o{ Sales_Interactions : "participates_in"
+    Leads ||--o{ CRM_Sync_Logs : "synchronized_in"
+
+    Users {
+        int user_id PK
+        string name
+        string email
+        string role
+        string department
+        timestamp created_at
+    }
+
+    Leads {
+        int lead_id PK
+        string company_name
+        string industry
+        string contact_name
+        string email
+        string phone
+        string lead_status
+        timestamp created_at
+    }
+
+    Lead_Scores {
+        int score_id PK
+        int lead_id FK
+        float lead_score
+        float conversion_probability
+        timestamp generated_at
+    }
+
+    Company_Insights {
+        int insight_id PK
+        int lead_id FK
+        text business_needs
+        text opportunities
+        text industry_analysis
+        timestamp generated_at
+    }
+
+    Outreach_Campaigns {
+        int campaign_id PK
+        int lead_id FK
+        string email_subject
+        text email_content
+        string campaign_status
+        timestamp created_at
+    }
+
+    Sales_Interactions {
+        int interaction_id PK
+        int lead_id FK
+        string interaction_type
+        text summary
+        text action_items
+        timestamp interaction_date
+    }
+
+    CRM_Sync_Logs {
+        int sync_id PK
+        int lead_id FK
+        string crm_platform
+        string sync_status
+        timestamp timestamp
+    }
+
+    Sales_Analytics {
+        int analytics_id PK
+        int user_id FK
+        float conversion_rate
+        decimal pipeline_value
+        timestamp generated_at
+    }
+    </div>
+  </div>
+
+  <div class="footer">
+    Role: Database DevOps Engineer | Generated for Infosys Springboard Virtual Internship 7.0
+  </div>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      er: {
+        useMaxWidth: false
+      }
+    });
+  </script>
+</body>
+</html>
