@@ -1,0 +1,1076 @@
+{
+  "info": {
+    "_postman_id": "b1c0a7d2-4f6e-4a3b-9c1d-5a2e7f8b9c01",
+    "name": "SalesGenie AI - Team C",
+    "description": "API collection for the SalesGenie AI backend (Team C).\n\nRun order: Auth -> Prospects -> Import -> Intelligence -> Outreach -> Scoring -> Conversations -> Analytics -> CRM.\n\nThe Auth request stores `token`; Create prospect stores `lead_id`; Generate outreach stores `campaign_id`; CRM sync stores `log_id`.\n\nExpected non-2xx results that are correct by design:\n- POST /api/v1/outreach/send -> 501 email_transport_not_configured (SRS D-05)\n- POST /api/v1/crm/sync -> 501 crm_not_configured (SRS D-06)\n- Create duplicate prospect -> 409 duplicate_lead\n\nSelect the `SalesGenie AI - Local` environment before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Issue token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('access token returned', () => pm.expect(pm.response.json().access_token).to.be.a('string'));",
+                  "pm.collectionVariables.set('token', pm.response.json().access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "{{email}}" },
+                { "key": "password", "value": "{{password}}" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/token", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "token"] }
+          }
+        },
+        {
+          "name": "Who am I",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('profile has a role', () => pm.expect(pm.response.json().role).to.be.oneOf(['admin','manager','rep','viewer']));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        },
+        {
+          "name": "List users (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/users", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "users"] }
+          }
+        },
+        {
+          "name": "Create viewer user (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('role is viewer', () => pm.expect(pm.response.json().role).to.eql('viewer'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"qa.viewer.postman@example.com\",\n  \"full_name\": \"QA Viewer\",\n  \"password\": \"ViewerPass123!\",\n  \"role\": \"viewer\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/users", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "users"] }
+          }
+        },
+        {
+          "name": "Change user role (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"rep\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/users/2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "users", "2"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Prospects",
+      "item": [
+        {
+          "name": "Create prospect",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('email normalised', () => pm.expect(pm.response.json().email).to.eql(pm.response.json().email.toLowerCase()));",
+                  "pm.test('stage stored', () => pm.expect(pm.response.json().stage).to.be.a('string'));",
+                  "pm.collectionVariables.set('lead_id', pm.response.json().id);",
+                  "pm.collectionVariables.set('lead_email', pm.response.json().email);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Postman Northwind Logistics\",\n  \"industry\": \"Logistics\",\n  \"contact_name\": \"Ada Fernandes\",\n  \"email\": \"ada.postman@northwind.example\",\n  \"phone\": \"+1 415 555 0134\",\n  \"website\": \"northwind.example\",\n  \"company_size\": \"250-500\",\n  \"annual_revenue\": \"USD 40M\",\n  \"funding_stage\": \"Series B\",\n  \"tech_stack\": \"Salesforce, Snowflake, dbt\",\n  \"company_description\": \"Regional freight and last-mile logistics operator.\",\n  \"prospect_role\": \"VP Operations\",\n  \"engagement_history\": \"Opened two newsletters and attended a webinar.\",\n  \"explicit_needs\": \"Reduce manual dispatch planning.\",\n  \"response_behavior\": \"Responds within one business day.\",\n  \"user_research\": \"Public filings mention fleet automation investment.\",\n  \"pain_points\": \"Manual dispatch planning; high driver turnover\",\n  \"lead_source\": \"Webinar\",\n  \"stage\": \"qualified\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/leads", "host": ["{{base_url}}"], "path": ["api", "v1", "leads"] }
+          }
+        },
+        {
+          "name": "Create duplicate (expect 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('code is duplicate_lead', () => pm.expect(pm.response.json().code).to.eql('duplicate_lead'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company_name\": \"Postman Northwind Logistics\",\n  \"email\": \"{{lead_email}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/leads", "host": ["{{base_url}}"], "path": ["api", "v1", "leads"] }
+          }
+        },
+        {
+          "name": "List prospects (page 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('body is an array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+                  "pm.test('X-Total-Count present', () => pm.expect(pm.response.headers.has('X-Total-Count')).to.be.true);",
+                  "pm.test('page size respected', () => pm.expect(pm.response.json().length).to.be.at.most(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads?page=1&page_size=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "page_size", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search prospects",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads?query=Northwind",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads"],
+              "query": [{ "key": "query", "value": "Northwind" }]
+            }
+          }
+        },
+        {
+          "name": "Get prospect",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update prospect stage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('stage is proposal', () => pm.expect(pm.response.json().stage).to.eql('proposal'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"stage\": \"proposal\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Duplicate check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('is_duplicate is true', () => pm.expect(pm.response.json().is_duplicate).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{lead_email}}\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/duplicate-check",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "duplicate-check"]
+            }
+          }
+        },
+        {
+          "name": "Delete prospect (manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('204 No Content', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Import",
+      "item": [
+        {
+          "name": "Import CSV",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('report has imported count', () => pm.expect(pm.response.json()).to.have.property('imported'));",
+                  "pm.test('report has duplicates count', () => pm.expect(pm.response.json()).to.have.property('duplicates'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "uat-leads.csv" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "import"]
+            }
+          }
+        },
+        {
+          "name": "Import non-CSV (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('400 Bad Request', () => pm.response.to.have.status(400));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "notes.txt" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "import"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Intelligence",
+      "item": [
+        {
+          "name": "Analyze company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has business needs', () => pm.expect(pm.response.json()).to.have.property('possible_needs'));",
+                  "pm.test('has qualification', () => pm.expect(pm.response.json()).to.have.property('qualification'));",
+                  "pm.test('declares missing information', () => pm.expect(pm.response.json()).to.have.property('missing_information'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_service\": \"Dispatch automation suite\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/insights",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "insights"]
+            }
+          }
+        },
+        {
+          "name": "Read stored insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('at least one insight stored', () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/insights",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "insights"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Outreach",
+      "item": [
+        {
+          "name": "Generate outreach",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('body is not empty', () => pm.expect(pm.response.json().body).to.be.a('string').and.not.empty);",
+                  "pm.collectionVariables.set('campaign_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lead_id\": {{lead_id}},\n  \"tone\": \"consultative\",\n  \"length\": \"short\",\n  \"outreach_type\": \"cold_email\",\n  \"goal\": \"book a 20 minute discovery call\",\n  \"industry\": \"Logistics\",\n  \"pain_points\": [\"manual dispatch planning\", \"driver turnover\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/outreach/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "outreach", "generate"]
+            }
+          }
+        },
+        {
+          "name": "List outreach drafts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/outreach-drafts",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "outreach-drafts"]
+            }
+          }
+        },
+        {
+          "name": "Get campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/outreach/campaigns/{{campaign_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "outreach", "campaigns", "{{campaign_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Edit campaign",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Edited by QA during acceptance testing.\",\n  \"subject\": \"A shorter route to fewer dispatch delays\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/outreach/campaigns/{{campaign_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "outreach", "campaigns", "{{campaign_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Mark sent (local state only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/outreach/campaigns/{{campaign_id}}/mark-sent",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "outreach", "campaigns", "{{campaign_id}}", "mark-sent"]
+            }
+          }
+        },
+        {
+          "name": "Send (expect 501 by design)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('501 Not Implemented', () => pm.response.to.have.status(501));",
+                  "pm.test('code explains why', () => pm.expect(pm.response.json().code).to.eql('email_transport_not_configured'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/outreach/send",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "outreach", "send"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Scoring",
+      "item": [
+        {
+          "name": "Score lead",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('score is 0-100', () => { const s = pm.response.json().score; pm.expect(s).to.be.at.least(0); pm.expect(s).to.be.at.most(100); });",
+                  "pm.test('four factors', () => pm.expect(pm.response.json().factors.length).to.eql(4));",
+                  "pm.test('probability is not fabricated', () => pm.expect(pm.response.json().conversion_probability).to.be.null);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/scores",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "scores"]
+            }
+          }
+        },
+        {
+          "name": "Score history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('history is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/scores",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "scores"]
+            }
+          }
+        },
+        {
+          "name": "Latest score",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/scores/latest",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "scores", "latest"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Conversations",
+      "item": [
+        {
+          "name": "Summarize call notes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('summary present', () => pm.expect(pm.response.json().executive_summary).to.be.a('string').and.not.empty);",
+                  "pm.test('action items is a list', () => pm.expect(pm.response.json().action_items).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lead_id\": {{lead_id}},\n  \"interaction_type\": \"call\",\n  \"transcript\": \"Call with Ada Fernandes. Discussed dispatch backlog and driver turnover. Ada will send the routing spreadsheet by Friday. We agreed to prepare a pilot proposal for 50 vehicles.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/summarize",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "summarize"]
+            }
+          }
+        },
+        {
+          "name": "List interactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/leads/{{lead_id}}/conversations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "leads", "{{lead_id}}", "conversations"]
+            }
+          }
+        },
+        {
+          "name": "Get interaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK or 404 if none stored', () => pm.expect([200,404]).to.include(pm.response.code));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Analytics",
+      "item": [
+        {
+          "name": "KPIs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('conversion rate has a value', () => pm.expect(pm.response.json().conversion_rate.value).to.not.be.undefined);",
+                  "pm.test('pipeline value is flagged pending', () => pm.expect(pm.response.json().pipeline_value.pending_definition).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics"]
+            }
+          }
+        },
+        {
+          "name": "Dashboard summary alias",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "summary"]
+            }
+          }
+        },
+        {
+          "name": "Follow-ups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('returns a list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/follow-ups",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "follow-ups"]
+            }
+          }
+        },
+        {
+          "name": "Analytics insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/insights",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics", "insights"]
+            }
+          }
+        },
+        {
+          "name": "Take snapshot (manager)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/snapshot",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "analytics", "snapshot"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. CRM",
+      "item": [
+        {
+          "name": "Providers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/providers",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "providers"]
+            }
+          }
+        },
+        {
+          "name": "Validate mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"salesforce\",\n  \"mapping\": {\n    \"company_name\": \"Account.Name\",\n    \"email\": \"Contact.Email\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/mappings/validate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "mappings", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Sync preview (dry run)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('marked as dry run', () => pm.expect(pm.response.json().dry_run).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"salesforce\",\n  \"lead_ids\": [{{lead_id}}]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync/preview",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync", "preview"]
+            }
+          }
+        },
+        {
+          "name": "Sync (expect 501 by design)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('501 Not Implemented', () => pm.response.to.have.status(501));",
+                  "pm.test('code explains why', () => pm.expect(pm.response.json().code).to.eql('crm_not_configured'));",
+                  "pm.collectionVariables.set('log_id', pm.response.json().meta.sync_log_id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"salesforce\",\n  \"lead_ids\": [{{lead_id}}]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Sync logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('failure was logged', () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync-logs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync-logs"]
+            }
+          }
+        },
+        {
+          "name": "Retry sync log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('200 OK or 404 if the log was removed', () => pm.expect([200,404]).to.include(pm.response.code));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync-logs/{{log_id}}/retry",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync-logs", "{{log_id}}", "retry"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "token", "value": "" },
+    { "key": "email", "value": "qa.admin@example.com" },
+    { "key": "password", "value": "" },
+    { "key": "lead_id", "value": "" },
+    { "key": "lead_email", "value": "" },
+    { "key": "campaign_id", "value": "" },
+    { "key": "log_id", "value": "" }
+  ]
+}

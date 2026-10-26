@@ -269,6 +269,24 @@ Verified results in this environment:
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
 recreates the `public` schema. Exact commands and output: [`docs/test-report.md`](docs/test-report.md).
 
+### QA / test-engineering pack
+
+The full QA deliverables for the milestone - test plan, scenarios, 75 test cases, traceability
+matrix, API and database matrices, AI quality validation, regression procedure, defect log,
+UAT plan and results, and the milestone test report - are in
+[`docs/qa/`](docs/qa/README.md). Every result there is backed by a captured artifact in
+[`docs/qa/evidence/`](docs/qa/evidence/).
+
+A live acceptance run against a real server and PostgreSQL is also reproducible:
+
+```powershell
+python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
+  --email qa.admin@example.com --password "<UAT password>"
+```
+
+Verified result: **20 of 21 workflows passed, 1 partial, 0 failed** (the partial is the missing
+recommendation channel, BUG-006).
+
 ---
 
 ## 10. Known limitations
@@ -323,3 +341,8 @@ identity. It is not attributed to M Doran.
 | [`docs/contributor-actions.md`](docs/contributor-actions.md) | Actions for Sai and Mahidhar |
 | [`docs/pr-changes.md`](docs/pr-changes.md) | Exact file-level changes and commands per contributor |
 | [`docs/milestone-readiness.md`](docs/milestone-readiness.md) | What can be demonstrated |
+| [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
+| [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the milestone review |
+| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 13 defects with severity, reproduction and status |
+| [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
+| [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 40-request Postman collection |
