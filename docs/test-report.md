@@ -95,20 +95,21 @@ $env:JWT_SECRET = "test-secret-value-0123456789"
 Actual result:
 
 ```
-101 passed, 6 skipped, 8 warnings in 49.03s
+111 passed, 6 skipped, 8 warnings in 63.64s
 ```
 
 The 6 skips are `tests/test_postgres.py`, which skips itself when `TEST_DATABASE_URL` is unset.
 
-Coverage by module:
+Coverage by module (counts from `pytest --collect-only -q`):
 
 | File | Tests | What is verified |
 |---|---|---|
-| `tests/test_api_leads.py` | 16 | CRUD, validation, lifecycle, aliases, duplicate policy, pagination headers, RBAC, 401/403/404/409/422 |
-| `tests/test_api_auth.py` | 11 | PBKDF2 round trip, token issue, expiry, forged signature, inactive user, user administration |
+| `tests/test_api_leads.py` | 19 | CRUD, validation, lifecycle, aliases, duplicate policy, pagination headers, RBAC, 401/403/404/409/422 |
+| `tests/test_api_auth.py` | 10 | PBKDF2 round trip, token issue, expiry, forged signature, inactive user, user administration |
 | `tests/test_api_import.py` | 12 | Happy path, aliases, in-file duplicates, DB duplicates, invalid rows, length limits, stage errors, file type, empty file, missing column, non-UTF-8, RBAC |
-| `tests/test_api_ai.py` | 24 | Insights persistence, outreach generation/edit/mark-sent, 501 send, scoring honesty, score history, conversation persistence, analytics null KPIs, follow-ups, recommendations, CRM, health, OpenAPI |
-| `tests/test_intelligence.py` | 24 | Determinism, bounds, missing-data behaviour, factor weights, no fake probability, outreach channels/tones, conversation honesty, engine selection, external adapter failure |
+| `tests/test_api_ai.py` | 29 | Insights persistence, outreach generation/edit/mark-sent, 501 send, scoring honesty, score history, conversation persistence, analytics null KPIs, follow-ups, recommendations, CRM, health, OpenAPI |
+| `tests/test_intelligence.py` | 23 | Determinism, bounds, missing-data behaviour, factor weights, no fake probability, outreach channels/tones, conversation honesty, engine selection, external adapter failure |
+| `tests/test_external_adapter.py` | 10 | Adapter contract: operation names, outreach key translation, threshold forwarding, error mapping, invalid-output rejection (stub package, not the reviewed code) |
 | `tests/test_schema.py` | 8 | Eight models, migration up/down, ORM/migration parity, cascade delete, unique e-mail key, nullable e-mail, JSON round trip |
 
 Warnings (non-failing):
@@ -185,7 +186,7 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgen
 Actual result:
 
 ```
-107 passed, 10 warnings in 61.61s
+117 passed, 10 warnings in 69.60s
 ```
 
 ---
@@ -207,7 +208,7 @@ Installed versions matched `requirements-dev.txt` exactly (`fastapi==0.162.0`,
 Full suite in that clean environment:
 
 ```
-107 passed, 10 warnings in 61.60s
+117 passed, 10 warnings in 69.60s
 ```
 
 **Conclusion:** a clean checkout can be installed and tested from `requirements-dev.txt` alone.
@@ -336,11 +337,11 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 
 $env:JWT_SECRET = "any-long-random-value"
-python -m pytest -q                      # 101 passed, 6 skipped
+python -m pytest -q                      # 111 passed, 6 skipped
 
 # optional PostgreSQL
 $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres:PASSWORD@127.0.0.1:5432/salesgenie_test"
-python -m pytest -q                      # 107 passed
+python -m pytest -q                      # 117 passed
 
 # live server
 python -m alembic upgrade head

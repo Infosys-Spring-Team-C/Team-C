@@ -242,6 +242,42 @@ google-genai==...    # optional Gemini
 
 ---
 
+### A-11 (Medium) - Outreach request keys differ from the frontend contract
+
+`ai/agents/outreach.py` reads its parameters as:
+
+```python
+channel = request.get("channel", "Email")
+objective = request.get("campaign_objective", "start a discovery conversation")
+user_insights = request.get("company_insights", lead.get("user_research", ""))
+```
+
+The backend API speaks `outreach_type`, `goal` and `pain_points` (see `docs/api-contract.md`).
+Passing the request through unchanged would silently drop the user's choices: every external draft
+would be an e-mail with the default objective, regardless of what was selected in the UI.
+
+**Resolved in the adapter.** `ExternalAIEngine._outreach_payload()` translates the request:
+
+| Backend field | AI package field |
+|---|---|
+| `outreach_type` | `channel` (`cold_email`/`follow_up` -> `Email`, `linkedin_message` -> `LinkedIn`, `call_script` -> `Call script`, `short_message` -> `Short message`) |
+| `goal` | `campaign_objective` |
+| `pain_points` + `industry` + `lead.user_research` | `company_insights` (joined text) |
+| `tone`, `product_service`, `call_to_action` | passed through unchanged |
+
+`length` (`short`/`medium`/`long`) has **no equivalent** in the package - its prompt has no length
+control - so it is not forwarded. With the heuristic engine it is honoured; with the external
+engine it is ignored. This is recorded as a limitation, not hidden.
+
+**Optional action for Mahidhar.** If length control is wanted, add a `length` instruction to the
+outreach prompt and expose it in `generate_outreach`. The adapter already sends nothing that would
+conflict with such an addition.
+
+This behaviour is covered by `tests/test_external_adapter.py`, which uses a stub implementing the
+documented interface (not a copy of the package).
+
+---
+
 ## 4. Interface mapping used by the backend adapter
 
 `backend/intelligence/external.py` maps the package to the backend contract without copying code.
@@ -249,7 +285,7 @@ google-genai==...    # optional Gemini
 | Backend contract method | AI package call | Validation |
 |---|---|---|
 | `analyze_lead(lead)` | `run_workflow("lead_intelligence", {"lead": lead}, provider)` | `ResearchResult` + `QualificationAssessment` -> `LeadIntelligence` |
-| `generate_outreach(lead, request)` | `run_workflow("outreach", {"lead": lead, **request}, provider)` | `OutreachDraft` |
+| `generate_outreach(lead, request)` | `run_workflow("outreach", translated_request, provider)` - see A-11 | `OutreachDraft` |
 | `summarize_conversation(transcript, notes)` | `run_workflow("conversation", {...}, provider)` | `ConversationSummary` |
 | `recommend(lead)` | `run_workflow("follow_up", {"lead": lead}, provider)` | `Recommendation` |
 | `score_lead(lead)` | `calculate_lead_score(lead, qualified_threshold=..., nurture_threshold=...)` | `LeadScoreResult` (probability stays `None`) |

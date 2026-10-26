@@ -381,6 +381,11 @@ Runs the configured intelligence engine, validates the structured result, persis
 | `product_service` | max 500 |
 | `call_to_action` | max 500 |
 
+> **Engine note.** With the default `heuristic` engine every parameter above is honoured. With
+> `SALES_GENIE_AI_BACKEND=external`, `length` is ignored because the reviewed AI package has no
+> length control; `outreach_type`, `goal` and `pain_points` are translated to that package's
+> `channel`, `campaign_objective` and `company_insights`. See `docs/ai-review.md` A-11.
+
 Generates content, persists a `draft` campaign, returns:
 
 ```json

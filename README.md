@@ -95,7 +95,7 @@ Team-C/
 |-- alembic/
 |   |-- env.py                  # DATABASE_URL always from settings
 |   `-- versions/0001_canonical_schema.py
-|-- tests/                      # 107 tests (101 SQLite + 6 PostgreSQL-gated)
+|-- tests/                      # 117 tests (111 SQLite + 6 PostgreSQL-gated)
 |-- docs/                       # SRS, audit, reviews, API contract, reports
 |-- requirements.txt
 |-- requirements-dev.txt
@@ -261,8 +261,8 @@ python -m pytest -q
 
 Verified results in this environment:
 
-* SQLite only: **101 passed, 6 skipped** (the PostgreSQL module skips itself).
-* With PostgreSQL 16 on `127.0.0.1:55432`: **107 passed**.
+* SQLite only: **111 passed, 6 skipped** (the PostgreSQL module skips itself).
+* With PostgreSQL 16 on `127.0.0.1:55432`: **117 passed**.
 
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
 recreates the `public` schema. Exact commands and output: [`docs/test-report.md`](docs/test-report.md).

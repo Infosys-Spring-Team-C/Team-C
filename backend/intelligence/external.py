@@ -32,6 +32,15 @@ from backend.intelligence.contract import (
     SalesInsightsResult,
 )
 
+#: Frontend ``outreach_type`` -> AI package ``channel`` literal.
+_CHANNEL_BY_TYPE = {
+    "cold_email": "Email",
+    "follow_up": "Email",
+    "linkedin_message": "LinkedIn",
+    "call_script": "Call script",
+    "short_message": "Short message",
+}
+
 
 class ExternalAIEngine:
     """Thin, validating adapter; it performs no AI work itself."""
@@ -87,7 +96,28 @@ class ExternalAIEngine:
 
     @staticmethod
     def _dump(value: Any) -> dict[str, Any]:
-        return value.model_dump() if hasattr(value, "model_dump") else dict(value)
+        if hasattr(value, "model_dump"):
+            return value.model_dump()
+        try:
+            return dict(value)
+        except (TypeError, ValueError) as exc:
+            raise IntelligenceError(
+                f"AI package returned an unsupported payload type: {type(value).__name__}"
+            ) from exc
+
+    @staticmethod
+    def _validate(model: Any, payload: Any, what: str) -> Any:
+        """Validate package output against the backend contract.
+
+        A schema mismatch must surface as ``IntelligenceError`` (HTTP 502), not
+        as an unhandled ``ValidationError`` (HTTP 500).
+        """
+        try:
+            return model.model_validate(payload)
+        except ValueError as exc:
+            raise IntelligenceError(
+                f"AI package returned {what} that does not match the backend contract: {exc}"
+            ) from exc
 
     # -- engine interface ------------------------------------------------
     def analyze_lead(self, lead: dict[str, Any]) -> tuple[LeadIntelligence, ExecutionInfo]:
@@ -95,17 +125,58 @@ class ExternalAIEngine:
         if response.research is None or response.qualification is None:
             raise IntelligenceError("AI package returned no research/qualification output.")
         research = self._dump(response.research)
-        qualification = QualificationAssessment.model_validate(self._dump(response.qualification))
+        qualification = self._validate(
+            QualificationAssessment,
+            self._dump(response.qualification),
+            "a qualification assessment",
+        )
         research["qualification"] = qualification.model_dump()
-        return LeadIntelligence.model_validate(research), info
+        return self._validate(LeadIntelligence, research, "lead intelligence"), info
 
     def generate_outreach(
         self, lead: dict[str, Any], request: dict[str, Any]
     ) -> tuple[OutreachDraft, ExecutionInfo]:
-        response, info = self._run("outreach", {"lead": lead, **request})
+        response, info = self._run("outreach", self._outreach_payload(lead, request))
         if response.result is None:
             raise IntelligenceError("AI package returned no outreach draft.")
-        return OutreachDraft.model_validate(self._dump(response.result)), info
+        return self._validate(OutreachDraft, self._dump(response.result), "an outreach draft"), info
+
+    @staticmethod
+    def _outreach_payload(lead: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        """Translate the frontend request into the AI package's outreach request.
+
+        The API speaks ``outreach_type``/``goal``/``pain_points``; the reviewed
+        package reads ``channel``/``campaign_objective``/``company_insights``.
+        Without this mapping those choices would be silently dropped and every
+        external draft would use the package defaults.
+
+        ``length`` has no equivalent in the package (its prompt has no length
+        control), so it is not forwarded; see ``docs/ai-review.md``.
+        """
+        payload: dict[str, Any] = {"lead": lead, **request}
+        channel = _CHANNEL_BY_TYPE.get(str(request.get("outreach_type", "")).strip().lower())
+        if channel:
+            payload["channel"] = channel
+        if request.get("goal"):
+            payload["campaign_objective"] = request["goal"]
+
+        context: list[str] = []
+        if request.get("industry"):
+            context.append(f"Industry: {request['industry']}")
+        pain_points = [str(item) for item in request.get("pain_points") or [] if str(item).strip()]
+        if pain_points:
+            context.append("Pain points: " + "; ".join(pain_points))
+        # The package falls back to the lead's research only when this is empty,
+        # so include it to avoid losing context.
+        research = str(lead.get("user_research") or "").strip()
+        if research:
+            context.append(f"User research: {research}")
+        if context:
+            payload["company_insights"] = " | ".join(context)
+
+        for key in ("outreach_type", "goal", "pain_points", "length"):
+            payload.pop(key, None)
+        return payload
 
     def summarize_conversation(
         self, transcript: str, notes: str
@@ -115,13 +186,17 @@ class ExternalAIEngine:
         )
         if response.result is None:
             raise IntelligenceError("AI package returned no conversation summary.")
-        return ConversationSummary.model_validate(self._dump(response.result)), info
+        return self._validate(
+            ConversationSummary, self._dump(response.result), "a conversation summary"
+        ), info
 
     def recommend(self, lead: dict[str, Any]) -> tuple[Recommendation, ExecutionInfo]:
         response, info = self._run("follow_up", {"lead": lead})
         if response.result is None:
             raise IntelligenceError("AI package returned no recommendation.")
-        return Recommendation.model_validate(self._dump(response.result)), info
+        return self._validate(
+            Recommendation, self._dump(response.result), "a recommendation"
+        ), info
 
     def score_lead(self, lead: dict[str, Any]) -> tuple[LeadScoreResult, ExecutionInfo]:
         started = time.perf_counter()
@@ -129,9 +204,16 @@ class ExternalAIEngine:
             from ai.scoring.rule_based import calculate_lead_score  # type: ignore
         except ImportError as exc:  # pragma: no cover
             raise IntelligenceError("The AI package does not expose ai.scoring.rule_based.") from exc
-        result = LeadScoreResult.model_validate(
-            self._dump(calculate_lead_score(lead, qualified_threshold=self.settings.score_threshold_qualified,
-                                            nurture_threshold=self.settings.score_threshold_nurture))
+        result = self._validate(
+            LeadScoreResult,
+            self._dump(
+                calculate_lead_score(
+                    lead,
+                    qualified_threshold=self.settings.score_threshold_qualified,
+                    nurture_threshold=self.settings.score_threshold_nurture,
+                )
+            ),
+            "a lead score",
         )
         info = ExecutionInfo(
             engine=self.name,
@@ -148,4 +230,6 @@ class ExternalAIEngine:
         response, info = self._run("sales_insights", {"analytics": analytics})
         if response.result is None:
             raise IntelligenceError("AI package returned no analytics interpretation.")
-        return SalesInsightsResult.model_validate(self._dump(response.result)), info
+        return self._validate(
+            SalesInsightsResult, self._dump(response.result), "an analytics interpretation"
+        ), info

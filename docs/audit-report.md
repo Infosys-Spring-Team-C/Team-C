@@ -185,7 +185,7 @@ the 17 tests. The backend integration uses these through an adapter rather than 
 * Replaced the `create_all()` migration with explicit DDL.
 * Added the intelligence boundary (`contract.py`, `heuristic.py`, `external.py`).
 * Added transactional CSV import, duplicate policy and analytics services.
-* Added 107 tests and verified them on SQLite and PostgreSQL 16.
+* Added 117 tests and verified them on SQLite and PostgreSQL 16.
 * Added `requirements*.txt`, `.env.example`, `.gitignore`, a non-root `Dockerfile` and a
   corrected two-service `docker-compose.yml`.
 * Removed the nonexistent `ui` service and the failing legacy test module.

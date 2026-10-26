@@ -108,6 +108,13 @@ jobs:
       checks the `trace` for each operation.
 - [ ] **Enforce the transcript size limit** before building the conversation prompt.
 - [ ] **Keep the honesty language.** Do not add a conversion probability to the heuristic score.
+- [ ] **Keep the outreach request keys stable.** The backend adapter translates
+      `outreach_type` -> `channel` and `goal` -> `campaign_objective` (A-11). Renaming those keys
+      would silently break external drafts; if they must change, update
+      `ExternalAIEngine._outreach_payload` in the same PR.
+- [ ] **Optional: add length control.** `length` (`short`/`medium`/`long`) has no equivalent in
+      `ai/agents/outreach.py`, so the external engine ignores it. Adding a length instruction to
+      the prompt would let the adapter forward it.
 
 ### Verification the PR must show
 

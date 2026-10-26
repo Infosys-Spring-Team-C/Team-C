@@ -14,7 +14,7 @@ review so the team does not overclaim.
 
 | Layer | Readiness | Basis |
 |---|---|---|
-| Backend API | **Ready to demonstrate** | 107 automated tests pass on SQLite and PostgreSQL 16 |
+| Backend API | **Ready to demonstrate** | 117 automated tests pass on SQLite and PostgreSQL 16 |
 | Database schema + migration | **Ready to demonstrate** | `alembic upgrade head` verified on both engines; parity tests |
 | Authentication / RBAC | **Ready to demonstrate** | Login, expiry, forged token, role matrix tested |
 | AI intelligence (heuristic) | **Ready to demonstrate** | Deterministic, offline, tested for honesty and validation |
@@ -123,7 +123,7 @@ decision and the next step", not a demonstration of a stand-in.
 | FR-049..FR-051 CRM | Dry-run + logging only | `routers/analytics.py` |
 | FR-052..FR-053 analytics | Implemented; three KPIs pending definition | `services/analytics.py` |
 | NFR-005 auth/RBAC | Implemented, tested | `security.py`, `deps.py`, `routers/auth.py` |
-| NFR-009 testing | Implemented, 107 tests | `tests/` |
+| NFR-009 testing | Implemented, 117 tests | `tests/` |
 | NFR-010 deployment | Files complete; runtime unverified | `Dockerfile`, `docker-compose.yml` |
 
 This snapshot is intentionally conservative; the detailed requirement text remains in
