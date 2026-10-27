@@ -534,16 +534,28 @@ st.markdown(f"""
 
 # ==============================================================================
 # SESSION STATE & API DEFAULTS
+# ------------------------------------------------------------------------------
+# The UI was written against the contributor's own FastAPI backend.
+# `api_compat` translates its paths and response shapes onto Team-C's canonical
+# /api/v1 contract without changing the screens below.
+# ==============================================================================
+import sys
+from pathlib import Path
+
+_FRONTEND_DIR = str(Path(__file__).resolve().parent)
+if _FRONTEND_DIR not in sys.path:
+    sys.path.insert(0, _FRONTEND_DIR)
+
+import api_compat
+
+
 def resolve_backend_url():
     try:
         if hasattr(st, "secrets") and "BACKEND_URL" in st.secrets:
             return str(st.secrets["BACKEND_URL"]).strip().rstrip("/")
     except Exception:
         pass
-    env_val = os.getenv("BACKEND_URL", "").strip()
-    if env_val:
-        return env_val.rstrip("/")
-    return "http://localhost:8000"
+    return api_compat.resolve_base_url()
 
 DEFAULT_BACKEND_URL = resolve_backend_url()
 
@@ -570,36 +582,20 @@ if "scores_cache" not in st.session_state:
 REQUEST_TIMEOUT = 8
 
 def api_get(endpoint: str, params: dict = None, timeout: float = None):
-    url = f"{st.session_state.backend_url.rstrip('/')}{endpoint}"
-    req_timeout = timeout if timeout is not None else REQUEST_TIMEOUT
-    try:
-        response = requests.get(url, params=params, timeout=req_timeout)
-        if response.status_code == 200:
-            return True, response.json()
-        elif response.status_code == 404:
-            return False, {"error": "Resource not found (404)", "status_code": 404}
-        else:
-            return False, {"error": f"Server HTTP {response.status_code}: {response.text}", "status_code": response.status_code}
-    except requests.exceptions.ConnectionError:
-        return False, {"error": "Cannot connect to backend server.", "connection_error": True}
-    except Exception as e:
-        return False, {"error": str(e)}
+    return api_compat.api_get(
+        st.session_state.backend_url,
+        endpoint,
+        params=params,
+        timeout=timeout if timeout is not None else REQUEST_TIMEOUT,
+    )
 
 def api_post(endpoint: str, json_data: dict = None, timeout: float = None):
-    url = f"{st.session_state.backend_url.rstrip('/')}{endpoint}"
-    req_timeout = timeout if timeout is not None else REQUEST_TIMEOUT
-    try:
-        response = requests.post(url, json=json_data, timeout=req_timeout)
-        if response.status_code in [200, 201]:
-            return True, response.json()
-        elif response.status_code == 404:
-            return False, {"error": "Resource not found (404)", "status_code": 404}
-        else:
-            return False, {"error": f"Server HTTP {response.status_code}: {response.text}", "status_code": response.status_code}
-    except requests.exceptions.ConnectionError:
-        return False, {"error": "Cannot connect to backend server.", "connection_error": True}
-    except Exception as e:
-        return False, {"error": str(e)}
+    return api_compat.api_post(
+        st.session_state.backend_url,
+        endpoint,
+        json_data=json_data,
+        timeout=timeout if timeout is not None else REQUEST_TIMEOUT,
+    )
 
 def fetch_leads():
     success, data = api_get("/leads/", timeout=5)
@@ -1039,8 +1035,18 @@ with tab_intel:
             st.markdown("#### 🎯 Qualification Score & Conversion Rating")
             if curr_score:
                 score_val = curr_score.get("lead_score", 0)
-                prob_raw = curr_score.get("conversion_probability", 0.0)
-                prob_val = int(prob_raw * 100) if prob_raw <= 1.0 else int(prob_raw)
+                prob_raw = curr_score.get("conversion_probability")
+                if prob_raw is None:
+                    # No calibrated model is configured, so never render a percentage.
+                    prob_display = "n/a"
+                    prob_note = (
+                        '<div style="font-size: 0.68rem; color: #94A3B8; margin-top: 4px;">'
+                        "No calibrated model configured</div>"
+                    )
+                else:
+                    prob_val = int(prob_raw * 100) if prob_raw <= 1.0 else int(prob_raw)
+                    prob_display = f"{prob_val}%"
+                    prob_note = ""
 
                 # Status Classification Badge (Strictly adhering to Execution Guide thresholds)
                 if score_val >= 90:
@@ -1072,7 +1078,8 @@ with tab_intel:
                         </div>
                         <div style="text-align: right; min-width: 150px;">
                             <div style="font-size: 0.8rem; text-transform: uppercase; color: #94A3B8; font-weight: 700;">Conversion Probability</div>
-                            <div style="font-family: 'Outfit'; font-size: 2.2rem; font-weight: 800; color: #FFFFFF;">{prob_val}%</div>
+                            <div style="font-family: 'Outfit'; font-size: 2.2rem; font-weight: 800; color: #FFFFFF;">{prob_display}</div>
+                            {prob_note}
                         </div>
                     </div>
                 </div>

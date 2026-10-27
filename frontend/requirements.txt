@@ -1,10 +1,6 @@
-fastapi>=0.110.0
-uvicorn>=0.28.0
-sqlalchemy>=2.0.0
-python-dotenv>=1.0.0
-streamlit>=1.32.0
-pandas>=2.0.0
-requests>=2.31.0
-pydantic>=2.6.0
-python-multipart>=0.0.9
-openai>=1.0.0
+# Frontend runtime dependencies, pinned to the versions this integration targets.
+# The UI is a client of the Team-C API; it does not talk to a database and it
+# holds no AI provider keys.
+streamlit==1.65.0
+requests==2.34.2
+pandas==2.3.3

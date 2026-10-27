@@ -32,7 +32,7 @@ no replacement UI is included here.
 | CRM synchronisation transport | **Not implemented** - dry-run + failure logging only (SRS D-06) | `/api/v1/crm/*` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Files complete and `docker compose config` validated; image **not built** here because the Docker daemon was unavailable | `Dockerfile`, `docker-compose.yml` |
-| Streamlit frontend | Pending Maheksaba's PR | - |
+| Streamlit frontend | Merged from Maheksaba's `frontend-ui` branch; UI unchanged, API boundary adapted | `frontend/`, `tests/test_frontend_compat.py`, `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt` |
 
 Full details: [`docs/audit-report.md`](docs/audit-report.md),
 [`docs/test-report.md`](docs/test-report.md),
@@ -44,7 +44,7 @@ Full details: [`docs/audit-report.md`](docs/audit-report.md),
 
 ```
                     +---------------------------+
-                    |  Streamlit UI (later PR)  |
+                    | Streamlit UI (frontend/)  |
                     +------------+--------------+
                                  | HTTP/JSON + Bearer JWT
                     +------------v--------------+
@@ -95,8 +95,11 @@ Team-C/
 |-- alembic/
 |   |-- env.py                  # DATABASE_URL always from settings
 |   `-- versions/0001_canonical_schema.py
-|-- tests/                      # 122 tests (116 SQLite + 6 PostgreSQL-gated)
-|-- scripts/                    # render_db_workspace.py, qa_uat.py, check_ai_integration.py
+|-- tests/                      # backend + AI + frontend-adapter tests
+|-- scripts/                    # render_db_workspace.py, qa_uat.py, check_ai_integration.py,
+|                               #   check_frontend_integration.py
+|-- ai/                         # AI package (Mahidhar): graph, agents, prompts, providers, scoring
+|-- frontend/                   # Streamlit UI (Maheksaba) + api_compat.py adapter
 |-- salesgenie-db-workspace/    # generated PostgreSQL baseline, ER diagram, DB-only Compose
 |-- docs/                       # SRS, audit, reviews, API contract, reports
 |-- requirements.txt
@@ -316,12 +319,15 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
 3. **Undefined KPIs are `null`.** `pipeline_value`, `average_response_time_days` and
    `average_sales_cycle_days` require decisions the schema cannot yet support (SRS D-10).
 4. **No live CRM transport.** Requests are validated, dry-run previews work, failures are logged.
-5. **External AI adapter unverified** until the `ai.*` package is merged.
+5. **Real model calls are unverified.** The external `ai.*` package passes its gate with the
+   deterministic **mock** provider; no OpenAI or Gemini key was used.
 6. **Docker image not built in this environment** (daemon unavailable). Compose configuration was
-   validated with `docker compose config`.
+   validated with `docker compose config`; the frontend image is defined but unbuilt.
 7. **No CI workflow.** Adding one requires a decision on the target database service; the exact
    proposed workflow is in `docs/contributor-actions.md`.
-8. **Frontend absent by design.** Integration guidance is in `docs/frontend-integration.md`.
+8. **Frontend is merged but not browser-tested.** The adapter is unit-tested and passed 11/11 live
+   checks; no human click-through was recorded. See
+   [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md).
 
 ---
 
@@ -357,8 +363,10 @@ identity. It is not attributed to M Doran.
 | [`docs/audit-report.md`](docs/audit-report.md) | Audit of all three repositories |
 | [`docs/database-review.md`](docs/database-review.md) | File-specific review for Sai |
 | [`docs/ai-review.md`](docs/ai-review.md) | File-specific review for Mahidhar |
+| [`docs/ai-handoff.md`](docs/ai-handoff.md) | AI attribution disclosure and maintainer corrections |
 | [`docs/api-contract.md`](docs/api-contract.md) | Routes, schemas, auth, errors |
-| [`docs/frontend-integration.md`](docs/frontend-integration.md) | Checklist for Maheksaba |
+| [`docs/frontend-integration.md`](docs/frontend-integration.md) | Frontend contract and page-to-endpoint map |
+| [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md) | What was merged from Maheksaba, patches, verification |
 | [`docs/test-report.md`](docs/test-report.md) | Exact commands and results |
 | [`docs/git-report.md`](docs/git-report.md) | Branch, commits, push status |
 | [`docs/pr-description.md`](docs/pr-description.md) | Ready-to-use pull request description |

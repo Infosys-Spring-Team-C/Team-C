@@ -4,7 +4,7 @@
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
 **Open defects:** 4 (0 Critical, 1 High, 1 Medium, 2 Low)
-**Closed defects:** 9
+**Closed defects:** 10
 
 **Severity** - Critical: cannot start / data loss · High: a Must requirement unmet or the
 system states something untrue · Medium: a Should requirement unmet or a degraded
@@ -30,6 +30,7 @@ workflow · Low: cosmetic, documentation or no user-visible impact.
 | BUG-011 | No `PATCH /api/v1/follow-ups/{id}` endpoint | Low | P3 | Open | Backend |
 | BUG-012 | Docker image and Compose stack never verified | High | P1 | Open | DevOps / Lead |
 | BUG-013 | `StarletteDeprecationWarning` from `TestClient` | Low | P3 | Open | Backend |
+| BUG-014 | Frontend adapter mis-read the saved-analysis endpoint | High | P1 | Closed (fixed, 12/12) | Lead (frontend adapter) |
 
 ---
 
@@ -328,17 +329,54 @@ width. The value is asserted by the generated-SQL tests.
 
 ---
 
+### BUG-014 - Frontend adapter mis-read the saved-analysis endpoint
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | FR-020 to FR-025 (lead intelligence in the UI) |
+| Found by | Headless Streamlit `AppTest` run during frontend integration |
+| Owner | Lead (frontend adapter) |
+
+**Description.** `frontend/api_compat.py` assumed `GET /api/v1/leads/{id}/insights`
+returned one nested object (`{"research": ..., "qualification": ...}`). The canonical
+endpoint returns a **list** of persisted analyses, newest first, with different key names
+(`industry_context`, `business_needs`), and the `POST` variant returns a **flat**
+`LeadIntelligence`. The adapter raised `AttributeError: 'list' object has no attribute 'get'`
+and the intelligence page could not render.
+
+**Why the first smoke run did not catch it.** The check only asserted that
+`business_needs` was non-empty. The adapter's fallback text ("No explicit need is
+recorded...") satisfied that, so a broken read looked like a pass. The check was tightened
+to reject the placeholder and to require a qualification category, and a GET-saved check was
+added.
+
+**Resolution.** `normalise_insight` now accepts both the flat POST shape and the persisted
+GET row shape; the GET branch selects the newest row and returns an honest 404 when no
+analysis exists; the saved-outreach lookup now selects the newest draft instead of the
+oldest.
+
+**Verification.** `tests/test_frontend_compat.py`: **17 passed** (two new shape tests plus a
+list/empty test). `scripts/check_frontend_integration.py`: **12/12**. `AppTest`: **0
+exceptions, 0 errors**. Evidence:
+`docs/qa/evidence/2026-10-27-frontend-integration-gate.txt`,
+`docs/qa/evidence/2026-10-27-frontend-apptest.txt`.
+
+---
+
 ## 4. Defect trend
 
-| Stage | Found | Closed | Open |
-|---|---|---|---|
-| Baseline audit (`f3724a2`) | 3 | 3 | 0 |
-| Integration review | 2 | 2 | 0 |
-| Adapter review | 1 | 1 | 0 |
-| Live UAT and environment checks | 4 | 0 | 4 |
-| Database review | 2 | 2 | 0 |
-| Test-tooling review | 1 | 0 | 1 |
-| **Total** | **13** | **8** | **5** |
+| Status | Count |
+|---|---|
+| Closed | 10 |
+| Open | 4 |
+| **Total** | **14** |
 
-No defect has been reopened. Every closed defect has a verification reference in the row
-above.
+All 14 defects are listed in section 1 with the stage that found them. No defect has been
+reopened, and every closed defect has a verification reference in its entry.
+
+The four open defects are unchanged in nature: FR-032 has no channel field (BUG-006), no
+`PATCH /follow-ups/{id}` (BUG-011), the Docker stack was never built (BUG-012), and a
+third-party deprecation warning remains in the test client (BUG-013). None is a regression
+from the AI or frontend merges.

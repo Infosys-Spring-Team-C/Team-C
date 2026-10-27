@@ -1,0 +1,15 @@
+# Streamlit app execution check (AppTest, no browser)
+# Date: 2026-10-27
+# Command: python C:\Users\ishar\AppData\Local\Temp\opencode\apptest_frontend.py
+# API: http://127.0.0.1:8010 (SQLite, AUTH_ENABLED=false, external AI + mock provider)
+# Streamlit: 1.65.0, Python 3.10.11
+# This runs frontend/app.py headlessly and executes the same top-level code the
+# browser session executes. It is not a human click-through.
+EXCEPTIONS: 0
+ERRORS: 0
+SIDEBAR_MARKDOWN: 8
+BUTTONS: ['? Save Prospect to Database', '? Generate AI Company Profile Analysis', '? Compute Qualification Score (0-100)', '? Generate Personalized Email', '? Regenerate Variation', '? Dispatch to Prospect', '? Refresh Live Dashboard Analytics', '? Refresh Prospect Directory']
+SELECTBOXES: ['Industry Sector', 'Company Size', 'Funding Stage', 'Pipeline Stage', 'Industry Filter', 'Stage Filter', 'Target Lead for Intelligence Analysis:', 'Active Prospect for Outreach:', 'Tone of Voice', 'Theme Palette', 'Select Prospect']
+TEXT_INPUTS: ['Company Name *', 'Contact Person Name *', 'Business Email *', 'Direct Phone', '? Search Company / Contact', 'Subject', 'FastAPI URL']
+DATAFRAMES: 2
+METRICS: 0
