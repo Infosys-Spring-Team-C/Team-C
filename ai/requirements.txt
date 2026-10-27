@@ -1,0 +1,7 @@
+# AI-layer runtime dependencies.
+# Team-C integration follow-up: replace these compatible ranges with exact pins.
+pydantic>=2.7
+langgraph>=0.2
+scikit-learn>=1.4
+openai>=1.30
+google-genai>=0.5
