@@ -2,12 +2,14 @@
 
 **Project:** SalesGenie AI - AI Sales Assistant and Lead Intelligence Platform
 **Team:** Team C (Infosys Springboard)
-**Report date:** 26 October 2026
+**Report date:** 27 October 2026
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer and Project Lead
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Commit under test:** `feature/ai-integration` at `3864e86` (the AI package merge and its
-integration fixes), on top of merge commit `fbe1fbc` (`origin/team_c_sai` into
-`feature/backend-integration`) and its reconciliation commit
+**Commit under test:** `feature/frontend-integration` at `92c9c6c` (the frontend adapter and
+packaging on top of `3cc616d`, Maheksaba's UI as submitted), branched from `main` at
+`1f3fc11`, which merged `feature/ai-integration` at `3864e86` (the AI package and its
+integration fixes). That line sits on merge commit `fbe1fbc` (`origin/team_c_sai` into
+`feature/backend-integration`) and its reconciliation commit.
 **Milestone:** M2 evaluation (Modules 3 and 4 demonstrated, Modules 1-6 integrated)
 
 ---
