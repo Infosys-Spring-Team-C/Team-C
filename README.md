@@ -3,10 +3,10 @@
 Canonical repository for the Infosys Springboard Team-C project **SalesGenie AI - AI Sales
 Assistant & Lead Intelligence Platform**.
 
-This repository currently contains the **FastAPI backend, PostgreSQL schema and migrations,
-JWT/RBAC security, a deterministic intelligence layer, Docker packaging and the test suite**.
-The Streamlit frontend is owned by Maheksaba Akbar Shaikh and will be integrated later through
-her own pull request; no replacement UI is included here.
+This repository contains the **FastAPI backend, PostgreSQL schema and migrations, JWT/RBAC
+security, the AI intelligence layer, Docker packaging and the test suite**. The Streamlit
+frontend is owned by Maheksaba Akbar Shaikh and is integrated from her own repository/branch;
+no replacement UI is included here.
 
 > **Honesty statement.** This README distinguishes what is implemented and tested from what is
 > planned. Every test result quoted below was produced by running the command shown. The default
@@ -22,12 +22,12 @@ her own pull request; no replacement UI is included here.
 | Lead CRUD, lifecycle stages, filtering, pagination | Implemented, tested | `tests/test_api_leads.py` |
 | CSV import with validation, duplicate policy, per-row reporting | Implemented, tested | `tests/test_api_import.py` |
 | JWT authentication, RBAC (`admin`/`manager`/`rep`/`viewer`) | Implemented, tested | `tests/test_api_auth.py` |
-| Company analysis / lead intelligence | Implemented on the heuristic engine, tested | `tests/test_api_ai.py`, `tests/test_intelligence.py` |
+| Company analysis / lead intelligence | Implemented; heuristic by default, external `ai.*` package available | `tests/test_api_ai.py`, `tests/test_intelligence.py` |
 | Outreach generation + draft persistence | Implemented, tested | `tests/test_api_ai.py` |
 | Email delivery | **Not implemented** - returns `501` by design (SRS D-05) | `POST /api/v1/outreach/send` |
-| Lead scoring + explainable factors | Implemented as heuristic, tested | `tests/test_api_ai.py` |
+| Lead scoring + explainable factors | Implemented as heuristic; external package maps 8 factors to the 4 SRS dimensions | `tests/test_api_ai.py`, `tests/test_intelligence.py` |
 | Calibrated conversion probability | **Not implemented** - returns `null` | `lead_scores.conversion_probability` |
-| Conversation summaries | Implemented on the heuristic engine, tested | `tests/test_api_ai.py` |
+| Conversation summaries | Implemented; heuristic by default, external package available | `tests/test_api_ai.py` |
 | Analytics + follow-ups | Implemented; undefined KPIs return `null` | `tests/test_api_ai.py` |
 | CRM synchronisation transport | **Not implemented** - dry-run + failure logging only (SRS D-06) | `/api/v1/crm/*` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
@@ -231,10 +231,9 @@ Full request/response documentation: [`docs/api-contract.md`](docs/api-contract.
 
 ```env
 SALES_GENIE_AI_BACKEND=heuristic        # default; offline and deterministic
-# SALES_GENIE_AI_BACKEND=external       # requires the reviewed ai.* package (PR pending)
-SALES_GENIE_LLM_PROVIDER=mock           # mock | grok | gemini | openai
+# SALES_GENIE_AI_BACKEND=external       # uses the merged ai.* package
+SALES_GENIE_LLM_PROVIDER=mock           # external package: mock | openai | gemini
 SALES_GENIE_LLM_MODEL=
-GROK_API_KEY=
 GOOGLE_API_KEY=
 OPENAI_API_KEY=
 ```
@@ -243,11 +242,14 @@ OPENAI_API_KEY=
   `heuristic` in the `execution` block and `provider`/`model` columns.
 * With `external`, the backend validates the AI package's structured output against its own
   Pydantic contract. Missing package or invalid output produces `502 ai_failed`, never a silent
-  fallback.
-* The external adapter is **untested end to end** here because the AI package has not been merged.
-  See [`docs/ai-review.md`](docs/ai-review.md).
-* Once the AI PR is merged, run `python scripts/check_ai_integration.py`. It exercises all six
-  operations with the mock provider and prints `6/6 operations passed`, or exits non-zero.
+  fallback. Install the package's extras with `pip install -r ai/requirements.txt`.
+* `SALES_GENIE_LLM_PROVIDER=grok` is rejected by the external engine: the package implements
+  mock, openai and gemini only.
+* The external engine is verified with the **mock** provider: `python scripts/check_ai_integration.py`
+  exercises all six operations and prints `6/6 operations passed` (evidence in
+  `docs/qa/evidence/2026-10-27-ai-integration-gate.txt`). Real OpenAI/Gemini calls are **not**
+  verified because no key was used.
+* Attribution and the list of maintainer corrections: [`docs/ai-handoff.md`](docs/ai-handoff.md).
 
 ---
 
@@ -332,12 +334,15 @@ This repository is the only source of truth. Individual repositories are review 
   `saisurekha914 <saisurekha914@gmail.com>`. The canonical schema was reconciled against her
   workspace in separate lead commits; the record is
   [`docs/database-merge-notes.md`](docs/database-merge-notes.md).
-* `Infosys-Spring-Team-C/team-c-mahi` - AI/ML work, still to be merged, review in
-  [`docs/ai-review.md`](docs/ai-review.md).
-
-Mahidhar must submit his own pull request so the work remains attributed to him. This
-repository does not copy his code to bypass that process; it defines the integration point and
-documents the required changes in [`docs/contributor-actions.md`](docs/contributor-actions.md).
+* `mahidar22/infosys-springboard-internship` - AI/ML work. **Merged** on 27 October 2026.
+  The contributor could not push a branch, so his submitted archive was applied with him as
+  git **author** (`Mahidhar Reddy <mahidarreddy.2005@gmail.com>`) and the lead as
+  **committer**. Integration corrections are separate lead commits. Review:
+  [`docs/ai-review.md`](docs/ai-review.md); disclosure and correction list:
+  [`docs/ai-handoff.md`](docs/ai-handoff.md).
+* `Mahek-saba/frontend-infosys` - Streamlit frontend. Merged from her `frontend-ui` branch,
+  with her commits preserved; integration work (API adapter, packaging) is separate lead
+  commits. See [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md).
 
 The backend implementation in this repository was authored by Mohamed Isharak M under his own Git
 identity. It is not attributed to M Doran.

@@ -2,8 +2,9 @@
 
 **Date:** 26 October 2026
 **Author:** Mohamed Isharak M
-**Engine under test:** `HeuristicEngine` (default, offline, deterministic)
-**Adapter under test:** `ExternalAIEngine` against a stub package
+**Engine under test:** `HeuristicEngine` (default, offline, deterministic) and the merged
+`ai.*` package behind `ExternalAIEngine` (mock provider)
+**Adapter under test:** `ExternalAIEngine` against the real package and against a stub
 
 The SRS leaves the accuracy metric and dataset open (Decision D-13), so this document does
 **not** report an accuracy percentage. It validates the properties that can be checked
@@ -125,21 +126,57 @@ not an oversight.
 
 ---
 
-## 7. What cannot be validated yet
+## 7. External package verification (merged 27 October 2026)
+
+The `ai.*` package is now in the repository and is selected with
+`SALES_GENIE_AI_BACKEND=external`. The gate exercises all six operations with the
+deterministic **mock** provider:
+
+| Operation | Result | Validated against |
+|---|---|---|
+| `analyze_lead` | PASS - `Qualified` | `LeadIntelligence` contract |
+| `generate_outreach` | PASS - `Email` | `OutreachDraft` contract |
+| `summarize_conversation` | PASS | `ConversationSummary` contract |
+| `recommend` | PASS | `Recommendation` contract |
+| `score_lead` | PASS - score 82, 8 factors | `LeadScoreResult` contract |
+| `interpret_analytics` | PASS | `SalesInsightsResult` contract |
+
+**6/6 operations passed.** Evidence:
+`docs/qa/evidence/2026-10-27-ai-integration-gate.txt`.
+
+Additional properties checked in this run:
+
+* the package's own 12 tests pass inside Team-C (workflow routing, LangGraph
+  checkpointer path, transcript chunking, prompt-injection handling, schema bounds,
+  scorer determinism);
+* the eight package factors are annotated with the four SRS FR-030 dimensions, and
+  the package's score and weights are unchanged;
+* `conversion_probability` remains `null` - the external scorer is still a
+  heuristic, not a calibrated model;
+* `SALES_GENIE_LLM_PROVIDER=grok` is rejected with an actionable message instead of
+  failing inside the package;
+* provider retries now cover only transient failures (timeout, 429, 5xx).
+
+**Not verified:** real OpenAI or Gemini calls. The gate reports `used_mock: true` for
+every operation, and that must not be read as proof that a real model works.
+
+---
+
+## 8. What cannot be validated yet
 
 | Property | Blocker |
 |---|---|
 | Accuracy against a labelled dataset (target >= 85%) | SRS D-13: no metric, no dataset |
-| Consistency across providers | SRS D-01: provider not selected; only the heuristic and a stub were exercised |
+| Consistency across providers | SRS D-01: provider not selected; only the heuristic, the package's mock provider and a stub were exercised |
 | Latency against the 5-second target | SRS D-11: measurement conditions undefined |
 | Real-world output quality on live prospect data | No production data is used in testing |
-| Behaviour of the real `ai.*` package | Package absent from the repository - **BUG-008** |
+| Real OpenAI/Gemini calls | No API key was used; the package reports `used_mock: true` |
 
 None of these is reported as passing.
 
 ---
 
-## 8. Summary
+## 9. Summary
 
 | Area | Verdict |
 |---|---|
@@ -148,10 +185,11 @@ None of these is reported as passing.
 | Grounding and non-fabrication | PASS |
 | Boundary and adversarial inputs | PASS (13 of 13) |
 | Adapter error translation | PASS |
+| External package integration (mock provider) | PASS - gate 6/6 |
 | Calibrated probability | PARTIAL by design |
 | Recommendation channel field | PARTIAL - BUG-006 |
 | Accuracy metric | BLOCKED - D-13 |
-| Real package integration | BLOCKED - BUG-008 |
+| Real model calls (OpenAI/Gemini) | UNVERIFIED - no key used |
 
 The AI layer is safe to demonstrate: it produces structured, reproducible, clearly-labelled
 output and refuses to invent what it does not know. It is not yet proven accurate, because

@@ -9,6 +9,25 @@ The reviewed package must reach Team-C through Mahidhar's own pull request so th
 attributed to him. Team-C does **not** copy `ai/` or `utils/`; it defines an adapter and a typed
 contract. See `backend/intelligence/external.py` and `backend/intelligence/contract.py`.
 
+> **Update, 27 October 2026 - integration completed.** The contributor could not push a branch
+> or open a PR, so his archive was applied with him as git *author* and the lead as
+> *committer*. See `docs/ai-handoff.md` for the disclosure and the list of maintainer
+> corrections. Resolution of the findings below:
+>
+> | Finding | Status |
+> |---|---|
+> | A-01 package absent | **Closed** - `ai/` merged, gate 6/6 |
+> | A-02 no persistence | **Closed by design** - the backend owns persistence; the package does not |
+> | A-03 eight factors vs four dimensions | **Closed** - `ScoreFactor.dimension` maps all eight onto fit/intent/engagement/decision readiness |
+> | A-04 Streamlit coupling in `utils/config.py` | **Closed** - environment-only secrets; Streamlit confined to `runtime_settings()` |
+> | A-05 unclassified provider errors, no Gemini timeout | **Closed** - transient-only retries; Gemini receives the configured timeout |
+> | A-06 no conversion-probability model | **Open by design** - `conversion_probability` stays `null`; this is a truthful limitation |
+> | A-07 LangGraph fallback can hide defects | **Mitigated** - checkpointer test runs when the extra is installed and skips otherwise |
+> | A-08 `run_workflow` collects errors | **Accepted** - the adapter raises `IntelligenceError` when `errors` is non-empty |
+> | A-09 unbounded context | **Mitigated** - `max_transcript_chars` chunking retained |
+> | A-10 dependencies incomplete/unpinned | **Closed** - exact pins; `scikit-learn` dropped; `numpy` import is lazy |
+> | A-11 outreach request keys | **Closed** - the adapter translates `outreach_type`/`goal`/`pain_points` |
+
 ---
 
 ## 1. Verified execution
@@ -37,7 +56,7 @@ called during this review.
 | `ai/graph.py` | `run_workflow(operation, request, provider, checkpointer=None, thread_id=None) -> WorkflowResponse` | Working; LangGraph with a non-LangGraph fallback | operation string + request dict -> validated result + execution record | `ExternalAIEngine._run` |
 | `ai/state.py` | `WorkflowState` TypedDict | Working | graph state | internal |
 | `ai/schemas.py` | Pydantic boundary models | Working, well designed | structured AI output | mirrored by `backend/intelligence/contract.py` |
-| `ai/providers.py` | `create_provider(settings)`, `BaseLLMProvider.structured()` | Working; mock + Grok + Gemini | prompt + response model -> validated model | `ExternalAIEngine.__init__` |
+| `ai/providers.py` | `create_provider(settings)`, `BaseLLMProvider.structured()` | Working; mock + OpenAI + Gemini (no Grok provider exists) | prompt + response model -> validated model | `ExternalAIEngine.__init__` |
 | `ai/agents/research.py` | `analyze_lead_context(request, provider)` | Working | lead context -> `ResearchResult` | `analyze_lead` |
 | `ai/agents/qualification.py` | `qualify_lead(request, research, provider)` | Working | research -> `QualificationAssessment` | `analyze_lead` |
 | `ai/agents/outreach.py` | `generate_outreach(request, provider)` | Working | lead + parameters -> `OutreachDraft` | `generate_outreach` |

@@ -3,8 +3,8 @@
 **Date:** 26 October 2026
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
-**Open defects:** 5 (0 Critical, 2 High, 1 Medium, 2 Low)
-**Closed defects:** 8
+**Open defects:** 4 (0 Critical, 1 High, 1 Medium, 2 Low)
+**Closed defects:** 9
 
 **Severity** - Critical: cannot start / data loss · High: a Must requirement unmet or the
 system states something untrue · Medium: a Should requirement unmet or a degraded
@@ -24,7 +24,7 @@ workflow · Low: cosmetic, documentation or no user-visible impact.
 | BUG-005 | Analytics KPIs were stored as `0` rather than being undefined | High | P1 | Fixed | Backend |
 | BUG-006 | Recommendation has no channel field (FR-032) | Medium | P2 | Open | Backend |
 | BUG-007 | External AI adapter used the wrong request keys | High | P1 | Fixed | AI integration |
-| BUG-008 | `ai.*` package absent from the integrated repository | High | P1 | Open | AI (Mahidhar) |
+| BUG-008 | `ai.*` package absent from the integrated repository | High | P1 | Closed (package merged, gate 6/6) | AI (Mahidhar) / Lead |
 | BUG-009 | Database owner's ER description contradicts her `init_schema.sql` | Medium | P2 | Closed (merge reconciliation) | Database (Sai) / Lead |
 | BUG-010 | `VARCHAR(15)` phone column is too short | Low | P3 | Closed (merge reconciliation) | Database |
 | BUG-011 | No `PATCH /api/v1/follow-ups/{id}` endpoint | Low | P3 | Open | Backend |
@@ -68,43 +68,6 @@ Invoke-RestMethod -Uri "$b/api/v1/recommendations/$leadId" `
 
 **Suggested fix.** Add `suggested_channel: Literal["email", "phone", "linkedin", "meeting"]`
 to the `Recommendation` contract and populate it in both engines; extend the contract test.
-
----
-
-### BUG-008 - The `ai.*` package is absent from the integrated repository
-
-| Field | Value |
-|---|---|
-| Severity / Priority | High / P1 |
-| Status | Open - external dependency |
-| Requirement | FR-011 to FR-018 (real provider) |
-| Found by | Baseline audit and integration review |
-| Owner | AI contributor (Mahidhar) |
-
-**Description.** `backend/intelligence/external.py` targets the AI module's documented
-interface, but no `ai/` package exists in the integrated repository. With
-`SALES_GENIE_AI_BACKEND=external` the application fails at engine construction.
-
-**Reproduction.**
-
-```powershell
-$env:SALES_GENIE_AI_BACKEND="external"
-python -c "from backend.intelligence import get_engine; get_engine()"
-```
-
-**Expected.** The engine is constructed and `/api/v1/health` reports `ai_status: ok`.
-**Actual.** A clear `IntelligenceError` explaining the package is not importable; health
-reports `ai_status: unavailable`.
-
-**Impact.** The external AI path cannot be demonstrated. The default heuristic engine works,
-so the application is functional, but the AI module's own code is not running in the
-integrated build.
-
-**Mitigation in place.** The adapter is tested against a stub (10 tests) and
-`scripts/check_ai_integration.py` provides a 6-operation gate that will prove the real
-package the moment it is merged.
-
-**Resolution.** Merge the AI contributor's package, then run the gate and confirm `6/6`.
 
 ---
 
@@ -291,6 +254,38 @@ Against the real package this would have failed validation.
 `company_insights`, and does not forward `length`. Package output is validated and any
 failure is wrapped in `IntelligenceError`. **Verified:** `tests/test_external_adapter.py`
 (10 tests) and `scripts/check_ai_integration.py` (6/6 against a stub).
+
+---
+
+### BUG-008 - The `ai.*` package was absent from the integrated repository
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | FR-011 to FR-018 (external engine) |
+| Found by | Baseline audit and integration review |
+| Owner | AI contributor (Mahidhar) / Lead |
+
+**Description.** `backend/intelligence/external.py` targeted the AI module's documented
+interface, but no `ai/` package existed in the integrated repository, so
+`SALES_GENIE_AI_BACKEND=external` failed at engine construction.
+
+**Resolution.** The contributor's package was applied from his submitted archive with him
+as the git author (`feat(ai)` and `test(ai)` commits); the lead is the committer. Six
+integration corrections followed in `fix(ai): integrate the package with the backend
+contract` - the unsupported `grok_api_key` override, the Streamlit coupling in
+`utils/config.py`, unclassified provider retries and the missing Gemini timeout, the
+eight-factor/four-dimension mapping, dependency pins, and the optional LangGraph test guard.
+
+**Verification.** `scripts/check_ai_integration.py` reports **6/6 operations passed** with
+`SALES_GENIE_AI_BACKEND=external` and `SALES_GENIE_LLM_PROVIDER=mock`. Full suite: **131
+passed, 6 skipped** (SQLite). Evidence:
+`docs/qa/evidence/2026-10-27-ai-integration-gate.txt`.
+
+**Residual risk.** Only the mock provider was exercised. Real OpenAI and Gemini calls
+remain unverified because no key was used, and the package reports `used_mock: true`
+accordingly.
 
 ---
 
