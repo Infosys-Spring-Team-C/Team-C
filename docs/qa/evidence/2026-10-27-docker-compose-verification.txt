@@ -43,7 +43,7 @@ PASS score lead (GET latest)
 PASS generate outreach: A question about Smoke 9551276d Ltd's priorities
 PASS load saved outreach
 PASS analytics dashboard: total=7
-PASS send email is honestly unavailable: No e-mail delivery provider is configured. Outreach content 
+PASS send email is honestly unavailable: No e-mail delivery provider is configured. Outreach content
 PASS bulk CSV import: 2 imported, 0 duplicates, 0 invalid.
 
 12/12 frontend checks passed

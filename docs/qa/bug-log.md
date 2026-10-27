@@ -425,4 +425,3 @@ reopened, and every closed defect has a verification reference in its entry.
 The single open defect is BUG-011 (no way to dismiss a follow-up). It is a deliberate,
 documented scope decision: `FR-052` requires the panel, which works, and adding persisted
 dismissal state would change the eight-table schema and its generated artefacts.
-

@@ -161,4 +161,3 @@ a default placeholder text can no longer count as a pass.
   text (`docs/qa/evidence/2026-10-27-browser-ui-check.txt`).
 * BUG-011 (no way to dismiss a follow-up) remains open as an accepted
   limitation; see `docs/qa/bug-log.md`.
-
