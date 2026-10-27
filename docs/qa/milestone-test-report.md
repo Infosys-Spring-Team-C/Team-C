@@ -2,12 +2,14 @@
 
 **Project:** SalesGenie AI - AI Sales Assistant and Lead Intelligence Platform
 **Team:** Team C (Infosys Springboard)
-**Report date:** 26 October 2026
+**Report date:** 27 October 2026
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer and Project Lead
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Commit under test:** `feature/ai-integration` at `3864e86` (the AI package merge and its
-integration fixes), on top of merge commit `fbe1fbc` (`origin/team_c_sai` into
-`feature/backend-integration`) and its reconciliation commit
+**Commit under test:** `feature/frontend-integration` at `92c9c6c` (the frontend adapter and
+packaging on top of `3cc616d`, Maheksaba's UI as submitted), branched from `main` at
+`1f3fc11`, which merged `feature/ai-integration` at `3864e86` (the AI package and its
+integration fixes). That line sits on merge commit `fbe1fbc` (`origin/team_c_sai` into
+`feature/backend-integration`) and its reconciliation commit.
 **Milestone:** M2 evaluation (Modules 3 and 4 demonstrated, Modules 1-6 integrated)
 
 ---
@@ -15,13 +17,13 @@ integration fixes), on top of merge commit `fbe1fbc` (`origin/team_c_sai` into
 ## 1. Executive summary
 
 The integrated backend, database and AI layer are **functionally verified and safe to
-demonstrate**. After the AI package was merged, **131 automated tests pass on SQLite** (6
-skipped, all optional-dependency skips) and the external AI engine returns validated output
-for **all six operations** with the mock provider. The earlier **122-test PostgreSQL 16**
-run still stands for the pre-AI commit; it was **not** re-run after the AI merge because the
-local cluster would not stay up, so PostgreSQL coverage of the AI changes is unverified. The
-earlier live UAT (20 of 21 workflows against a real server and PostgreSQL) likewise applies
-to the pre-AI commit.
+demonstrate**. After the AI package and the Streamlit frontend were merged, **148 automated
+tests pass on SQLite** (6 skipped, all optional-dependency skips). The external AI engine
+returns validated output for **all six operations** with the mock provider, and the
+frontend's adapter passed **12/12 live checks** with the Streamlit script executing with
+**0 exceptions**. The earlier **122-test PostgreSQL 16** run still stands for the pre-AI
+commit; it was **not** re-run after the AI or frontend merges because the local cluster would
+not stay up, so PostgreSQL coverage of those changes is unverified.
 
 There is **one partial acceptance result** - the next-best-action recommendation has no
 channel field (FR-032, BUG-006) - and **no failures**.
@@ -59,11 +61,14 @@ unavailable integrations return `501` with a reason instead of pretending to wor
 
 | Environment | Command | Result |
 |---|---|---|
-| SQLite | `pytest -q` | **116 passed, 6 skipped** in 94.20 s |
-| PostgreSQL 16.15 | `pytest -q` with `TEST_DATABASE_URL` | **122 passed** in 88.26 s |
+| SQLite (after AI + frontend merge) | `pytest -q` | **148 passed, 6 skipped** in 59.22 s |
+| SQLite (after AI merge, before frontend) | `pytest -q` | **131 passed, 6 skipped** in 60.46 s |
+| SQLite (pre-AI baseline) | `pytest -q` | 116 passed, 6 skipped in 94.20 s |
+| PostgreSQL 16.15 (pre-AI baseline) | `pytest -q` with `TEST_DATABASE_URL` | 122 passed in 88.26 s |
 
-The 6 skips are the PostgreSQL-only module, which runs in the second command. Both runs
-include the five database-workspace drift tests added during the merge reconciliation.
+The 6 skips are the PostgreSQL-only module, which runs in the second command. The 17 new
+tests are the frontend adapter suite (`tests/test_frontend_compat.py`). The PostgreSQL run
+was **not** repeated after the AI or frontend merges: the local cluster would not stay up.
 
 ### 3.2 Live user acceptance
 
@@ -73,6 +78,11 @@ include the five database-workspace drift tests added during the merge reconcili
 | Passed | 20 |
 | Partial | 1 (UAT-15 → BUG-006) |
 | Failed | 0 |
+
+This UAT run predates the AI and frontend merges and was **not** repeated afterwards. It
+therefore describes the pre-AI backend. The frontend was verified separately by
+`scripts/check_frontend_integration.py` (12/12) and a headless `AppTest` run (0 exceptions);
+neither is a substitute for human acceptance of the eight UI requirements.
 
 ### 3.3 Requirement coverage
 
@@ -89,18 +99,21 @@ include the five database-workspace drift tests added during the merge reconcili
 | Severity | Open | Closed |
 |---|---|---|
 | Critical | 0 | 2 |
-| High | 2 (both externally blocked) | 4 |
+| High | 1 (BUG-012, environment) | 6 |
 | Medium | 1 | 1 |
 | Low | 2 | 1 |
-| **Total** | **5** | **8** |
+| **Total** | **4** | **10** |
 
-The two open High defects are **BUG-008** (the `ai.*` package is not in the integrated
-repository) and **BUG-012** (Docker was never executed). Neither is a defect in the code
-that was delivered; both are blockers on verification.
+The open High defect is **BUG-012** (Docker was never executed). It is not a defect in the
+delivered code; it is a blocker on verification, and it now also covers the frontend image.
 
 The two database defects found during review, **BUG-009** (ER description contradicted the
 SQL) and **BUG-010** (`VARCHAR(15)` phone column), are closed by the merge reconciliation:
 the workspace artefacts are now generated from `backend/db.py` and a test fails on drift.
+
+**BUG-008** (`ai.*` absent) and **BUG-014** (frontend adapter mis-read the saved-analysis
+endpoint) are closed by their respective merges. BUG-014 is notable because the first smoke
+check reported a false pass; the check was tightened before the defect was closed.
 
 ---
 
@@ -139,11 +152,11 @@ This section is the reason the report is trustworthy.
 
 | # | Limitation | Why | Consequence |
 |---|---|---|---|
-| 1 | No Streamlit frontend | Not delivered by the frontend owner | 8 requirements (`FR-006`, `FR-017`, `FR-023`, `FR-027`, `FR-033`, `FR-044`, `FR-050`, `FR-051`) cannot be user-accepted |
-| 2 | E-mail send does not exist | Provider unconfirmed (D-05) | Returns `501`; must be labelled in the UI |
+| 1 | Frontend not browser-tested | Merged from Maheksaba's branch, but no human click-through was recorded | Adapter is unit-tested (17) and passed 12/12 live checks; AppTest executed the script with 0 exceptions. The 8 UI requirements still need human acceptance |
+| 2 | E-mail send does not exist | Provider unconfirmed (D-05) | Returns `501`; the UI surfaces that message instead of faking a send |
 | 3 | CRM synchronisation does not execute | Credentials unconfirmed (D-06) | Returns `501` and logs the attempt |
-| 4 | External AI package not integrated | `ai/` absent from the repository (BUG-008) | Only the heuristic engine runs; the adapter is proven against a stub |
-| 5 | Docker never started | No daemon on the test machine (BUG-012) | Deployment is unverified |
+| 4 | Real model calls unverified | No OpenAI/Gemini key used | The merged `ai.*` package passes its 6/6 gate with the **mock** provider only |
+| 5 | Docker never started | No daemon on the test machine (BUG-012) | Deployment is unverified, including the new frontend image |
 | 6 | No scoring accuracy figure | Metric and dataset undefined (D-13) | No accuracy percentage is claimed |
 | 7 | No performance figure | Measurement conditions undefined (D-11) | No latency compliance is claimed |
 | 8 | No UAT satisfaction score | Survey undefined (D-12) | No satisfaction percentage is claimed |
@@ -198,12 +211,16 @@ This section is the reason the report is trustworthy.
 | Environment and versions | [`evidence/2026-10-26-environment.txt`](evidence/2026-10-26-environment.txt) |
 | Pytest, SQLite | [`evidence/2026-10-26-pytest-sqlite.txt`](evidence/2026-10-26-pytest-sqlite.txt) |
 | Pytest, SQLite (post-merge) | [`evidence/2026-10-26-pytest-sqlite-postmerge.txt`](evidence/2026-10-26-pytest-sqlite-postmerge.txt) |
+| Pytest, SQLite (after frontend merge, 148 passed) | [`evidence/2026-10-27-pytest-sqlite-frontend.txt`](evidence/2026-10-27-pytest-sqlite-frontend.txt) |
 | Pytest, PostgreSQL | [`evidence/2026-10-26-pytest-postgres.txt`](evidence/2026-10-26-pytest-postgres.txt) |
 | Pytest, PostgreSQL (post-merge) | [`evidence/2026-10-26-pytest-postgres-postmerge.txt`](evidence/2026-10-26-pytest-postgres-postmerge.txt) |
 | Schema parity, generated DDL vs Alembic | [`evidence/2026-10-26-schema-parity.txt`](evidence/2026-10-26-schema-parity.txt) |
 | Live UAT, readable | [`evidence/2026-10-26-uat-live-postgres-heuristic.md`](evidence/2026-10-26-uat-live-postgres-heuristic.md) |
 | Live UAT, machine-readable | [`evidence/2026-10-26-uat-live-postgres-heuristic.json`](evidence/2026-10-26-uat-live-postgres-heuristic.json) |
 | Live UAT, post-merge | [`evidence/2026-10-26-uat-live-postmerge.md`](evidence/2026-10-26-uat-live-postmerge.md), [`evidence/2026-10-26-uat-live-postmerge.json`](evidence/2026-10-26-uat-live-postmerge.json) |
+| AI integration gate, external engine + mock provider | [`evidence/2026-10-27-ai-integration-gate.txt`](evidence/2026-10-27-ai-integration-gate.txt) |
+| Frontend integration gate, live API | [`evidence/2026-10-27-frontend-integration-gate.txt`](evidence/2026-10-27-frontend-integration-gate.txt) |
+| Streamlit app execution (AppTest) | [`evidence/2026-10-27-frontend-apptest.txt`](evidence/2026-10-27-frontend-apptest.txt) |
 | Test plan | [`test-plan.md`](test-plan.md) |
 | Test cases | [`test-cases.md`](test-cases.md) |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) |

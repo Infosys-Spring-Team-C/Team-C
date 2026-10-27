@@ -1,0 +1,25 @@
+# Frontend integration gate - Streamlit UI calls against a live Team-C API
+# Date: 2026-10-27
+# Command: $env:SALES_GENIE_BACKEND_BASE_URL="http://127.0.0.1:8010"; python scripts/check_frontend_integration.py
+# Python: Python 3.10.11
+# API: DATABASE_URL=sqlite:///./_frontend_smoke.db, AUTH_ENABLED=false,
+#      SALES_GENIE_AI_BACKEND=external, SALES_GENIE_LLM_PROVIDER=mock
+# Frontend code: Mahek Shaikh's app.py (UI unchanged) + frontend/api_compat.py
+# Note: the external engine used its deterministic mock provider; no real model call.
+#       The database was migrated with lembic upgrade head before the run.
+API: http://127.0.0.1:8010
+PASS health: external
+PASS create lead: lead_id=10
+PASS list leads: 10 lead(s)
+PASS analyze lead (POST): Needs discovery / low
+PASS analyze lead (GET saved): Needs discovery
+PASS score lead (POST): score=36 probability=None
+PASS score lead (GET latest)
+PASS generate outreach: A question about Smoke 6fbadc03 Ltd's priorities
+PASS load saved outreach
+PASS analytics dashboard: total=10
+PASS send email is honestly unavailable: No e-mail delivery provider is configured. Outreach content 
+PASS bulk CSV import: 2 imported, 0 duplicates, 0 invalid.
+
+12/12 frontend checks passed
+Every UI call was translated and answered by the Team-C API.

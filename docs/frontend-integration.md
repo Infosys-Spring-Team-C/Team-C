@@ -3,6 +3,14 @@
 This document is the hand-off for the Streamlit frontend. The backend is runnable and testable on
 its own; the frontend is expected to arrive through its own pull request.
 
+> **Status, 27 October 2026 - integrated.** Maheksaba's `frontend-ui` branch has been merged and
+> `frontend/api_compat.py` translates her UI's calls onto the canonical `/api/v1` contract. The
+> checklist in section 10 describes the canonical contract; the actual implementation status,
+> the three UI patches and the open items are in
+> [`docs/frontend-merge-notes.md`](frontend-merge-notes.md). Where this guide and the merged
+> adapter differ, the adapter is authoritative and the differences are recorded in the merge
+> notes.
+
 **Do not copy Mahidhar's temporary Streamlit app.** It is a demo with in-memory state and is not
 the final UI.
 

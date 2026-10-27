@@ -1,0 +1,6 @@
+# Frontend runtime dependencies, pinned to the versions this integration targets.
+# The UI is a client of the Team-C API; it does not talk to a database and it
+# holds no AI provider keys.
+streamlit==1.65.0
+requests==2.34.2
+pandas==2.3.3

@@ -1,13 +1,15 @@
-# SalesGenie AI - backend + PostgreSQL.
+# SalesGenie AI - PostgreSQL + backend API + Streamlit frontend.
 #
-# The Streamlit frontend is owned by Maheksaba and will be added as a separate
-# service once her pull request lands. It is deliberately not defined here so
-# this file describes only what this repository actually contains.
+# The frontend image is defined but has NOT been built in this environment
+# (no Docker daemon was available), so the `frontend` service is unverified -
+# see BUG-012 in docs/qa/bug-log.md. The API and database services were
+# validated with `docker compose config` only.
 #
 # Usage:
 #   copy .env.example .env    (then set POSTGRES_PASSWORD and JWT_SECRET)
 #   docker compose up --build
 #   curl http://127.0.0.1:8000/api/v1/health
+#   open http://127.0.0.1:8501
 
 services:
   db:
@@ -58,6 +60,27 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
+    restart: unless-stopped
+
+  frontend:
+    # UNVERIFIED: the image was never built here because no Docker daemon was
+    # available (BUG-012). The service is provided so the stack is complete and
+    # reviewable; do not claim it runs until it has been built.
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      # The UI talks to the API only. It never receives DB credentials or AI
+      # provider keys.
+      SALES_GENIE_BACKEND_BASE_URL: http://api:8000
+      SALES_GENIE_BACKEND_TOKEN: ${FRONTEND_BACKEND_TOKEN:-}
+      SALES_GENIE_BACKEND_EMAIL: ${FRONTEND_BACKEND_EMAIL:-}
+      SALES_GENIE_BACKEND_PASSWORD: ${FRONTEND_BACKEND_PASSWORD:-}
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
