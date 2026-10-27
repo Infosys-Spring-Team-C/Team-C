@@ -1,0 +1,52 @@
+Clean install from requirements-dev.txt - 2026-10-27
+
+Purpose: prove a fresh virtual environment can install the declared dependencies
+(including the new httpx2 pin) and run tests without the Starlette warning.
+
+Environment:
+  python -m venv <fresh temp directory>
+  pip install -r requirements-dev.txt
+  httpx2 2.14.0, pytest 9.1.1, fastapi 0.162.0, starlette 1.7.0
+
+Command:
+  python -m pytest -q tests/test_frontend_compat.py tests/test_api_leads.py
+
+Output:
+
+=================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_frontend_compat.py ________________
+ImportError while importing test module 'C:\projects\infosys\Team-C\tests\test_frontend_compat.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\ishar\AppData\Local\Programs\Python\Python310\lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_frontend_compat.py:10: in <module>
+    from frontend import api_compat
+frontend\api_compat.py:31: in <module>
+    import requests
+E   ModuleNotFoundError: No module named 'requests'
+=========================== short test summary info ===========================
+ERROR tests/test_frontend_compat.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.27s
+
+Diagnosis (BUG-016):
+  frontend/api_compat.py imports `requests`, and the adapter tests import that module,
+  but `requests` was only listed in frontend/requirements.txt. A developer who installed
+  the declared test tooling therefore could not collect tests/test_frontend_compat.py.
+  The working tree's existing virtual environments had `requests` installed for other
+  reasons, which is why the defect only surfaced in a fresh environment.
+
+Fix:
+  requirements-dev.txt now pins requests==2.34.2 with a comment explaining that it is
+  needed to import the adapter in tests and that the backend runtime does not use it.
+
+Re-run after the fix, same fresh environment:
+
+  python -m pytest -q tests/test_frontend_compat.py tests/test_api_leads.py
+
+  .....................................                                    [100%]
+  37 passed in 24.23s
+
+Result: a clean environment built only from requirements-dev.txt collects and passes
+the frontend adapter tests. No Starlette deprecation warning is printed.

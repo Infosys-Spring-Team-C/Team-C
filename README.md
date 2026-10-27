@@ -385,6 +385,6 @@ identity. It is not attributed to M Doran.
 | [`salesgenie-db-workspace/README.md`](salesgenie-db-workspace/README.md) | Database deployment baseline: DDL, ER diagram, DB-only Compose |
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
 | [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the milestone review |
-| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 15 defects with severity, reproduction and status |
+| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 16 defects with severity, reproduction and status |
 | [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
 | [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 40-request Postman collection |

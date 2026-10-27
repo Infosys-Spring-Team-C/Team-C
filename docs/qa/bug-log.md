@@ -4,7 +4,7 @@
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
 **Open defects:** 1 (0 Critical, 0 High, 0 Medium, 1 Low)
-**Closed defects:** 14
+**Closed defects:** 15
 
 **Severity** - Critical: cannot start / data loss Â· High: a Must requirement unmet or the
 system states something untrue Â· Medium: a Should requirement unmet or a degraded
@@ -32,6 +32,7 @@ workflow Â· Low: cosmetic, documentation or no user-visible impact.
 | BUG-013 | `StarletteDeprecationWarning` from `TestClient` | Low | P3 | Closed (fixed) | Backend |
 | BUG-014 | Frontend adapter mis-read the saved-analysis endpoint | High | P1 | Closed (fixed, 12/12) | Lead (frontend adapter) |
 | BUG-015 | Frontend displayed a fabricated "Scoring Accuracy 98.4%" | High | P1 | Closed (fixed) | Lead (frontend) |
+| BUG-016 | Clean install could not collect the frontend adapter tests (`requests` missing) | Medium | P2 | Closed (fixed) | Lead (build) |
 
 ---
 
@@ -411,15 +412,53 @@ Evidence: `docs/qa/evidence/2026-10-27-browser-ui-check.txt`.
 
 ---
 
+### BUG-016 - Clean install could not collect the frontend adapter tests
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Medium / P2 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | NFR-011, TC-DEP-003 (install from declared dependencies) |
+| Found by | Clean virtual environment built from `requirements-dev.txt` |
+| Owner | Lead (build) |
+
+**Description.** `frontend/api_compat.py` imports `requests`, and
+`tests/test_frontend_compat.py` imports that module. `requests` was declared only in
+`frontend/requirements.txt`, so an environment installed from `requirements-dev.txt`
+alone failed during collection:
+
+```
+tests\test_frontend_compat.py:10: in <module>
+    from frontend import api_compat
+frontend\api_compat.py:31: in <module>
+    import requests
+E   ModuleNotFoundError: No module named 'requests'
+```
+
+**Why it was not seen earlier.** Every developer machine and the CI-style test
+environment already had `requests` installed transitively, so the suite collected
+locally. Only a genuinely fresh environment exposed the gap.
+
+**Resolution.** `requirements-dev.txt` now pins `requests==2.34.2`, with a comment
+stating that it is required to import the adapter under test and that the backend
+runtime does not use it.
+
+**Verification.** In the same fresh environment:
+`python -m pytest -q tests/test_frontend_compat.py tests/test_api_leads.py` reports
+**37 passed**, with no Starlette deprecation warning. Evidence:
+`docs/qa/evidence/2026-10-27-clean-install.txt`.
+
+---
+
 ## 4. Defect trend
 
 | Status | Count |
 |---|---|
-| Closed | 14 |
+| Closed | 15 |
 | Open | 1 |
-| **Total** | **15** |
+| **Total** | **16** |
 
-All 15 defects are listed in section 1 with the stage that found them. No defect has been
+All 16 defects are listed in section 1 with the stage that found them. No defect has been
 reopened, and every closed defect has a verification reference in its entry.
 
 The single open defect is BUG-011 (no way to dismiss a follow-up). It is a deliberate,

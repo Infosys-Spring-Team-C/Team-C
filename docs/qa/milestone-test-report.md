@@ -123,16 +123,18 @@ accepted because no human acceptance pass has been recorded.
 |---|---|---|
 | Critical | 0 | 2 |
 | High | 0 | 8 |
-| Medium | 0 | 2 |
+| Medium | 0 | 3 |
 | Low | 1 (BUG-011) | 2 |
-| **Total** | **1** | **14** |
+| **Total** | **1** | **15** |
 
 **BUG-012** (Docker never executed) is closed: both images built, all three Compose services
 became healthy, and the API migrated PostgreSQL. **BUG-006** (recommendation channel) is
 closed with contract and endpoint tests. **BUG-013** (Starlette deprecation warning) is
 closed by adding `httpx2` to the development requirements. **BUG-015** (a hard-coded
 "Scoring Accuracy 98.4%" in the UI) was found during the browser check and closed by
-replacing the card with the engine name reported by `/health`.
+replacing the card with the engine name reported by `/health`. **BUG-016** (a clean
+environment could not collect the adapter tests because `requests` was undeclared) was
+found by installing only `requirements-dev.txt` and closed by pinning `requests`.
 
 The two database defects found during review, **BUG-009** (ER description contradicted the
 SQL) and **BUG-010** (`VARCHAR(15)` phone column), remain closed by the merge reconciliation:

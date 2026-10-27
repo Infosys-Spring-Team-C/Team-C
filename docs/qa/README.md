@@ -23,7 +23,7 @@ estimated, inferred or copied from a plan.
 | Integration testing | [`integration-test-plan.md`](integration-test-plan.md) | API↔DB, API↔AI, API↔frontend contract, container topology |
 | AI quality validation | [`ai-quality-validation.md`](ai-quality-validation.md) | Rubric, determinism, boundary and invalid-output handling |
 | Regression testing | [`regression-suite.md`](regression-suite.md) | Exact commands, expected counts, triggers, triage |
-| Bug tracking | [`bug-log.md`](bug-log.md) | 15 defects with severity, reproduction, status |
+| Bug tracking | [`bug-log.md`](bug-log.md) | 16 defects with severity, reproduction, status |
 | User acceptance testing | [`uat-plan.md`](uat-plan.md), [`uat-results.md`](uat-results.md) | Personas, workflows, live execution results |
 | Milestone reporting | [`milestone-test-report.md`](milestone-test-report.md) | Summary, coverage, limitations, evidence index, sign-off |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) | Requirement → test case → automated test → status |
@@ -34,20 +34,25 @@ estimated, inferred or copied from a plan.
 
 | Signal | Value | Source |
 |---|---|---|
-| Automated tests, SQLite | **116 passed, 6 skipped** | `evidence/2026-10-26-pytest-sqlite-postmerge.txt` |
-| Automated tests, PostgreSQL 16 | **122 passed** | `evidence/2026-10-26-pytest-postgres-postmerge.txt` |
+| Automated tests, SQLite | **150 passed, 6 skipped** | `evidence/2026-10-27-pytest-sqlite-final.txt` |
+| Automated tests, PostgreSQL 16 | **156 passed** | `evidence/2026-10-27-pytest-postgres-open-defects.txt` |
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
 | Live UAT workflows | **20 passed, 1 partial, 0 failed** | `evidence/2026-10-26-uat-live-postmerge.md` |
-| Defects open | 5 (0 critical, 2 high, 1 medium, 2 low) | [`bug-log.md`](bug-log.md) |
-| Requirements fully verified | 33 of 53 FRs | [`traceability-matrix.md`](traceability-matrix.md) |
+| Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 | `evidence/2026-10-27-docker-compose-verification.txt` |
+| Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
+| Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
+| Defects open | 1 (0 critical, 0 high, 0 medium, 1 low) | [`bug-log.md`](bug-log.md) |
+| Requirements fully verified | 35 of 53 FRs | [`traceability-matrix.md`](traceability-matrix.md) |
 
 The 6 skipped tests are the PostgreSQL-only module; they run whenever
-`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 122 instead
-of 116.
+`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 156 instead
+of 150.
 
-These are the **post-merge** figures: the database contributor's branch
-(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026 and the canonical
-schema reconciled afterwards. See [`../database-merge-notes.md`](../database-merge-notes.md).
+These are the **final milestone** figures. The database contributor's branch
+(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026, the canonical
+schema was reconciled, and the AI and frontend packages were integrated on 27 October
+2026. See [`../database-merge-notes.md`](../database-merge-notes.md) and
+[`milestone-test-report.md`](milestone-test-report.md).
 
 ---
 
