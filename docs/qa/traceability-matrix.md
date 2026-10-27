@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-**Date:** 26 October 2026
+**Date:** 27 October 2026
 **Author:** Mohamed Isharak M
 **Source of requirements:** [`../SRS.md`](../SRS.md) - functional requirements `FR-001` to
 `FR-053` and acceptance criteria `AC-001` to `AC-030`
@@ -14,15 +14,18 @@
 
 | Verdict | Functional requirements (53) | Acceptance criteria (30) |
 |---|---|---|
-| PASS | 33 | 18 |
-| PARTIAL | 6 | 8 |
-| BLOCKED | 13 | 4 |
+| PASS | 35 | 19 |
+| PARTIAL | 5 | 7 |
+| BLOCKED | 12 | 4 |
 | NOT RUN | 1 | 0 |
 | FAIL | 0 | 0 |
 
-Every `BLOCKED` row is caused by one of three external constraints: the Streamlit frontend
-has not been delivered, the CRM credentials are unconfirmed (SRS D-06), or the scoring
-accuracy dataset and metric are undefined (SRS D-13). None is a hidden failure.
+The frontend was scored before it was merged. It now exists, the adapter passes 12/12 live
+checks, and the scoring screen was exercised in a browser. Only the requirements that were
+directly observed end to end have moved to `PASS` (`FR-032`, `FR-033`, `AC-019`). Rows whose
+note still says "no UI" are **awaiting human acceptance**, not missing: the remaining
+`BLOCKED` rows are the CRM transport (SRS D-06), the undefined accuracy dataset (SRS D-13),
+or UI interactions that no one has clicked through yet. None is a hidden failure.
 
 ---
 
@@ -61,8 +64,8 @@ accuracy dataset and metric are undefined (SRS D-13). None is a hidden failure.
 | FR-029 | Produce a conversion-probability estimate | M4 | TC-M4-002 | `test_heuristic_never_returns_a_calibrated_probability` - returns `null` | PARTIAL |
 | FR-030 | Score on engagement, fit, intent, decision readiness | M4 | TC-M4-003 | `test_score_factor_bounds_are_validated`, UAT-14 | PASS |
 | FR-031 | Store scores with history | M4 | TC-M4-004 | `test_scoring_history_is_append_only` | PASS |
-| FR-032 | Recommendation with timing, channel and content | M4 | TC-M4-005 | UAT-15 - no channel field, **BUG-006** | PARTIAL |
-| FR-033 | Display score and recommendation in the UI | M4 | TC-M4-003, TC-M4-005 | No UI | BLOCKED |
+| FR-032 | Recommendation with timing, channel and content | M4 | TC-M4-005 | `test_recommendation_endpoint` - `suggested_channel` present; BUG-006 closed | PASS |
+| FR-033 | Display score and recommendation in the UI | M4 | TC-M4-003, TC-M4-005 | Browser check: score 20/100 and recommended action rendered; AppTest 0 exceptions | PASS |
 | FR-034 | Accuracy validation against an agreed dataset | M4 | TC-M4-007 | SRS D-13 unresolved | BLOCKED |
 | FR-035 | Degraded outcome on missing data | M4 | TC-M4-006 | `test_missing_information_lowers_the_score` | PASS |
 | FR-036 | Summarise meeting/call notes | M5 | TC-M5-001, TC-M5-005 | `test_conversation_summary_persists_interaction`, UAT-16 | PASS |
@@ -108,7 +111,7 @@ accuracy dataset and metric are undefined (SRS D-13). None is a hidden failure.
 | AC-016 | Score and probability produced within the agreed scale | TC-M4-001, TC-M4-002 | PARTIAL - score yes, probability withheld |
 | AC-017 | All four factors considered | TC-M4-003 | PASS |
 | AC-018 | Scores stored and retrievable | TC-M4-004 | PASS |
-| AC-019 | Recommendations include timing, channel and content | TC-M4-005 | PARTIAL - **BUG-006** |
+| AC-019 | Recommendations include timing, channel and content | TC-M4-005 | PASS - `suggested_channel` added; BUG-006 closed |
 | AC-020 | Scoring accuracy meets the agreed target | TC-M4-007 | BLOCKED - D-13 |
 | AC-021 | Notes produce summary, points and actions | TC-M5-001, TC-M5-002, TC-M5-003 | PASS |
 | AC-022 | Empty/invalid notes give a clear message, no fabrication | TC-M5-005, TC-M5-006 | PASS |

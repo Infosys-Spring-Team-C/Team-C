@@ -283,3 +283,14 @@ def test_auth_error_is_actionable(transport):
     ok, data = api_compat.api_get("http://api.local", "/leads/")
     assert ok is False
     assert "SALES_GENIE_BACKEND_TOKEN" in data["error"]
+
+
+def test_frontend_does_not_claim_a_fabricated_accuracy():
+    """The UI must not present a made-up accuracy figure (SRS D-10, D-13)."""
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "frontend" / "app.py").read_text(
+        encoding="utf-8"
+    )
+    assert "Scoring Accuracy" not in source
+    assert "98.4%" not in source

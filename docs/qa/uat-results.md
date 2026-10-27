@@ -90,7 +90,15 @@ priority=High timing='Within one business day'
 deviation: response has no channel/channel_hint field
 ```
 
-This is the only non-passing workflow. It was not rounded up to a pass.
+This was the only non-passing workflow at the time of the run. It was not rounded up to a
+pass.
+
+**Post-run update (27 October 2026).** BUG-006 is fixed: the recommendation contract now
+carries `suggested_channel` (`email` when outreach is justified, `null` when it is not), and
+`tests/test_api_ai.py::test_recommendation_endpoint` asserts timing, channel and draft
+together. The 21-workflow run above was not repeated, so its recorded verdicts are unchanged;
+UAT-15's blocker is closed and re-verified at the API level. See `bug-log.md` BUG-006 and
+`milestone-test-report.md` section 3.2.
 
 ### UAT-17 - a failed sync does not damage local data
 

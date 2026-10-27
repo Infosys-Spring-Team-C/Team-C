@@ -605,7 +605,7 @@ def fetch_leads():
     return []
 
 # Fetch active leads initially if needed (fast 2s timeout for instant check)
-health_ok, _ = api_get("/health", timeout=2)
+health_ok, health_payload = api_get("/health", timeout=2)
 if not st.session_state.leads_cache and health_ok:
     fetch_leads()
 
@@ -715,6 +715,10 @@ with st.sidebar:
 # ==============================================================================
 status_color = "#34D399" if health_ok else "#F59E0B"
 status_text = "● Backend Active" if health_ok else "⚠️ Backend Offline"
+# Never show a made-up accuracy figure.  The card names the engine the backend
+# actually reports; it makes no claim about calibration or accuracy (SRS D-10).
+_engine = health_payload.get("ai_backend") if isinstance(health_payload, dict) else None
+engine_label = str(_engine or "heuristic").replace("_", " ").title()
 
 st.markdown(f"""
 <div class="brand-hero">
@@ -730,8 +734,8 @@ st.markdown(f"""
                 <div style="font-weight: 800; color: {status_color}; font-size: 0.95rem;">{status_text}</div>
             </div>
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px 18px; text-align: center;">
-                <div style="font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700; letter-spacing: 0.5px;">Scoring Accuracy</div>
-                <div style="font-weight: 800; color: #38BDF8; font-size: 0.95rem;">98.4%</div>
+                <div style="font-size: 0.72rem; text-transform: uppercase; color: #94A3B8; font-weight: 700; letter-spacing: 0.5px;">Scoring Engine</div>
+                <div style="font-weight: 800; color: #38BDF8; font-size: 0.95rem;">{engine_label}</div>
             </div>
         </div>
     </div>

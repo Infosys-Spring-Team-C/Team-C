@@ -92,7 +92,7 @@ performed.
 | `generate_outreach` | channel, subject, body, call to action, rationale, facts used, assumptions, missing context | Yes |
 | `score_lead` | 0-100 score, category, four factors, signals, missing information, next action, band, note | Yes |
 | `summarize_conversation` | executive summary, discussion points, requirements, pain points, objections, buying signals, action items, follow-up, source note | Yes |
-| `recommend` | related lead, action, reason, evidence, priority, timing, follow-up draft | Yes, except an explicit channel field - **BUG-006** |
+| `recommend` | related lead, action, reason, evidence, priority, timing, channel, follow-up draft | Yes - the backend derives the channel (`email` or `null`) and adds `suggested_channel`; BUG-006 closed |
 | `interpret_analytics` | observations only, with a caveat | Yes |
 
 ---
@@ -187,7 +187,7 @@ None of these is reported as passing.
 | Adapter error translation | PASS |
 | External package integration (mock provider) | PASS - gate 6/6 |
 | Calibrated probability | PARTIAL by design |
-| Recommendation channel field | PARTIAL - BUG-006 |
+| Recommendation channel field | PASS - `suggested_channel` added to the contract and asserted by `test_recommendation_endpoint` |
 | Accuracy metric | BLOCKED - D-13 |
 | Real model calls (OpenAI/Gemini) | UNVERIFIED - no key used |
 

@@ -219,9 +219,16 @@ class ExternalAIEngine:
         response, info = self._run("follow_up", {"lead": lead})
         if response.result is None:
             raise IntelligenceError("AI package returned no recommendation.")
-        return self._validate(
+        result = self._validate(
             Recommendation, self._dump(response.result), "a recommendation"
-        ), info
+        )
+        # The package's Recommendation has no channel field (FR-032).  Derive one
+        # only when the package also produced a follow-up draft, so the channel
+        # always matches content the user can actually send.
+        channel = "email" if result.follow_up_draft and result.priority != "Low" else None
+        if channel is not None:
+            result = result.model_copy(update={"suggested_channel": channel})
+        return result, info
 
     def score_lead(self, lead: dict[str, Any]) -> tuple[LeadScoreResult, ExecutionInfo]:
         started = time.perf_counter()

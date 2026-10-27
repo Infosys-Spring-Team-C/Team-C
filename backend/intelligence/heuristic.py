@@ -585,13 +585,17 @@ class HeuristicEngine:
         if needs and engagement:
             priority, action = "High", "Send a tailored recap and request a discovery meeting."
             timing = "Within one business day"
+            channel = "email"
         elif needs or engagement:
             priority, action = "Medium", "Validate the recorded signal and propose a next step."
             timing = "Within three business days"
+            channel = "email"
         else:
             priority = "Low"
             action = "Enrich the record before outreach; no verified signal is available."
             timing = None
+            # No outreach is justified yet, so no channel is asserted.
+            channel = None
 
         contact = _text(lead.get("contact_name")).split()
         first_name = contact[0] if contact else "there"
@@ -607,6 +611,7 @@ class HeuristicEngine:
             supporting_evidence=evidence,
             priority=priority,
             suggested_timing=timing,
+            suggested_channel=channel,
             follow_up_draft=(
                 f"Hi {first_name}, thanks for the context. Would it be useful to align on the "
                 "next discovery step?"

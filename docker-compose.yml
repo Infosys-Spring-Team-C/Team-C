@@ -1,9 +1,9 @@
 # SalesGenie AI - PostgreSQL + backend API + Streamlit frontend.
 #
-# The frontend image is defined but has NOT been built in this environment
-# (no Docker daemon was available), so the `frontend` service is unverified -
-# see BUG-012 in docs/qa/bug-log.md. The API and database services were
-# validated with `docker compose config` only.
+# The stack was built and started on 27 October 2026 (Docker 29.7.2): all three
+# services report healthy, the API applies the Alembic migration to PostgreSQL,
+# and the frontend answers /_stcore/health. See
+# docs/qa/evidence/2026-10-27-docker-compose-verification.txt.
 #
 # Usage:
 #   copy .env.example .env    (then set POSTGRES_PASSWORD and JWT_SECRET)
@@ -63,9 +63,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    # UNVERIFIED: the image was never built here because no Docker daemon was
-    # available (BUG-012). The service is provided so the stack is complete and
-    # reviewable; do not claim it runs until it has been built.
+    # Built and verified on 27 October 2026; see BUG-012 in docs/qa/bug-log.md.
     build:
       context: .
       dockerfile: frontend/Dockerfile

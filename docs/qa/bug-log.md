@@ -1,15 +1,15 @@
 # Defect Log
 
-**Date:** 26 October 2026
+**Date:** 27 October 2026
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
-**Open defects:** 4 (0 Critical, 1 High, 1 Medium, 2 Low)
-**Closed defects:** 10
+**Open defects:** 1 (0 Critical, 0 High, 0 Medium, 1 Low)
+**Closed defects:** 14
 
-**Severity** - Critical: cannot start / data loss · High: a Must requirement unmet or the
-system states something untrue · Medium: a Should requirement unmet or a degraded
-workflow · Low: cosmetic, documentation or no user-visible impact.
-**Priority** - P1 before this milestone · P2 before final delivery · P3 when time allows.
+**Severity** - Critical: cannot start / data loss Â· High: a Must requirement unmet or the
+system states something untrue Â· Medium: a Should requirement unmet or a degraded
+workflow Â· Low: cosmetic, documentation or no user-visible impact.
+**Priority** - P1 before this milestone Â· P2 before final delivery Â· P3 when time allows.
 
 ---
 
@@ -22,62 +22,27 @@ workflow · Low: cosmetic, documentation or no user-visible impact.
 | BUG-003 | Alembic "migration" was a `create_all()` stub | High | P1 | Fixed | Database |
 | BUG-004 | Heuristic engine persisted a fabricated `conversion_probability` | High | P1 | Fixed | AI / Backend |
 | BUG-005 | Analytics KPIs were stored as `0` rather than being undefined | High | P1 | Fixed | Backend |
-| BUG-006 | Recommendation has no channel field (FR-032) | Medium | P2 | Open | Backend |
+| BUG-006 | Recommendation has no channel field (FR-032) | Medium | P2 | Closed (fixed) | Backend |
 | BUG-007 | External AI adapter used the wrong request keys | High | P1 | Fixed | AI integration |
 | BUG-008 | `ai.*` package absent from the integrated repository | High | P1 | Closed (package merged, gate 6/6) | AI (Mahidhar) / Lead |
 | BUG-009 | Database owner's ER description contradicts her `init_schema.sql` | Medium | P2 | Closed (merge reconciliation) | Database (Sai) / Lead |
 | BUG-010 | `VARCHAR(15)` phone column is too short | Low | P3 | Closed (merge reconciliation) | Database |
-| BUG-011 | No `PATCH /api/v1/follow-ups/{id}` endpoint | Low | P3 | Open | Backend |
-| BUG-012 | Docker image and Compose stack never verified | High | P1 | Open | DevOps / Lead |
-| BUG-013 | `StarletteDeprecationWarning` from `TestClient` | Low | P3 | Open | Backend |
+| BUG-011 | No `PATCH /api/v1/follow-ups/{id}` endpoint | Low | P3 | Open - accepted limitation | Backend |
+| BUG-012 | Docker image and Compose stack never verified | High | P1 | Closed (fixed, stack verified) | DevOps / Lead |
+| BUG-013 | `StarletteDeprecationWarning` from `TestClient` | Low | P3 | Closed (fixed) | Backend |
 | BUG-014 | Frontend adapter mis-read the saved-analysis endpoint | High | P1 | Closed (fixed, 12/12) | Lead (frontend adapter) |
+| BUG-015 | Frontend displayed a fabricated "Scoring Accuracy 98.4%" | High | P1 | Closed (fixed) | Lead (frontend) |
 
 ---
 
 ## 2. Open defects
-
-### BUG-006 - Recommendation has no channel field
-
-| Field | Value |
-|---|---|
-| Severity / Priority | Medium / P2 |
-| Status | Open |
-| Requirement | FR-032, AC-019 |
-| Found by | Live UAT (UAT-15) |
-| Owner | Backend |
-
-**Description.** FR-032 requires next-best-action recommendations to include *follow-up
-timing, channel and content strategy*. `GET /api/v1/recommendations/{lead_id}` returns
-`suggested_timing` and `follow_up_draft` but has no field identifying a channel (e-mail,
-call, LinkedIn).
-
-**Reproduction.**
-
-```powershell
-$t = (Invoke-RestMethod -Method Post -Uri "$b/api/v1/auth/token" `
-      -Body @{username=$e; password=$p}).access_token
-Invoke-RestMethod -Uri "$b/api/v1/recommendations/$leadId" `
-  -Headers @{Authorization="Bearer $t"} | ConvertTo-Json -Depth 5
-```
-
-**Expected.** A field naming the recommended channel.
-**Actual.** No channel key; the JSON contains `recommended_action`, `reason`,
-`supporting_evidence`, `priority`, `suggested_timing`, `follow_up_draft`, `status`.
-
-**Impact.** The dashboard can show *when* and *what* but not *through which channel*.
-`AC-019` cannot be marked PASS.
-
-**Suggested fix.** Add `suggested_channel: Literal["email", "phone", "linkedin", "meeting"]`
-to the `Recommendation` contract and populate it in both engines; extend the contract test.
-
----
 
 ### BUG-011 - No `PATCH /api/v1/follow-ups/{id}` endpoint
 
 | Field | Value |
 |---|---|
 | Severity / Priority | Low / P3 |
-| Status | Open - deferred |
+| Status | Open - accepted limitation |
 | Requirement | FR-052 (panel interaction) |
 | Found by | Contract review |
 | Owner | Backend |
@@ -88,55 +53,15 @@ one as done or dismissed, so the panel is read-only.
 **Impact.** A user cannot clear a follow-up. Acceptable for the milestone; not for a
 production workflow.
 
+**Why it stays open.** `FR-052` requires a follow-up recommendations panel, which exists and
+is populated from stored Module 4 output. Dismissing a follow-up is an interaction that the
+SRS does not require. Implementing it needs a new persisted table (or a `dismissed_at`
+column), which would change the eight-table schema, the migration, the generated ER diagram
+and the schema tests. That is a deliberate scope decision, not an oversight, and it is
+recorded here rather than silently closed.
+
 **Suggested fix.** Persist a `follow_up_state` table keyed by lead, or add a `dismissed_at`
 column to `lead_scores`.
-
----
-
-### BUG-012 - Docker image and Compose stack never verified
-
-| Field | Value |
-|---|---|
-| Severity / Priority | High / P1 |
-| Status | Open - environment blocker |
-| Requirement | NFR-011, SRS D-14 |
-| Found by | Test execution |
-| Owner | DevOps / Project lead |
-
-**Description.** `Dockerfile` and `docker-compose.yml` exist and are reviewed, but the
-Docker daemon was not running on the test machine, so neither `docker build` nor
-`docker compose up` was executed.
-
-```
-failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
-```
-
-**Impact.** Deployment is **unverified**. Nothing in this repository claims the container
-image works.
-
-**Resolution.** Start Docker, run `docker compose up --build -d`, confirm
-`/api/v1/health` returns `status: ok`, then close this defect with the output attached.
-
----
-
-### BUG-013 - `StarletteDeprecationWarning` from `TestClient`
-
-| Field | Value |
-|---|---|
-| Severity / Priority | Low / P3 |
-| Status | Open - accepted |
-| Requirement | - |
-| Found by | Test run warnings |
-| Owner | Backend |
-
-**Description.** `fastapi.testclient` emits
-`StarletteDeprecationWarning: Using 'httpx' with 'starlette.testclient' is deprecated;
-install 'httpx2' instead.` The suite passes; the warning is noise.
-
-**Impact.** None on behaviour. It obscures real warnings in the output.
-
-**Suggested fix.** Move the test client to the supported transport when the dependency set
-is next updated.
 
 ---
 
@@ -238,6 +163,36 @@ written definition field while SRS D-10 is open. `conversion_rate` is computed.
 
 ---
 
+### BUG-006 - Recommendation has no channel field
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Medium / P2 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | FR-032, AC-019 |
+| Found by | Live UAT (UAT-15) |
+| Owner | Backend |
+
+**Description.** FR-032 requires next-best-action recommendations to include *follow-up
+timing, channel and content strategy*. `GET /api/v1/recommendations/{lead_id}` returned
+`suggested_timing` and `follow_up_draft` but had no field identifying a channel (e-mail,
+call, LinkedIn).
+
+**Resolution.** `Recommendation.suggested_channel` is now part of the contract, typed as
+`Literal["email", "phone", "linkedin", "meeting"] | None`. The deterministic engine sets
+`email` for High and Medium priorities and `None` for Low, where no outreach is justified.
+The external engine derives `email` only when the AI package actually produced a follow-up
+draft and the priority is not Low, so the channel always matches content the user can send.
+No channel is guessed.
+
+**Verification.** `test_recommendation_priority_follows_evidence`,
+`test_recommendation_endpoint` (asserts timing, channel and draft together) and
+`test_external_recommendation_derives_a_channel_from_the_draft`. Full suite: **156 passed**
+against PostgreSQL 16.15. Evidence:
+`docs/qa/evidence/2026-10-27-pytest-postgres-open-defects.txt`.
+
+---
+
 ### BUG-007 - External AI adapter used the wrong request keys
 
 | Field | Value |
@@ -329,6 +284,70 @@ width. The value is asserted by the generated-SQL tests.
 
 ---
 
+### BUG-012 - Docker image and Compose stack never verified
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | NFR-011, SRS D-14 |
+| Found by | Test execution |
+| Owner | DevOps / Project lead |
+
+**Description.** `Dockerfile` and `docker-compose.yml` existed and were reviewed, but the
+Docker daemon was not running on the test machine, so neither `docker build` nor
+`docker compose up` was executed.
+
+```
+failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
+```
+
+**Impact.** Deployment was unverified, and nothing in the repository claimed the container
+image worked.
+
+**Resolution.** Docker Desktop 29.7.2 was started. `docker compose build` built both images
+(`team-c-api`, `team-c-frontend`), and `docker compose up -d` brought up `db`, `api` and
+`frontend` with all three reporting `healthy`. The API applied the Alembic migration to
+PostgreSQL 16 and `/api/v1/health` returned `status: ok`, `database: ok`,
+`database_dialect: postgresql`, `auth_enabled: true`. The Streamlit container answered
+`/_stcore/health` with `ok`.
+
+**Additional hardening.** A `.dockerignore` was added. Without it, `COPY . .` would have
+baked `.git/`, local databases and a developer's `.env` into the API image.
+
+**Verification.** `scripts/check_frontend_integration.py` passed **12/12** against the
+containerised API with authentication enabled, using a user created with
+`backend.cli create-user`. The UI was then loaded in a browser: it reported
+"Backend Active", computed a score and rendered the uncalibrated-probability notice.
+Evidence: `docs/qa/evidence/2026-10-27-docker-compose-verification.txt`,
+`docs/qa/evidence/2026-10-27-browser-ui-check.txt`.
+
+---
+
+### BUG-013 - `StarletteDeprecationWarning` from `TestClient`
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Low / P3 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | - |
+| Found by | Test run warnings |
+| Owner | Backend |
+
+**Description.** `fastapi.testclient` emitted
+`StarletteDeprecationWarning: Using 'httpx' with 'starlette.testclient' is deprecated;
+install 'httpx2' instead.` The suite passed; the warning obscured real warnings.
+
+**Resolution.** `httpx2==2.14.0` was added to `requirements-dev.txt`, which is what
+Starlette's `TestClient` prefers. The 156-test PostgreSQL run now reports **1 warning**
+(a JWT key-length warning from a test that deliberately uses a short key) and no Starlette
+deprecation warning.
+
+**Related cleanup.** `alembic.ini` gained `path_separator = os`, removing two Alembic
+`DeprecationWarning`s about legacy `prepend_sys_path` / `version_locations` splitting.
+
+---
+
 ### BUG-014 - Frontend adapter mis-read the saved-analysis endpoint
 
 | Field | Value |
@@ -357,11 +376,38 @@ GET row shape; the GET branch selects the newest row and returns an honest 404 w
 analysis exists; the saved-outreach lookup now selects the newest draft instead of the
 oldest.
 
-**Verification.** `tests/test_frontend_compat.py`: **17 passed** (two new shape tests plus a
-list/empty test). `scripts/check_frontend_integration.py`: **12/12**. `AppTest`: **0
-exceptions, 0 errors**. Evidence:
+**Verification.** `tests/test_frontend_compat.py`: **18 passed** (two shape tests, a
+list/empty test, and the integrity test added with BUG-015). `scripts/check_frontend_integration.py`:
+**12/12**. `AppTest`: **0 exceptions, 0 errors**. Evidence:
 `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt`,
 `docs/qa/evidence/2026-10-27-frontend-apptest.txt`.
+
+---
+
+### BUG-015 - Frontend displayed a fabricated "Scoring Accuracy 98.4%"
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 27 October 2026 |
+| Requirement | SRS D-10, D-13; project rule against fabricated model accuracy |
+| Found by | Browser check of the containerised UI |
+| Owner | Lead (frontend) |
+
+**Description.** The hero header of `frontend/app.py` rendered a hard-coded card:
+`Scoring Accuracy` / `98.4%`. No accuracy measurement exists, no calibration model is
+configured, and the backend explicitly reports `conversion_probability: null`. The number
+was presentation-only and would have been read as a measured model property.
+
+**Resolution.** The card now reads the `ai_backend` value from `GET /health` and displays
+`Scoring Engine` / `Heuristic` (or the configured engine name). It makes no accuracy or
+calibration claim. A static regression test
+(`test_frontend_does_not_claim_a_fabricated_accuracy`) fails if `98.4%` or
+`Scoring Accuracy` returns to the source.
+
+**Verification.** `AppTest`: **0 exceptions, 0 errors**; the rendered header contains
+`Scoring Engine` and no `98.4`. Browser check of the rebuilt container shows the same.
+Evidence: `docs/qa/evidence/2026-10-27-browser-ui-check.txt`.
 
 ---
 
@@ -369,14 +415,14 @@ exceptions, 0 errors**. Evidence:
 
 | Status | Count |
 |---|---|
-| Closed | 10 |
-| Open | 4 |
-| **Total** | **14** |
+| Closed | 14 |
+| Open | 1 |
+| **Total** | **15** |
 
-All 14 defects are listed in section 1 with the stage that found them. No defect has been
+All 15 defects are listed in section 1 with the stage that found them. No defect has been
 reopened, and every closed defect has a verification reference in its entry.
 
-The four open defects are unchanged in nature: FR-032 has no channel field (BUG-006), no
-`PATCH /follow-ups/{id}` (BUG-011), the Docker stack was never built (BUG-012), and a
-third-party deprecation warning remains in the test client (BUG-013). None is a regression
-from the AI or frontend merges.
+The single open defect is BUG-011 (no way to dismiss a follow-up). It is a deliberate,
+documented scope decision: `FR-052` requires the panel, which works, and adding persisted
+dismissal state would change the eight-table schema and its generated artefacts.
+

@@ -103,7 +103,7 @@ the runner.
 | UAT-12 | rep | Generate outreach, edit it, open the history | Draft generated, edit accepted, history contains the campaign | FR-019 to FR-026 |
 | UAT-13 | rep | Press Send | Refused with `501 email_transport_not_configured`; nothing sent | FR-024, AC-015 |
 | UAT-14 | rep | Score a lead | 0-100 score, four factors summing to 100 points, `conversion_probability` null | FR-028 to FR-031 |
-| UAT-15 | rep | Read the next-best-action | Action, reason, priority, timing and a follow-up draft | FR-032, AC-019 |
+| UAT-15 | rep | Read the next-best-action | Action, reason, priority, timing, channel and a follow-up draft | FR-032, AC-019 |
 | UAT-16 | rep | Log a call and read the summary | Summary, key points and action items returned and stored | FR-036 to FR-039 |
 | UAT-17 | rep | Attempt a CRM sync | `501 crm_not_configured`, a failure row in the sync log, lead still present | FR-043, FR-045 |
 | UAT-18 | manager | Open the dashboard data | Conversion rate has a value; the three undefined KPIs are `null` + `pending_definition` | FR-046 to FR-050 |

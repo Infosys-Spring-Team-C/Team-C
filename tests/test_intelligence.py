@@ -212,8 +212,11 @@ def test_recommendation_priority_follows_evidence(engine):
     low, _ = engine.recommend({"company_name": "Bare Co"})
     assert high.priority == "High"
     assert high.supporting_evidence
+    assert high.suggested_channel == "email"
     assert low.priority == "Low"
     assert low.supporting_evidence == []
+    # No outreach is justified for an empty record, so no channel is invented.
+    assert low.suggested_channel is None
 
 
 def test_analytics_interpretation_is_observation_only(engine):
@@ -286,6 +289,15 @@ def test_external_score_maps_eight_factors_onto_four_dimensions():
     }
     assert result.conversion_probability is None
     assert info.model == "rule-based"
+
+
+def test_external_recommendation_derives_a_channel_from_the_draft():
+    engine = ExternalAIEngine(
+        Settings(ai_backend="external", ai_provider="mock", jwt_secret="x" * 32)
+    )
+    result, _ = engine.recommend(RICH_LEAD)
+    assert result.follow_up_draft
+    assert result.suggested_channel == "email"
 
 
 def test_unsupported_backend_is_a_configuration_error(monkeypatch):

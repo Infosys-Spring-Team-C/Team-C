@@ -1,0 +1,50 @@
+Docker Compose stack verification - 2026-10-27
+
+Purpose: build both images and run db + api + frontend together, then exercise the
+frontend compatibility layer against the containerised API with AUTH_ENABLED=true.
+
+Docker: 29.7.2 / Docker Desktop (linux engine)
+Command: docker compose build; docker compose up -d
+
+=== docker compose ps ===
+NAME                SERVICE    STATUS                   PORTS
+team-c-api-1        api        Up 4 minutes (healthy)   127.0.0.1:8000->8000/tcp
+team-c-db-1         db         Up 4 minutes (healthy)   5432/tcp
+team-c-frontend-1   frontend   Up 3 minutes (healthy)   127.0.0.1:8501->8501/tcp
+
+=== docker images (team-c) ===
+team-c-frontend:latest 3543fc3ff63f 572MB
+team-c-api:latest 77ed1bf2b221 216MB
+
+=== GET http://127.0.0.1:8000/api/v1/health ===
+{
+    "status":  "ok",
+    "version":  "1.0.0",
+    "database":  "ok",
+    "database_dialect":  "postgresql",
+    "auth_enabled":  true,
+    "ai_backend":  "heuristic",
+    "ai_status":  "ok"
+}
+
+=== GET http://127.0.0.1:8501/_stcore/health ===
+ok
+
+=== frontend compatibility gate (auth enabled, admin user) ===
+Command: python scripts/check_frontend_integration.py
+API: http://127.0.0.1:8000
+PASS health: heuristic
+PASS create lead: lead_id=7
+PASS list leads: 7 lead(s)
+PASS analyze lead (POST): Nurture / medium
+PASS analyze lead (GET saved): Nurture
+PASS score lead (POST): score=40 probability=None
+PASS score lead (GET latest)
+PASS generate outreach: A question about Smoke 9551276d Ltd's priorities
+PASS load saved outreach
+PASS analytics dashboard: total=7
+PASS send email is honestly unavailable: No e-mail delivery provider is configured. Outreach content 
+PASS bulk CSV import: 2 imported, 0 duplicates, 0 invalid.
+
+12/12 frontend checks passed
+Every UI call was translated and answered by the Team-C API.

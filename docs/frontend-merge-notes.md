@@ -42,10 +42,11 @@ repository must not carry databases or environment templates from a second
 stack (and the `.env.example` contained a placeholder API key path that would
 confuse this project's secret policy).
 
-## 3. The three lead patches to `app.py`
+## 3. The four lead patches to `app.py`
 
 Her screens are unchanged. The patches are the minimum needed to point the UI at
-the canonical API and to stop it inventing a conversion percentage.
+the canonical API, to stop it inventing a conversion percentage, and to stop it
+advertising a fabricated accuracy figure.
 
 1. **Import and base URL.** `resolve_backend_url()` now calls
    `api_compat.resolve_base_url()`, which reads `SALES_GENIE_BACKEND_BASE_URL`
@@ -59,9 +60,15 @@ the canonical API and to stop it inventing a conversion percentage.
    *"No calibrated model configured"* when the value is `None`. This matters:
    SRS D-10/D-13 leave the model undefined, so a `0%` would have been a
    fabricated probability.
+4. **Fabricated accuracy card.** The hero header displayed a hard-coded
+   `Scoring Accuracy 98.4%`. No accuracy measurement exists. The card now shows
+   `Scoring Engine` and the engine name reported by `GET /health`
+   (`Heuristic` in this deployment). This also required keeping the health
+   payload instead of discarding it (`health_ok, health_payload = api_get(...)`).
+   See BUG-015.
 
 All other differences are whitespace only. A diff of her `app.py` against the
-merged file should show exactly these three areas.
+merged file should show exactly these four areas.
 
 ## 4. Dependencies
 
@@ -111,18 +118,22 @@ tested file. The full endpoint map is in `frontend/README.md` and
 
 | Check | Result |
 |---|---|
-| `tests/test_frontend_compat.py` | **17 passed** (adapter translation only, no server) |
+| `tests/test_frontend_compat.py` | **18 passed** (adapter translation plus the accuracy-integrity test) |
 | `scripts/check_frontend_integration.py` against a live API | **12/12 checks passed** |
 | `frontend/app.py` executed headlessly with Streamlit `AppTest` | **0 exceptions, 0 errors**; all 8 action buttons and 11 selects rendered |
-| Full backend suite after the merge | see `docs/qa/milestone-test-report.md` |
-| Browser click-through | **not performed**; the gate calls the same functions the screens call |
+| Full backend suite after the merge | **156 passed** on PostgreSQL 16.15 (see `docs/qa/milestone-test-report.md`) |
+| Docker Compose stack (db + api + frontend) | all three services **healthy**; `12/12` gate passed with `AUTH_ENABLED=true` |
+| Browser click-through | **performed**: loaded the containerised UI, computed a score, saw the `n/a` probability notice and the `Heuristic` engine card |
 
-Evidence: `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt` and
-`docs/qa/evidence/2026-10-27-frontend-apptest.txt`.
+Evidence: `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt`,
+`docs/qa/evidence/2026-10-27-frontend-apptest.txt`,
+`docs/qa/evidence/2026-10-27-docker-compose-verification.txt` and
+`docs/qa/evidence/2026-10-27-browser-ui-check.txt`.
 
-The live run used SQLite, `AUTH_ENABLED=false`, and the external AI engine with
-its **mock** provider. It proves the request/response translation; it does not
-prove real-model output or the Docker frontend image (BUG-012).
+The stack ran on PostgreSQL 16 with `AUTH_ENABLED=true` and a real login created
+through `backend.cli create-user`, so the token and email/password paths were
+exercised against a live server, not only in unit tests. The AI engine was the
+deterministic heuristic; real-model output remains unverified (no key was used).
 
 A defect found during this verification is worth recording: the first version of
 the adapter treated `GET /leads/{id}/insights` as a single object, but the
@@ -133,13 +144,9 @@ a default placeholder text can no longer count as a pass.
 
 ## 8. Open items
 
-* The frontend service in `docker-compose.yml` is defined but its image was
-  never built here (no Docker daemon).
-* Authentication was exercised only with `AUTH_ENABLED=false`; the token and
-  email/password paths are implemented and unit-tested but not run against a
-  live auth-enabled server.
-* Her UI was not visually reviewed in a browser during this merge; only its
-  imports and the adapter contract were executed.
+* Real OpenAI and Gemini output remains unverified: the AI package was exercised
+  with its **mock** provider only (see BUG-008). The frontend integration itself
+  does not depend on the provider.
 * `.streamlit/config.toml` disables CORS and XSRF protection
   (`enableCORS = false`, `enableXsrfProtection = false`). That is acceptable for
   a local demo behind a loopback port, but it must be revisited before any
@@ -149,3 +156,9 @@ a default placeholder text can no longer count as a pass.
   2025-12-31. The pinned version still supports it, so the UI runs now, but a
   future Streamlit upgrade will require replacing those arguments in `app.py`.
   This is a maintenance item for the frontend owner, not a defect in this merge.
+* A viewport screenshot of the UI could not be captured because the automation
+  desktop window was not visible; the browser evidence is the page's rendered
+  text (`docs/qa/evidence/2026-10-27-browser-ui-check.txt`).
+* BUG-011 (no way to dismiss a follow-up) remains open as an accepted
+  limitation; see `docs/qa/bug-log.md`.
+

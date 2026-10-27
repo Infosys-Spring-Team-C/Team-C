@@ -67,7 +67,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M4-002 | Conversion probability is only produced by a calibrated model | Unit + API | FR-029, AC-016 | `test_intelligence.py::test_heuristic_never_returns_a_calibrated_probability`, `test_api_ai.py::test_scoring_is_explainable_and_never_fakes_probability` | PARTIAL - returns `null` by design; FR-029 blocked by D-09/D-13 |
 | TC-M4-003 | All four SRS factors are present and explainable | Unit + UAT | FR-030, AC-017 | `test_intelligence.py::test_score_factor_bounds_are_validated`, UAT-14 | PASS |
 | TC-M4-004 | Scores are stored and history is append-only | API | FR-031, AC-018 | `test_api_ai.py::test_scoring_history_is_append_only` | PASS |
-| TC-M4-005 | Recommendation includes follow-up timing, channel and content | API + UAT | FR-032, AC-019 | `test_api_ai.py::test_recommendation_endpoint`, UAT-15 | PARTIAL - no channel field (**BUG-006**) |
+| TC-M4-005 | Recommendation includes follow-up timing, channel and content | API + UAT | FR-032, AC-019 | `test_api_ai.py::test_recommendation_endpoint`, UAT-15 | PASS - `suggested_channel` added; BUG-006 closed |
 | TC-M4-006 | Missing data produces a defined degraded outcome | Unit | FR-035 | `test_intelligence.py::test_missing_information_lowers_the_score` | PASS |
 | TC-M4-007 | Accuracy is measured on an agreed dataset with an agreed metric | UAT | FR-034, AC-020 | Not executable | BLOCKED - SRS D-13 unresolved |
 | TC-M4-008 | Scoring requires a write role | API | NFR-005 | `test_api_ai.py::test_scoring_requires_write_role` | PASS |
@@ -155,8 +155,8 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 | ID | Case | Level | Req | Automated / method | Verdict |
 |---|---|---|---|---|---|
-| TC-DEP-001 | The Docker image builds from the Dockerfile | Deployment | NFR-011 | `docker build` | BLOCKED - daemon unavailable (**BUG-012**) |
-| TC-DEP-002 | `docker compose up` starts API and PostgreSQL and health returns ok | Deployment | NFR-011 | `docker compose up -d` | BLOCKED - daemon unavailable (**BUG-012**) |
+| TC-DEP-001 | The Docker image builds from the Dockerfile | Deployment | NFR-011 | `docker compose build` | PASS - `team-c-api` and `team-c-frontend` built |
+| TC-DEP-002 | `docker compose up` starts API and PostgreSQL and health returns ok | Deployment | NFR-011 | `docker compose up -d` | PASS - three services healthy; `/api/v1/health` ok |
 | TC-DEP-003 | Dependencies install from scratch into a clean virtual environment | Deployment | NFR-011 | `pip install -r requirements-dev.txt` in a new venv, then full suite | PASS |
 
 ---

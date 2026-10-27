@@ -112,6 +112,10 @@ class Recommendation(BaseModel):
     supporting_evidence: list[EvidenceItem] = Field(default_factory=list)
     priority: Literal["High", "Medium", "Low"]
     suggested_timing: str | None = None
+    #: FR-032 requires a channel alongside timing and content strategy.
+    #: ``None`` means no channel is justified (for example, enrich the record
+    #: first), never a guessed one.
+    suggested_channel: Literal["email", "phone", "linkedin", "meeting"] | None = None
     status: Literal["Open", "Completed", "Dismissed"] = "Open"
     follow_up_draft: str | None = None
 

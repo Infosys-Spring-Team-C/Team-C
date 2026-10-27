@@ -23,7 +23,7 @@ estimated, inferred or copied from a plan.
 | Integration testing | [`integration-test-plan.md`](integration-test-plan.md) | API↔DB, API↔AI, API↔frontend contract, container topology |
 | AI quality validation | [`ai-quality-validation.md`](ai-quality-validation.md) | Rubric, determinism, boundary and invalid-output handling |
 | Regression testing | [`regression-suite.md`](regression-suite.md) | Exact commands, expected counts, triggers, triage |
-| Bug tracking | [`bug-log.md`](bug-log.md) | 13 defects with severity, reproduction, status |
+| Bug tracking | [`bug-log.md`](bug-log.md) | 15 defects with severity, reproduction, status |
 | User acceptance testing | [`uat-plan.md`](uat-plan.md), [`uat-results.md`](uat-results.md) | Personas, workflows, live execution results |
 | Milestone reporting | [`milestone-test-report.md`](milestone-test-report.md) | Summary, coverage, limitations, evidence index, sign-off |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) | Requirement → test case → automated test → status |

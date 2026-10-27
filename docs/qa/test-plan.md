@@ -74,8 +74,8 @@ analytics, the API layer, and the integration points between them.
 | ENV-1 | Local, Python 3.10.11, SQLite in a temporary file | Fast regression loop, default CI-style run | Available |
 | ENV-2 | Local, Python 3.10.11, PostgreSQL 16.15 on an isolated cluster (port 55432) | Production-dialect verification, JSONB, real constraints | Available |
 | ENV-3 | Local Uvicorn server on `127.0.0.1:8011` backed by PostgreSQL `salesgenie_uat` | Live UAT, real HTTP | Available |
-| ENV-4 | Docker Compose (api + postgres) | Deployment verification (SRS D-14) | **Blocked** - Docker daemon unavailable on the test machine |
-| ENV-5 | Streamlit frontend + backend | UI integration and full E2E | **Blocked** - frontend not delivered |
+| ENV-4 | Docker Compose (db + api + frontend) | Deployment verification (SRS D-14) | Available - built and started with Docker 29.7.2 |
+| ENV-5 | Streamlit frontend + backend | UI integration and full E2E | Available - 12/12 gate, AppTest and browser check |
 
 Exact versions are recorded in [`evidence/2026-10-26-environment.txt`](evidence/2026-10-26-environment.txt).
 
@@ -105,15 +105,16 @@ Exact versions are recorded in [`evidence/2026-10-26-environment.txt`](evidence/
 
 | # | Criterion | Target | Actual |
 |---|---|---|---|
-| 1 | All automated tests pass on SQLite | 100% | Met - 116 passed, 6 skipped |
-| 2 | All automated tests pass on PostgreSQL | 100% | Met - 122 passed |
-| 3 | No open Critical defects; every open High defect has an external blocker | 0 critical | Met - 0 critical; 2 High, both externally blocked (BUG-008, BUG-012) |
+| 1 | All automated tests pass on SQLite | 100% | Met - 150 passed, 6 skipped |
+| 2 | All automated tests pass on PostgreSQL | 100% | Met - 156 passed |
+| 3 | No open Critical defects; every open High defect has an external blocker | 0 critical | Met - 0 critical, 0 High; one Low accepted (BUG-011) |
 | 4 | Every Must-priority FR has a verdict | 100% | Met - see traceability matrix |
 | 5 | Live UAT covers all six modules | 100% of workflows executed | Met - 21 workflows |
-| 6 | Every failed or partial result is logged as a defect | 100% | Met - BUG-006 logged from UAT-15 |
-| 7 | Deployment verified | Docker Compose starts | **Not met** - BUG-012, environment blocked |
+| 6 | Every failed or partial result is logged as a defect | 100% | Met - BUG-006 logged from UAT-15 and now fixed |
+| 7 | Deployment verified | Docker Compose starts | Met - db, api and frontend healthy |
 
-Criterion 7 is the only unmet exit criterion. It is recorded as a known limitation, not
+All exit criteria are met. The single open defect is Low and accepted (BUG-011); the
+remaining limitations are recorded in `milestone-test-report.md` section 5 rather than
 waived silently.
 
 ---

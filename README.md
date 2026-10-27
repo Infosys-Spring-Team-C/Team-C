@@ -31,8 +31,8 @@ no replacement UI is included here.
 | Analytics + follow-ups | Implemented; undefined KPIs return `null` | `tests/test_api_ai.py` |
 | CRM synchronisation transport | **Not implemented** - dry-run + failure logging only (SRS D-06) | `/api/v1/crm/*` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
-| Docker packaging | Files complete and `docker compose config` validated; image **not built** here because the Docker daemon was unavailable | `Dockerfile`, `docker-compose.yml` |
-| Streamlit frontend | Merged from Maheksaba's `frontend-ui` branch; UI unchanged, API boundary adapted | `frontend/`, `tests/test_frontend_compat.py`, `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt` |
+| Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
+| Streamlit frontend | Merged from Maheksaba's `frontend-ui` branch; UI unchanged, API boundary adapted; 12/12 live checks and a browser check | `frontend/`, `tests/test_frontend_compat.py`, `docs/qa/evidence/2026-10-27-browser-ui-check.txt` |
 
 Full details: [`docs/audit-report.md`](docs/audit-report.md),
 [`docs/test-report.md`](docs/test-report.md),
@@ -177,12 +177,15 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Compose starts PostgreSQL 16 with a persistent named volume and the API. The API container waits
-for the database health check, runs `alembic upgrade head`, then starts uvicorn. Only port 8000 is
-published, bound to `127.0.0.1`.
+Compose starts PostgreSQL 16 with a persistent named volume, the API and the Streamlit
+frontend. The API container waits for the database health check, runs `alembic upgrade head`,
+then starts uvicorn. Ports 8000 (API) and 8501 (UI) are published, bound to `127.0.0.1`.
 
-`docker compose config` was validated in this environment. **The image was not built here** because
-the Docker daemon was not running; see `docs/test-report.md` for the exact blocker.
+This stack was **built and started** on 27 October 2026 with Docker 29.7.2; all three
+services reported healthy and the API migrated PostgreSQL. Create the first login with
+`docker compose exec api python -m backend.cli create-user --email you@example.com --role admin`
+and set `FRONTEND_BACKEND_EMAIL` / `FRONTEND_BACKEND_PASSWORD` in `.env` for the UI. See
+`docs/qa/evidence/2026-10-27-docker-compose-verification.txt`.
 
 ---
 
@@ -291,8 +294,10 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
   --email qa.admin@example.com --password "<UAT password>"
 ```
 
-Verified result: **20 of 21 workflows passed, 1 partial, 0 failed** (the partial is the missing
-recommendation channel, BUG-006).
+Verified result: **20 of 21 workflows passed, 1 partial, 0 failed**. The partial was the
+missing recommendation channel (BUG-006); the contract now carries `suggested_channel` and
+`test_recommendation_endpoint` asserts it. The 21-workflow run itself was not repeated after
+that fix.
 
 ### Database deployment baseline
 
@@ -321,13 +326,16 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
 4. **No live CRM transport.** Requests are validated, dry-run previews work, failures are logged.
 5. **Real model calls are unverified.** The external `ai.*` package passes its gate with the
    deterministic **mock** provider; no OpenAI or Gemini key was used.
-6. **Docker image not built in this environment** (daemon unavailable). Compose configuration was
-   validated with `docker compose config`; the frontend image is defined but unbuilt.
+6. **Docker verified locally, not production-hardened.** The Compose stack builds and runs, but
+   there is no TLS termination, secrets manager or orchestrator configuration.
 7. **No CI workflow.** Adding one requires a decision on the target database service; the exact
    proposed workflow is in `docs/contributor-actions.md`.
-8. **Frontend is merged but not browser-tested.** The adapter is unit-tested and passed 11/11 live
-   checks; no human click-through was recorded. See
+8. **No human usability acceptance of the UI.** The adapter passed 12/12 live checks, `AppTest`
+   ran with 0 exceptions, and the scoring path was exercised in a browser; the eight UI
+   requirements have not been formally accepted by a person. See
    [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md).
+9. **Follow-ups are read-only.** There is no dismissal endpoint (BUG-011). FR-052 only requires
+   the panel, which works.
 
 ---
 
@@ -377,6 +385,6 @@ identity. It is not attributed to M Doran.
 | [`salesgenie-db-workspace/README.md`](salesgenie-db-workspace/README.md) | Database deployment baseline: DDL, ER diagram, DB-only Compose |
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
 | [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the milestone review |
-| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 13 defects with severity, reproduction and status |
+| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 15 defects with severity, reproduction and status |
 | [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
 | [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 40-request Postman collection |

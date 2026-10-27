@@ -164,8 +164,9 @@ why. Evidence: `TC-M4-006`.
 *Precondition:* a scored prospect.
 *Steps:* request the recommendation.
 *Acceptance:* `AC-019`
-*Verdict:* **PARTIAL** - timing and content strategy are returned, but no explicit channel
-field. Logged as **BUG-006**. Evidence: `TC-M4-005`, UAT-15.
+*Verdict:* **PASS** - timing, channel and content strategy are returned. The channel is
+`email` when outreach is justified and `null` when it is not. BUG-006 closed. Evidence:
+`TC-M4-005`, UAT-15, `test_recommendation_endpoint`.
 
 ### SCN-M4-06 - Accuracy against a labelled dataset
 *Precondition:* an agreed test dataset and metric.
@@ -238,8 +239,10 @@ Evidence: `TC-M6-007`.
 *Precondition:* a Streamlit frontend.
 *Steps:* open the dashboard; compare KPI cards and Kanban with the database.
 *Acceptance:* `AC-026`, `AC-028`, `AC-029`, `AC-030`
-*Verdict:* **BLOCKED** - the frontend is not delivered. The API data required by every
-widget is verified; the rendering is not.
+*Verdict:* **PARTIAL** - the frontend now exists and the dashboard tab renders under
+`AppTest` with 0 exceptions; the KPI cards and Kanban have not been visually compared with
+the database in a human acceptance pass. Evidence:
+`evidence/2026-10-27-frontend-apptest.txt`, `evidence/2026-10-27-browser-ui-check.txt`.
 
 ---
 
@@ -259,8 +262,10 @@ successful Alembic upgrade **and downgrade** on PostgreSQL 16. Evidence: `TC-DB-
 
 ### SCN-X-03 - Deployment
 *Acceptance:* `NFR-011`
-*Verdict:* **BLOCKED** - Docker daemon unavailable; image build and Compose startup never
-executed. Logged as **BUG-012**. Evidence: `TC-DEP-001`, `TC-DEP-002`.
+*Verdict:* **PASS** - Docker 29.7.2 built both images and `docker compose up -d` brought up
+`db`, `api` and `frontend`; all three health checks passed and the API migrated PostgreSQL.
+BUG-012 closed. Evidence: `TC-DEP-001`, `TC-DEP-002`,
+`evidence/2026-10-27-docker-compose-verification.txt`.
 
 ### SCN-X-04 - Performance against the 5-second target
 *Acceptance:* `NFR-001`

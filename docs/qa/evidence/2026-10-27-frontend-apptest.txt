@@ -1,15 +1,33 @@
-# Streamlit app execution check (AppTest, no browser)
-# Date: 2026-10-27
-# Command: python C:\Users\ishar\AppData\Local\Temp\opencode\apptest_frontend.py
-# API: http://127.0.0.1:8010 (SQLite, AUTH_ENABLED=false, external AI + mock provider)
-# Streamlit: 1.65.0, Python 3.10.11
-# This runs frontend/app.py headlessly and executes the same top-level code the
-# browser session executes. It is not a human click-through.
-EXCEPTIONS: 0
-ERRORS: 0
-SIDEBAR_MARKDOWN: 8
-BUTTONS: ['? Save Prospect to Database', '? Generate AI Company Profile Analysis', '? Compute Qualification Score (0-100)', '? Generate Personalized Email', '? Regenerate Variation', '? Dispatch to Prospect', '? Refresh Live Dashboard Analytics', '? Refresh Prospect Directory']
-SELECTBOXES: ['Industry Sector', 'Company Size', 'Funding Stage', 'Pipeline Stage', 'Industry Filter', 'Stage Filter', 'Target Lead for Intelligence Analysis:', 'Active Prospect for Outreach:', 'Tone of Voice', 'Theme Palette', 'Select Prospect']
-TEXT_INPUTS: ['Company Name *', 'Contact Person Name *', 'Business Email *', 'Direct Phone', '? Search Company / Contact', 'Subject', 'FastAPI URL']
-DATAFRAMES: 2
-METRICS: 0
+Streamlit AppTest - 2026-10-27
+
+Purpose: execute frontend/app.py headlessly after the BUG-015 accuracy-card patch,
+against the containerised API with authentication enabled.
+
+Environment:
+  API: http://127.0.0.1:8000 (Docker Compose, AUTH_ENABLED=true)
+  Login supplied through SALES_GENIE_BACKEND_EMAIL / SALES_GENIE_BACKEND_PASSWORD
+  (local verification user, not recorded here)
+
+Command: python apptest_check.py
+Script:  AppTest.from_file("frontend/app.py", default_timeout=60).run()
+
+Output (the two use_container_width deprecation notices are the documented
+maintenance item and are reproduced verbatim):
+
+  2026-10-27 19:58:34.354 Please replace `use_container_width` with `width`.
+  `use_container_width` will be removed after 2025-12-31.
+  For `use_container_width=True`, use `width='stretch'`.
+
+  exceptions: 0
+  errors: 0
+  buttons: 8
+  selectboxes: 11
+  has Scoring Engine card: True
+  has 98.4: False
+  has Heuristic label: True
+
+Interpretation:
+  - The script executes without an uncaught exception or st.error call.
+  - The hero header renders the engine name from /health and no longer contains
+    the fabricated "98.4" figure (BUG-015).
+  - All 8 action buttons and 11 select boxes are present.

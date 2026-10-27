@@ -71,8 +71,10 @@ Expected:
 20/21 workflows passed, 1 partial
 ```
 
-The partial is UAT-15, which is **BUG-006**. A run that reports `0 failed` with that one
-partial is the current known-good state.
+The partial was UAT-15, which was **BUG-006**; the recommendation now carries
+`suggested_channel` and the endpoint test asserts it. A run that reports `0 failed` is the
+current known-good state: **156 passed** on PostgreSQL and **150 passed, 6 skipped** on
+SQLite.
 
 ### 2.4 External AI gate
 

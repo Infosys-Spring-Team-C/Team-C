@@ -1,0 +1,71 @@
+Browser check of the containerised Streamlit UI - 2026-10-27
+
+Purpose: load the real frontend in a browser against the Docker Compose stack
+(PostgreSQL + API with AUTH_ENABLED=true + Streamlit) and exercise the scoring
+path, instead of relying on Streamlit's AppTest alone.
+
+Environment:
+  docker compose up -d  (db, api, frontend - all healthy)
+  http://127.0.0.1:8501 loaded in the desktop browser
+  Logged-in identity supplied through SALES_GENIE_BACKEND_EMAIL/PASSWORD
+  (admin@example.com, local verification user)
+
+Actions performed in the page:
+  1. Loaded the app and confirmed "Backend Active".
+  2. Opened the "Lead Intelligence & Scoring" tab.
+  3. Pressed "Compute Qualification Score (0-100)".
+  4. Re-opened the tab and read the rendered result.
+
+Captured page text (document.body.innerText, verbatim):
+
+  ENGINE STATUS
+  ● Backend Active
+  SCORING ENGINE
+  Heuristic
+
+  🧠 AI Lead Intelligence & Qualification Engine
+  Deep strategic company profiling, conversion probability rating, and next-best-action guidance.
+
+  Target Lead for Intelligence Analysis:
+
+  🔍 Generate AI Company Profile Analysis
+  ⭐ Compute Qualification Score (0-100)
+
+  🎯 Qualification Score & Conversion Rating
+  20
+  SCORE OUT OF 100
+  STATUS CLASSIFICATION
+  ❄️ COLD (20/100) — LOW PRIORITY
+  CONVERSION PROBABILITY
+  n/a
+  No calibrated model configured
+  📋 Qualification Rationale
+
+  No calibrated conversion model is configured. The band is an uncalibrated heuristic and must not be read as a statistical probability.
+
+  👉 Recommended Next Action
+
+  Enrich the record or use a lightweight, permissioned nurture touch.
+
+  🔍 Deep Scoring Factor Attribution
+
+  💡 Strategic Business Opportunities & Company Intelligence
+  ℹ️
+
+  Company profile analysis is pending. Click Generate AI Company Profile Analysis above.
+
+Observations:
+  - The score card renders a real score from the API (20/100) and the
+    recommended next action.
+  - Conversion probability is "n/a" with the explanation "No calibrated model
+    configured", as required by SRS D-10/D-13; no invented percentage is shown.
+  - The header reports "Scoring Engine / Heuristic" (read from /health) instead
+    of the hard-coded "Scoring Accuracy 98.4%" that was removed in this branch.
+  - No uncaught page error was observed during the interaction.
+
+Limitations:
+  - A viewport screenshot could not be captured because the automation desktop
+    window is not visible in this session; the text above is the accessibility
+    / DOM output of the live page.
+  - The remaining tabs (Outreach Studio, Executive Dashboard) were covered by
+    scripts/check_frontend_integration.py (12/12) rather than by clicking here.
