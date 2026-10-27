@@ -281,8 +281,14 @@ $ docker compose config --quiet
 COMPOSE_CONFIG_EXIT=0
 ```
 
-**Not verified:** image build, container start, migration inside the container, health check
-execution. This must be repeated on a machine with Docker running.
+**Not verified at the time of this run:** image build, container start, migration inside the
+container, health check execution.
+
+**Update, 27 October 2026.** Docker Desktop 29.7.2 became available. `docker compose build`
+built both images and `docker compose up -d` started `db`, `api` and `frontend`; all three
+reported healthy, the migration ran inside the API container and `/api/v1/health` returned
+`status: ok`. See `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` and BUG-012
+in `docs/qa/bug-log.md`.
 
 ---
 

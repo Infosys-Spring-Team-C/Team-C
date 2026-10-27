@@ -102,6 +102,7 @@ call, and AppTest executes the same top-level script a browser session runs.
 * The UI's "funding stage" and "pipeline stage" lists are her original labels;
   the adapter maps them onto the canonical lifecycle stages and ignores a label
   it cannot map rather than guessing.
-* `docker compose` starts the API and database only. The frontend service is
-  defined but the image was never built here (no Docker daemon), so that path is
-  unverified - see BUG-012 in `docs/qa/bug-log.md`.
+* `docker compose` starts PostgreSQL, the API and the frontend. The stack was
+  built and verified on 27 October 2026: all three services report healthy and
+  the UI answers `/_stcore/health`. See BUG-012 in `docs/qa/bug-log.md` and
+  `docs/qa/evidence/2026-10-27-docker-compose-verification.txt`.

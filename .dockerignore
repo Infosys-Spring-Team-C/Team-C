@@ -1,0 +1,33 @@
+# Keep the build context small and make sure no local state or secret ever
+# reaches an image layer. `.env` is deliberately excluded: compose injects
+# configuration through the environment, never through a baked-in file.
+.git/
+.github/
+.gitignore
+.dockerignore
+.env
+.env.*
+!.env.example
+
+# Python byte-code, caches and local virtual environments
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Local databases and scratch artefacts
+*.db
+*.sqlite
+*.sqlite3
+_mig_test.db
+
+# Frontend test output
+frontend/.streamlit/secrets.toml
+
+# Documentation and evidence are not needed at runtime
+docs/

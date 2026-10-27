@@ -17,8 +17,8 @@ document records what was connected, how it was exercised, and what actually hap
 | INT-B | FastAPI → SQLite | API calls SQLAlchemy | Same code path, file database | Verified |
 | INT-C | FastAPI → heuristic AI engine | In-process call | `backend.intelligence.get_engine()` | Verified |
 | INT-D | FastAPI → external AI package | In-process adapter | `ExternalAIEngine`, package `ai.*` | Verified against a stub only - **BUG-008** |
-| INT-E | FastAPI → Streamlit frontend | HTTP + JSON | Documented contract | **Blocked** - frontend not delivered |
-| INT-F | API container → PostgreSQL container | TCP | Docker Compose | **Blocked** - no daemon - **BUG-012** |
+| INT-E | FastAPI → Streamlit frontend | HTTP + JSON | Documented contract | Verified - 12/12 gate with auth enabled, plus a browser check |
+| INT-F | API container → PostgreSQL container | TCP | Docker Compose | Verified - db, api and frontend healthy; migration applied |
 | INT-G | API → CRM provider | HTTPS | Not configured | **Blocked** - SRS D-06 |
 | INT-H | API → e-mail provider | SMTP/API | Not configured | **Blocked** - SRS D-05 |
 
@@ -114,11 +114,16 @@ No frontend exists yet. This is `TC-E2E-003`.
 
 ## 6. INT-F - Container topology
 
-**Method:** `Dockerfile` and `docker-compose.yml` are present and reviewed.
+**Method:** `docker compose build` followed by `docker compose up -d`, then the health
+endpoints and the frontend compatibility gate.
 
-**Result:** BLOCKED. The Docker daemon was not available on the test machine, so neither
-`docker build` nor `docker compose up` was executed. Nothing about container startup is
-claimed. **BUG-012**.
+**Result:** PASS. Docker 29.7.2 built both images. `db`, `api` and `frontend` all became
+healthy; the API applied the Alembic migration to PostgreSQL and returned `status: ok`,
+`database: ok`, `database_dialect: postgresql`, `auth_enabled: true`; the Streamlit
+container answered `/_stcore/health` with `ok`. The live gate passed 12/12 with a real
+login. Evidence:
+[`evidence/2026-10-27-docker-compose-verification.txt`](evidence/2026-10-27-docker-compose-verification.txt).
+BUG-012 is closed.
 
 ---
 
@@ -157,7 +162,7 @@ data over HTTP and asserts each step. Result:
 |---|---|
 | Workflows executed | 21 |
 | Passed | 20 |
-| Partial | 1 (FR-032 channel, BUG-006) |
+| Partial | 1 (FR-032 channel, BUG-006 - fixed after this run) |
 | Failed | 0 |
 
 Evidence: [`evidence/2026-10-26-uat-live-postgres-heuristic.md`](evidence/2026-10-26-uat-live-postgres-heuristic.md).

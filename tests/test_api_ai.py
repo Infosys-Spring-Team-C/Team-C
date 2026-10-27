@@ -308,6 +308,10 @@ def test_recommendation_endpoint(client, lead, rep):
     assert body["priority"] in {"High", "Medium", "Low"}
     assert body["recommended_action"]
     assert body["lead_id"] == lead["id"]
+    # FR-032: timing, channel and content strategy must all be present.
+    assert body["suggested_channel"] in {"email", "phone", "linkedin", "meeting"}
+    assert body["suggested_timing"]
+    assert body["follow_up_draft"]
 
 
 def test_analytics_insights_are_labelled_observations(client, lead, rep):

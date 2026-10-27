@@ -54,8 +54,11 @@ docker compose config --quiet                         # exit 0
 
 Exact commands, environment versions and output: `docs/test-report.md`.
 
-**Not verified in this environment:** Docker image build and container start (daemon unavailable),
-`SALES_GENIE_AI_BACKEND=external` (package not merged), real provider calls, browser CORS.
+**Verified on 27 October 2026:** Docker image build, Compose startup (db + api + frontend),
+authentication enabled, and `SALES_GENIE_AI_BACKEND=external` with the mock provider.
+
+**Still unverified:** real provider calls (no OpenAI/Gemini key was used) and a human
+usability pass over the frontend screens.
 
 ## Review notes
 

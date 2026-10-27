@@ -2,3 +2,6 @@
 -r requirements.txt
 pytest==9.1.1
 httpx==0.28.1
+# Starlette's TestClient prefers `httpx2`; without it every test run prints a
+# StarletteDeprecationWarning (BUG-013).
+httpx2==2.14.0

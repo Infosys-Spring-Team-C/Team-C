@@ -157,7 +157,7 @@ each relationship.
 | Eight tables, six foreign keys | Implemented and tested (`tests/test_schema.py`, `tests/test_postgres.py`) |
 | Migration up and down on PostgreSQL 16 | Verified |
 | DDL and ER diagram match the ORM | Enforced by `tests/test_db_workspace.py` |
-| Docker execution of this Compose file | **Not verified** - no Docker daemon was available on the test machine (BUG-012) |
+| Docker execution of this Compose file | **Not executed** - the root Compose stack was verified instead; this DB-only file has not been started |
 
 Nothing in this folder claims that the Compose stack has been started. The SQL is verified
 against a real PostgreSQL 16 instance through the migration and test suite; the container

@@ -1,0 +1,24 @@
+PostgreSQL verification - 2026-10-27
+
+Purpose: full suite against a real PostgreSQL 16.15 cluster after the BUG-006,
+BUG-013 and BUG-015 fixes, and after the Docker Compose stack was verified.
+
+Environment:
+  PostgreSQL 16.15 (local cluster, port 55433, database salesgenie_test)
+  TEST_DATABASE_URL=postgresql+psycopg://postgres@127.0.0.1:55433/salesgenie_test
+  JWT_SECRET=test-secret-value-0123456789 (test-only value)
+
+Command:
+  python -m pytest -q
+
+Output:
+........................................................................ [ 46%]
+........................................................................ [ 92%]
+............                                                             [100%]
+============================== warnings summary ===============================
+tests/test_api_auth.py::test_token_signed_with_wrong_secret_is_rejected
+  C:\Users\ishar\AppData\Local\Temp\opencode\venv-reqtest\lib\site-packages\jwt\api_jwt.py:149: InsecureKeyLengthWarning: The HMAC key is 25 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    return self._jws.encode(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+156 passed, 1 warning in 84.55s (0:01:24)
