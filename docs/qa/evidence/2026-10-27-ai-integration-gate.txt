@@ -1,0 +1,17 @@
+# AI integration gate - external engine with the mock provider
+# Date: 2026-10-27
+# Command: $env:SALES_GENIE_AI_BACKEND="external"; $env:SALES_GENIE_LLM_PROVIDER="mock"; python scripts/check_ai_integration.py
+# Python: Python 3.10.11
+# Package: ai/ as committed (Mahidhar Reddy), plus the maintainer's integration fixes
+# Note: the mock provider performs no network calls and needs no API key.
+#       Real OpenAI/Gemini calls remain unverified (no key used in CI).
+PASS analyze_lead: engine=external provider=mock model=deterministic-demo-v1 used_mock=True category=Qualified
+PASS generate_outreach: engine=external provider=mock model=deterministic-demo-v1 used_mock=True channel=Email
+PASS summarize_conversation: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+PASS recommend: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+PASS score_lead: engine=external provider=mock model=rule-based used_mock=False score=82 factors=8 probability=None
+PASS interpret_analytics: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+
+6/6 operations passed
+External engine produced validated output for every operation.
+Note: this used the mock provider. Real model calls are still unverified.

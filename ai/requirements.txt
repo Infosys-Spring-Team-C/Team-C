@@ -1,0 +1,20 @@
+# AI-layer runtime dependencies, pinned to the versions verified in Team-C.
+# Install with:  pip install -r ai/requirements.txt
+#
+# The backend runs without this file: it defaults to the offline heuristic
+# engine. Only set SALES_GENIE_AI_BACKEND=external after installing these.
+#
+# numpy/scikit-learn are NOT required. ai/scoring/models.py imports numpy
+# lazily and only when a trained estimator is actually attached; no fitted
+# model ships with this package.
+
+# Required by the package (schemas, graph state, provider boundary).
+pydantic==2.14.1
+
+# Optional: enables the LangGraph execution path. Without it the package uses
+# its built-in sequential fallback, which produces the same validated output.
+langgraph==1.2.18
+
+# Optional: real model providers. The mock provider needs no SDK and no key.
+openai==3.39.0
+google-genai==2.33.0

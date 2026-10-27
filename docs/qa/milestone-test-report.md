@@ -5,8 +5,9 @@
 **Report date:** 26 October 2026
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer and Project Lead
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Commit under test:** merge commit `fbe1fbc` (`origin/team_c_sai` into
-`feature/backend-integration`) plus the reconciliation commit that follows it
+**Commit under test:** `feature/ai-integration` at `3864e86` (the AI package merge and its
+integration fixes), on top of merge commit `fbe1fbc` (`origin/team_c_sai` into
+`feature/backend-integration`) and its reconciliation commit
 **Milestone:** M2 evaluation (Modules 3 and 4 demonstrated, Modules 1-6 integrated)
 
 ---
@@ -14,17 +15,20 @@
 ## 1. Executive summary
 
 The integrated backend, database and AI layer are **functionally verified and safe to
-demonstrate**. 122 automated tests pass on PostgreSQL 16 and 116 pass on SQLite, and 20 of
-21 live user-acceptance workflows pass end to end against a real server and a real
-database. These figures are from the runs **after** the database contributor's branch was
-merged and reconciled.
+demonstrate**. After the AI package was merged, **131 automated tests pass on SQLite** (6
+skipped, all optional-dependency skips) and the external AI engine returns validated output
+for **all six operations** with the mock provider. The earlier **122-test PostgreSQL 16**
+run still stands for the pre-AI commit; it was **not** re-run after the AI merge because the
+local cluster would not stay up, so PostgreSQL coverage of the AI changes is unverified. The
+earlier live UAT (20 of 21 workflows against a real server and PostgreSQL) likewise applies
+to the pre-AI commit.
 
 There is **one partial acceptance result** - the next-best-action recommendation has no
 channel field (FR-032, BUG-006) - and **no failures**.
 
 The application is **not** claimed to be deployment-ready: the Docker stack was never
-started because no daemon was available, and the Streamlit frontend does not exist yet, so
-eight user-facing requirements cannot be accepted.
+started because no daemon was available, and the Streamlit frontend was merged after this
+test run, so its eight user-facing requirements still need acceptance testing.
 
 The most important quality property of this build is that it **does not overstate itself**:
 uncalibrated probabilities are withheld, undefined KPIs are returned as `null`, and
@@ -40,7 +44,7 @@ unavailable integrations return `501` with a reason instead of pretending to wor
 | API - every documented endpoint | 122 collected tests | PASS |
 | Database - schema, keys, constraints, migrations, dialect parity | SQLite + PostgreSQL 16 | PASS |
 | Database workspace - generated DDL and ER diagram cannot drift | 5 drift tests + parity check | PASS |
-| Integration - API↔DB, API↔AI, adapter contract | Live server + stub package | PASS, one adapter gap (BUG-008) |
+| Integration - API↔DB, API↔AI, adapter contract | Live server + the merged `ai.*` package (mock provider) | PASS - gate 6/6, BUG-008 closed |
 | AI quality - determinism, grounding, boundaries | 13 adversarial cases | PASS |
 | UAT - 21 user workflows | Live HTTP on PostgreSQL | 20 PASS, 1 PARTIAL |
 | Regression | Full suite before and after each change | PASS |
