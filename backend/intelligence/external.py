@@ -41,6 +41,21 @@ _CHANNEL_BY_TYPE = {
     "short_message": "Short message",
 }
 
+#: The package scores eight factors; SRS FR-030 reports four dimensions.  This
+#: map annotates each factor with its dimension so the richer model is kept and
+#: the requirement is still satisfied (see ``docs/ai-review.md`` A-03).  The
+#: package's own weights and score are left untouched.
+_DIMENSION_BY_FACTOR = {
+    "Company Fit": "Fit",
+    "Industry Relevance": "Fit",
+    "Company Size": "Fit",
+    "Explicit Needs": "Intent",
+    "Response Behavior": "Intent",
+    "Engagement History": "Engagement",
+    "Contact Role": "Decision readiness",
+    "Sales Stage": "Decision readiness",
+}
+
 
 class ExternalAIEngine:
     """Thin, validating adapter; it performs no AI work itself."""
@@ -62,15 +77,25 @@ class ExternalAIEngine:
 
         self._run_workflow = run_workflow
         self._provider_error = ProviderError
-        overrides = {
+        # The package's provider boundary supports mock, openai and gemini only.
+        # Grok was planned for the backend, so reject it here instead of letting
+        # ``create_provider`` fail with an opaque message.
+        if settings.ai_provider == "grok":
+            raise IntelligenceError(
+                "SALES_GENIE_LLM_PROVIDER=grok is not supported by the external AI "
+                "engine. The reviewed package implements mock, openai and gemini. "
+                "Select openai/gemini, or set SALES_GENIE_AI_BACKEND=heuristic."
+            )
+        overrides: dict[str, Any] = {
             "demo_mode": settings.ai_provider == "mock",
             "llm_provider": settings.ai_provider,
-            "llm_model": settings.ai_model,
             "llm_temperature": settings.ai_temperature,
             "request_timeout_seconds": settings.ai_timeout_seconds,
-            "grok_api_key": settings.grok_api_key,
             "google_api_key": settings.google_api_key,
         }
+        # An empty model keeps the package's own default instead of blanking it.
+        if settings.ai_model:
+            overrides["llm_model"] = settings.ai_model
         try:
             self._provider = create_provider(ai_settings(overrides=overrides))
         except Exception as exc:  # pragma: no cover - provider configuration error
@@ -214,6 +239,18 @@ class ExternalAIEngine:
                 )
             ),
             "a lead score",
+        )
+        result = result.model_copy(
+            update={
+                "factors": [
+                    factor.model_copy(
+                        update={
+                            "dimension": _DIMENSION_BY_FACTOR.get(factor.name),
+                        }
+                    )
+                    for factor in result.factors
+                ]
+            }
         )
         info = ExecutionInfo(
             engine=self.name,

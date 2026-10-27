@@ -483,7 +483,9 @@ class HeuristicEngine:
         else:
             readiness += 0.05
 
-        def factor(name: str, weight: float, value: float, explanation: str) -> ScoreFactor:
+        def factor(
+            name: str, weight: float, value: float, explanation: str, dimension: str
+        ) -> ScoreFactor:
             value = max(0.0, min(1.0, value))
             if value == 0:
                 signal = "missing"
@@ -500,6 +502,7 @@ class HeuristicEngine:
                 points=round(weight * value, 2),
                 explanation=explanation,
                 signal=signal,
+                dimension=dimension,
             )
 
         factors = [
@@ -509,24 +512,28 @@ class HeuristicEngine:
                 fit,
                 "Signals present: "
                 + (", ".join(k for k, (_, present) in fit_parts.items() if present) or "none"),
+                "Fit",
             ),
             factor(
                 "Intent",
                 25,
                 intent,
                 "Explicit need and response behaviour indicators.",
+                "Intent",
             ),
             factor(
                 "Engagement",
                 25,
                 engagement_value,
                 engagement or "No engagement history supplied.",
+                "Engagement",
             ),
             factor(
                 "Decision readiness",
                 20,
                 readiness,
                 f"Role '{role or 'unknown'}' at stage '{stage}'.",
+                "Decision readiness",
             ),
         ]
 

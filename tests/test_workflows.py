@@ -39,7 +39,10 @@ def test_missing_real_provider_key_is_clear():
     else: raise AssertionError("provider should require a key")
 
 def test_opt_in_memory_checkpointer_executes_graph():
-    from langgraph.checkpoint.memory import MemorySaver
+    import pytest
+    MemorySaver = pytest.importorskip(
+        "langgraph.checkpoint.memory", reason="optional 'langgraph' extra not installed"
+    ).MemorySaver
     response=run_workflow("research",{"lead":sample_lead(),"product_service":"platform"},provider(),checkpointer=MemorySaver(),thread_id="test-thread")
     assert response.execution.success
     assert response.result is not None

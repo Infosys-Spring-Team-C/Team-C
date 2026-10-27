@@ -1,7 +1,6 @@
 """Extensible scoring interfaces; no fitted model is shipped with the frontend layer."""
 from __future__ import annotations
 from typing import Any, Callable, Protocol
-import numpy as np
 from ai.schemas import LeadScoreResult, ScoreFactor
 from .rule_based import calculate_lead_score
 
@@ -31,6 +30,15 @@ class EvaluatedSklearnLeadScorer:
             raise TypeError("The estimator must expose predict_proba for this adapter.")
         self.estimator=estimator;self.feature_builder=feature_builder;self.evaluation_note=evaluation_note
     def score(self, lead: dict[str, Any]) -> LeadScoreResult:
+        # Imported lazily: no fitted model ships with the package, so numpy is
+        # only needed when an estimator is actually attached.
+        try:
+            import numpy as np
+        except ImportError as exc:  # pragma: no cover - depends on optional extra
+            raise RuntimeError(
+                "A trained lead-scoring model requires numpy. Install it in the "
+                "backend/model layer before enabling EvaluatedSklearnLeadScorer."
+            ) from exc
         vector=np.asarray([self.feature_builder(lead)],dtype=float)
         probability=float(self.estimator.predict_proba(vector)[0][-1])
         score=max(0,min(100,round(probability*100)))

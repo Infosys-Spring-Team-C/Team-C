@@ -244,11 +244,48 @@ def test_analytics_interpretation_without_data_is_honest(engine):
 # ---------------------------------------------------------------------------
 # Engine selection / external adapter
 # ---------------------------------------------------------------------------
-def test_external_backend_fails_loudly_when_package_is_absent():
+def test_external_backend_fails_loudly_when_package_is_absent(monkeypatch):
+    # Simulate a checkout where the AI package was not merged.
+    import sys
+
+    monkeypatch.setitem(sys.modules, "ai.graph", None)
     with pytest.raises(IntelligenceError) as excinfo:
         ExternalAIEngine(get_settings())
     assert "reviewed AI package" in str(excinfo.value)
     assert "SALES_GENIE_AI_BACKEND=heuristic" in str(excinfo.value)
+
+
+def test_external_engine_initialises_with_the_mock_provider():
+    engine = ExternalAIEngine(
+        Settings(ai_backend="external", ai_provider="mock", jwt_secret="x" * 32)
+    )
+    assert engine.name == "external"
+    assert engine.provider == "mock"
+
+
+def test_external_engine_rejects_grok_with_a_clear_message():
+    with pytest.raises(IntelligenceError) as excinfo:
+        ExternalAIEngine(
+            Settings(ai_backend="external", ai_provider="grok", jwt_secret="x" * 32)
+        )
+    assert "grok" in str(excinfo.value).lower()
+    assert "SALES_GENIE_AI_BACKEND=heuristic" in str(excinfo.value)
+
+
+def test_external_score_maps_eight_factors_onto_four_dimensions():
+    engine = ExternalAIEngine(
+        Settings(ai_backend="external", ai_provider="mock", jwt_secret="x" * 32)
+    )
+    result, info = engine.score_lead(RICH_LEAD)
+    assert len(result.factors) == 8
+    assert {factor.dimension for factor in result.factors} == {
+        "Fit",
+        "Intent",
+        "Engagement",
+        "Decision readiness",
+    }
+    assert result.conversion_probability is None
+    assert info.model == "rule-based"
 
 
 def test_unsupported_backend_is_a_configuration_error(monkeypatch):

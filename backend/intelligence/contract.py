@@ -123,6 +123,10 @@ class ScoreFactor(BaseModel):
     points: float
     explanation: str
     signal: Literal["positive", "negative", "neutral", "missing"]
+    #: SRS FR-030 dimension this factor contributes to. ``None`` means the
+    #: factor is already a dimension in its own right (offline engine) or the
+    #: source did not classify it.
+    dimension: Literal["Fit", "Intent", "Engagement", "Decision readiness"] | None = None
 
 
 class LeadScoreResult(BaseModel):

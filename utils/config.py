@@ -1,4 +1,4 @@
-"""Runtime configuration. Secrets are read only from environment / Streamlit secrets."""
+"""Runtime configuration. Secrets are read only from the environment."""
 from __future__ import annotations
 from dataclasses import dataclass, field, replace
 import json
@@ -7,14 +7,13 @@ from typing import Any
 
 
 def _secret(name: str, default: str = "") -> str:
-    value = os.getenv(name)
-    if value is not None:
-        return value
-    try:
-        import streamlit as st
-        return str(st.secrets.get(name, default))
-    except Exception:
-        return default
+    """Environment-only lookup.
+
+    The backend runs headless, so secrets must never depend on a UI framework.
+    ``runtime_settings`` is the only function that touches Streamlit, and only
+    for non-secret per-session preferences.
+    """
+    return os.getenv(name, default)
 
 
 def _boolean(value: str, default: bool) -> bool:

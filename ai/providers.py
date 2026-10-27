@@ -16,6 +16,55 @@ class ProviderError(RuntimeError):
     pass
 
 
+class RetryableProviderError(ProviderError):
+    """A transient failure (timeout, rate limit, 5xx) that is safe to retry."""
+
+
+#: HTTP statuses where a retry can succeed without changing the request.
+_RETRYABLE_STATUS = frozenset({408, 409, 425, 429, 500, 502, 503, 504})
+
+#: Exception class-name fragments that indicate a transient transport failure.
+_RETRYABLE_NAMES = (
+    "timeout",
+    "timedout",
+    "ratelimit",
+    "connection",
+    "temporarilyunavailable",
+    "internalservererror",
+    "serviceunavailable",
+    "overloaded",
+)
+
+
+def _status_code(exc: BaseException) -> int | None:
+    """Best-effort HTTP status extraction across the provider SDKs."""
+    for attribute in ("status_code", "http_status", "code"):
+        value = getattr(exc, attribute, None)
+        if isinstance(value, int):
+            return value
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    return status if isinstance(status, int) else None
+
+
+def is_retryable(exc: BaseException) -> bool:
+    """Return ``True`` only for failures that a retry can plausibly fix.
+
+    Authentication, permission, bad-request, schema-validation and JSON-decoding
+    failures are deterministic: retrying them wastes quota and hides the real
+    error behind a generic message.
+    """
+    if isinstance(exc, RetryableProviderError):
+        return True
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    status = _status_code(exc)
+    if status is not None:
+        return status in _RETRYABLE_STATUS
+    name = type(exc).__name__.lower()
+    return any(token in name for token in _RETRYABLE_NAMES)
+
+
 class BaseLLMProvider(ABC):
     name = "base"
     is_mock = False
@@ -32,14 +81,16 @@ class BaseLLMProvider(ABC):
     ) -> T:
         """Call provider, retry transient errors, and validate before returning to UI."""
         last_error: Exception | None = None
-        for attempt in range(self.settings.request_retries + 1):
+        attempts = max(0, self.settings.request_retries) + 1
+        for attempt in range(attempts):
             try:
                 raw = self._json_response(system, user)
                 return response_model.model_validate(raw)
             except Exception as exc:
                 last_error = exc
-                if attempt < self.settings.request_retries:
-                    time.sleep(min(0.5 * (2**attempt), 2.0))
+                if not is_retryable(exc) or attempt == attempts - 1:
+                    break
+                time.sleep(min(0.5 * (2**attempt), 2.0))
         # A production provider failure must remain visible. Returning deterministic content here
         # would blur mock output with real-model output and could mislead users.
         raise ProviderError(f"{self.name} could not produce a valid structured response: {last_error}") from last_error
@@ -92,7 +143,11 @@ class GeminiProvider(BaseLLMProvider):
             raise ProviderError("GOOGLE_API_KEY is not configured. Enable demo mode or configure a provider key.")
         try:
             from google import genai
-            self.client = genai.Client(api_key=settings.google_api_key)
+            self.client = genai.Client(
+                api_key=settings.google_api_key,
+                # The SDK takes milliseconds; without this Gemini had no timeout.
+                http_options={"timeout": max(1000, int(settings.request_timeout_seconds * 1000))},
+            )
             self._types = __import__("google.genai.types", fromlist=["GenerateContentConfig"])
         except ImportError as exc:
             raise ProviderError("Install the optional 'google-genai' package to use Gemini.") from exc
