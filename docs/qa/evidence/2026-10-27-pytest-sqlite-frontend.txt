@@ -1,0 +1,11 @@
+# Full test suite - after the frontend merge
+# Date: 2026-10-27
+# Commit: 298b394 (feature/frontend-integration)
+# Command: $env:JWT_SECRET="test-secret-value-0123456789"; python -m pytest -q
+# Database: SQLite (default). PostgreSQL was not available on this machine.
+# Python: 3.10.11
+# Streamlit is installed for the manual AppTest gate; the suite itself does not need it.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+148 passed, 6 skipped, 7 warnings in 59.88s
+
