@@ -236,19 +236,19 @@ Full request/response documentation: [`docs/api-contract.md`](docs/api-contract.
 ## 8. AI provider configuration
 
 ```env
-SALES_GENIE_AI_BACKEND=heuristic        # default; offline and deterministic
-# SALES_GENIE_AI_BACKEND=external       # uses the merged ai.* package
+SALES_GENIE_AI_BACKEND=external        # default; uses the merged ai.* package
+# SALES_GENIE_AI_BACKEND=heuristic     # optional: offline, deterministic fallback
 SALES_GENIE_LLM_PROVIDER=mock           # external package: mock | openai | gemini
 SALES_GENIE_LLM_MODEL=
 GOOGLE_API_KEY=
 OPENAI_API_KEY=
 ```
 
-* With `heuristic`, no network calls and no credentials are needed. Outputs are labelled
-  `heuristic` in the `execution` block and `provider`/`model` columns.
-* With `external`, the backend validates the AI package's structured output against its own
-  Pydantic contract. Missing package or invalid output produces `502 ai_failed`, never a silent
+* With `external` (default), the backend validates the AI package's structured output against its
+  own Pydantic contract. Missing package or invalid output produces `502 ai_failed`, never a silent
   fallback. Install the package's extras with `pip install -r ai/requirements.txt`.
+* With `heuristic` (optional), no network calls and no credentials are needed. Outputs are labelled
+  `heuristic` in the `execution` block and `provider`/`model` columns.
 * `SALES_GENIE_LLM_PROVIDER=grok` is rejected by the external engine: the package implements
   mock, openai and gemini only.
 * The external engine is verified with the **mock** provider: `python scripts/check_ai_integration.py`

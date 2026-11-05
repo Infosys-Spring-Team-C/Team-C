@@ -63,6 +63,46 @@ def resolve_base_url() -> str:
     return DEFAULT_BASE_URL
 
 
+def login(base_url: str, email: str, password: str, timeout: float = DEFAULT_TIMEOUT) -> tuple[bool, str]:
+    """Exchange credentials for a bearer token and keep it for this process.
+
+    Used by the UI's sign-in form.  Credentials are never stored; only the
+    token is kept in memory.
+    """
+    global _TOKEN
+    base = base_url.rstrip("/")
+    try:
+        response = requests.post(
+            f"{base}/api/v1/auth/token",
+            data={"username": email, "password": password},
+            timeout=timeout,
+        )
+    except requests.exceptions.ConnectionError:
+        return False, "Cannot connect to the backend server."
+    except requests.exceptions.Timeout:
+        return False, "The backend did not respond in time."
+    except Exception as exc:  # noqa: BLE001 - surfaced to the UI as text
+        return False, str(exc)
+
+    if response.status_code != 200:
+        return False, _detail(response) or "Sign-in failed."
+    token = (response.json() or {}).get("access_token")
+    if not token:
+        return False, "The backend returned no access token."
+    _TOKEN = token
+    return True, ""
+
+
+def clear_token() -> None:
+    """Forget the in-memory bearer token (sign-out)."""
+    global _TOKEN
+    _TOKEN = None
+
+
+def has_token() -> bool:
+    return bool(_TOKEN)
+
+
 def _token(base_url: str, timeout: float) -> str | None:
     """Bearer token from the environment, or a one-off login."""
     global _TOKEN
@@ -221,17 +261,37 @@ def normalise_score(raw: dict[str, Any]) -> dict[str, Any]:
         elif name:
             labels.append(name)
 
+    detail = []
+    for factor in factors:
+        if not isinstance(factor, dict):
+            continue
+        detail.append(
+            {
+                "name": str(factor.get("name", "")).strip(),
+                "dimension": factor.get("dimension") or "",
+                "weight": factor.get("weight"),
+                "value": factor.get("normalized_value"),
+                "points": factor.get("points"),
+                "signal": factor.get("signal") or "",
+                "explanation": factor.get("explanation") or "",
+            }
+        )
+
     return {
         "lead_id": raw.get("lead_id"),
         "lead_score": raw.get("score", 0),
         "priority_level": raw.get("priority_level", ""),
+        "category": raw.get("qualification_category", ""),
         "conversion_probability": raw.get("conversion_probability"),
         "reason": raw.get("explanation") or raw.get("methodology_note") or "",
         "next_action": raw.get("recommended_next_action", ""),
         "scoring_factors": labels,
+        "factors_detail": detail,
         "positive_signals": raw.get("positive_signals", []),
         "negative_signals": raw.get("negative_signals", []),
         "missing_information": raw.get("missing_information", []),
+        "model_version": raw.get("model_version", ""),
+        "created_at": raw.get("created_at", ""),
     }
 
 
@@ -270,6 +330,19 @@ def normalise_insight(raw: dict[str, Any]) -> dict[str, Any]:
 
     needs = _join_statements(needs_source)
     opportunities = _join_statements(opportunities_source)
+
+    def _statements(items: Any) -> list[str]:
+        values: list[str] = []
+        for item in items or []:
+            text = (
+                str(item.get("statement", "")).strip()
+                if isinstance(item, dict)
+                else str(item).strip()
+            )
+            if text:
+                values.append(text)
+        return values
+
     return {
         "business_needs": needs
         or "No explicit need is recorded for this lead; confirm it in discovery.",
@@ -279,6 +352,10 @@ def normalise_insight(raw: dict[str, Any]) -> dict[str, Any]:
         or "No company overview is available from the supplied context.",
         "product_industry_fit": fit,
         "buyer_role_relevance": raw.get("buyer_role_relevance", ""),
+        "supported_facts": _statements(raw.get("supported_facts")),
+        "potential_challenges": _statements(raw.get("potential_challenges")),
+        "needs_detail": _statements(needs_source),
+        "opportunities_detail": _statements(opportunities_source),
         "discovery_questions": raw.get("discovery_questions", []),
         "missing_information": raw.get("missing_information", []),
         "qualification_category": qualification.get("category", ""),
@@ -307,6 +384,7 @@ def normalise_analytics(raw: dict[str, Any], leads: list[dict[str, Any]]) -> dic
         if isinstance(item, dict)
     }
     conversion = (raw.get("conversion_rate") or {}).get("value")
+    pipeline_metric = raw.get("pipeline_value") or {}
     industries: dict[str, int] = {}
     for lead in leads:
         key = str(lead.get("industry") or "Unknown").strip() or "Unknown"
@@ -314,6 +392,8 @@ def normalise_analytics(raw: dict[str, Any], leads: list[dict[str, Any]]) -> dic
 
     return {
         "total_leads": raw.get("total_leads", len(leads)),
+        "qualified_leads": raw.get("qualified_leads", 0),
+        "converted_leads": raw.get("converted_leads", 0),
         "hot_leads": bands.get("70-100", 0),
         "warm_leads": bands.get("45-69", 0),
         "cold_leads": bands.get("0-44", 0),
@@ -322,9 +402,52 @@ def normalise_analytics(raw: dict[str, Any], leads: list[dict[str, Any]]) -> dic
         "emails_sent": 0,
         "calls_done": raw.get("interactions_logged", 0),
         "conversion_rate": round(conversion * 100, 1) if conversion is not None else 0.0,
+        "conversion_rate_defined": conversion is not None,
+        "pipeline_value": pipeline_metric.get("value"),
+        "pipeline_value_defined": (
+            pipeline_metric.get("value") is not None
+            and not pipeline_metric.get("pending_definition", False)
+        ),
+        "pipeline_distribution": raw.get("pipeline_distribution") or [],
+        "activity_trend": raw.get("activity_trend") or [],
+        "follow_up_tasks": raw.get("follow_up_tasks", 0),
         "industry_distribution": industries,
         "average_lead_score": raw.get("average_lead_score"),
         "is_demo": raw.get("is_demo", False),
+        "source": raw.get("source", ""),
+        "generated_at": raw.get("generated_at", ""),
+    }
+
+
+def normalise_conversation(raw: dict[str, Any]) -> dict[str, Any]:
+    """Conversation summary (POST) or a stored interaction row (GET)."""
+    return {
+        "id": raw.get("id"),
+        "lead_id": raw.get("lead_id"),
+        "created_at": raw.get("created_at") or raw.get("interaction_date") or "",
+        "interaction_type": raw.get("interaction_type", ""),
+        "summary": raw.get("executive_summary") or raw.get("summary") or "",
+        "key_points": raw.get("key_discussion_points") or raw.get("key_points") or [],
+        "action_items": raw.get("action_items") or [],
+        "requirements": raw.get("customer_requirements") or [],
+        "pain_points": raw.get("pain_points") or [],
+        "objections": raw.get("objections") or [],
+        "buying_signals": raw.get("buying_signals") or [],
+        "suggested_follow_up": raw.get("suggested_follow_up") or "",
+        "missing": raw.get("missing_or_uncertain") or [],
+    }
+
+
+def normalise_follow_up(raw: dict[str, Any]) -> dict[str, Any]:
+    """Follow-up item from ``GET /api/v1/follow-ups``."""
+    return {
+        "lead_id": str(raw.get("lead_id", "")),
+        "company_name": raw.get("company_name", ""),
+        "priority": raw.get("priority", ""),
+        "action": raw.get("recommended_action", ""),
+        "score": raw.get("score"),
+        "last_interaction_at": raw.get("last_interaction_at") or "",
+        "reason": raw.get("reason", ""),
     }
 
 
@@ -426,6 +549,38 @@ def api_get(
         leads_ok, leads = api_get(base, "/leads/", timeout=timeout)
         return True, normalise_analytics(data, leads if leads_ok else [])
 
+    if re.fullmatch(r"/auth/me/?", path):
+        return _request("GET", base, "/api/v1/auth/me", timeout=timeout)
+
+    if re.fullmatch(r"/follow-ups/?", path):
+        ok, data = _request("GET", base, "/api/v1/follow-ups", timeout=timeout)
+        if not ok:
+            return ok, data
+        rows = data if isinstance(data, list) else []
+        return True, [normalise_follow_up(item) for item in rows]
+
+    match = re.fullmatch(rf"/recommendations/{_LEAD_ID}/?", path)
+    if match:
+        return _request(
+            "GET",
+            base,
+            f"/api/v1/recommendations/{match.group('lead_id')}",
+            timeout=timeout,
+        )
+
+    match = re.fullmatch(rf"/leads/{_LEAD_ID}/conversations/?", path)
+    if match:
+        ok, data = _request(
+            "GET",
+            base,
+            f"/api/v1/leads/{match.group('lead_id')}/conversations",
+            timeout=timeout,
+        )
+        if not ok:
+            return ok, data
+        rows = data if isinstance(data, list) else []
+        return True, [normalise_conversation(item) for item in rows]
+
     return _request("GET", base, path, params=params, timeout=timeout)
 
 
@@ -491,5 +646,24 @@ def api_post(
             return True, {"configured": False, "success": False, "message": "Unexpected response."}
         message = data.get("message") or data.get("error") or "E-mail delivery is not configured."
         return False, {"configured": False, "success": False, "message": message, **data}
+
+    if re.fullmatch(r"/conversations/summarize/?", path):
+        ok, data = _request(
+            "POST",
+            base,
+            "/api/v1/conversations/summarize",
+            json_data=json_data,
+            timeout=timeout,
+        )
+        return (True, normalise_conversation(data)) if ok else (ok, data)
+
+    if re.fullmatch(r"/analytics/insights/?", path):
+        return _request(
+            "POST",
+            base,
+            "/api/v1/analytics/insights",
+            json_data=json_data or {},
+            timeout=timeout,
+        )
 
     return _request("POST", base, path, json_data=json_data, timeout=timeout)

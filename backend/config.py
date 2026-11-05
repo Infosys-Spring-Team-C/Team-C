@@ -70,10 +70,9 @@ class Settings:
     access_token_minutes: int = 120
 
     # --- AI / intelligence layer ---------------------------------------
-    # "heuristic" = deterministic offline engine shipped with the backend.
-    # "external"  = adapter around the reviewed AI package (ai.*) contributed
-    #               through its own pull request.
-    ai_backend: str = "heuristic"
+    # "external"  = adapter around the reviewed AI package (ai.*); default.
+    # "heuristic" = deterministic offline engine, kept as an explicit fallback.
+    ai_backend: str = "external"
     ai_provider: str = "mock"  # mock | grok | gemini | openai
     ai_model: str = ""
     ai_temperature: float = 0.2
@@ -116,7 +115,7 @@ def get_settings() -> Settings:
         jwt_secret=_str("JWT_SECRET"),
         jwt_algorithm=_str("JWT_ALGORITHM", "HS256"),
         access_token_minutes=_int("ACCESS_TOKEN_MINUTES", 120),
-        ai_backend=_str("SALES_GENIE_AI_BACKEND", "heuristic").lower(),
+        ai_backend=_str("SALES_GENIE_AI_BACKEND", "external").lower(),
         ai_provider=_str("SALES_GENIE_LLM_PROVIDER", "mock").lower(),
         ai_model=_str("SALES_GENIE_LLM_MODEL"),
         ai_temperature=_float("SALES_GENIE_LLM_TEMPERATURE", 0.2),

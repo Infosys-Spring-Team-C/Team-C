@@ -314,5 +314,5 @@ def test_unsupported_backend_is_a_configuration_error(monkeypatch):
         reset_engine_cache()
 
 
-def test_default_engine_is_the_offline_heuristic():
-    assert get_engine().name == "heuristic"
+def test_default_engine_is_the_external_ai_package():
+    assert Settings(jwt_secret="x" * 32).ai_backend == "external"

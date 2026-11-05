@@ -285,6 +285,157 @@ def test_auth_error_is_actionable(transport):
     assert "SALES_GENIE_BACKEND_TOKEN" in data["error"]
 
 
+def test_sign_in_stores_the_token_and_sign_out_forgets_it(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_post(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return FakeResponse(200, {"access_token": "abc123", "token_type": "bearer"})
+
+    monkeypatch.setattr(api_compat.requests, "post", fake_post)
+    ok, message = api_compat.login("http://api.local/", "a@b.test", "secret")
+    assert ok is True
+    assert message == ""
+    assert api_compat.has_token() is True
+    assert calls[0]["url"] == "http://api.local/api/v1/auth/token"
+    assert calls[0]["data"] == {"username": "a@b.test", "password": "secret"}
+
+    api_compat.clear_token()
+    assert api_compat.has_token() is False
+
+
+def test_sign_in_failure_keeps_no_token(monkeypatch):
+    monkeypatch.setattr(
+        api_compat.requests,
+        "post",
+        lambda url, **kwargs: FakeResponse(401, {"detail": "Incorrect username or password"}),
+    )
+    ok, message = api_compat.login("http://api.local", "a@b.test", "wrong")
+    assert ok is False
+    assert "Incorrect username or password" in message
+    assert api_compat.has_token() is False
+
+
+def test_undefined_conversion_and_pipeline_are_flagged():
+    dashboard = api_compat.normalise_analytics(
+        {
+            "total_leads": 3,
+            "qualified_leads": 1,
+            "converted_leads": 0,
+            "conversion_rate": {"value": None},
+            "pipeline_value": {"value": None, "pending_definition": True},
+        },
+        [],
+    )
+    assert dashboard["conversion_rate"] == 0.0
+    assert dashboard["conversion_rate_defined"] is False
+    assert dashboard["pipeline_value"] is None
+    assert dashboard["pipeline_value_defined"] is False
+
+
+def test_analytics_carries_real_aggregates_through():
+    dashboard = api_compat.normalise_analytics(
+        {
+            "total_leads": 4,
+            "qualified_leads": 2,
+            "converted_leads": 1,
+            "conversion_rate": {"value": 0.25},
+            "pipeline_value": {"value": 120000, "pending_definition": False},
+            "follow_up_tasks": 2,
+            "activity_trend": [{"date": "2026-10-01", "activity": 1}],
+            "source": "postgres",
+            "generated_at": "2026-10-01T00:00:00Z",
+        },
+        [],
+    )
+    assert dashboard["qualified_leads"] == 2
+    assert dashboard["converted_leads"] == 1
+    assert dashboard["conversion_rate"] == 25.0
+    assert dashboard["conversion_rate_defined"] is True
+    assert dashboard["pipeline_value"] == 120000
+    assert dashboard["pipeline_value_defined"] is True
+    assert dashboard["follow_up_tasks"] == 2
+    assert dashboard["activity_trend"][0]["activity"] == 1
+    assert dashboard["source"] == "postgres"
+
+
+def test_conversation_summary_and_stored_row_are_normalised():
+    summary = api_compat.normalise_conversation(
+        {
+            "executive_summary": "They want faster onboarding.",
+            "key_discussion_points": ["Onboarding takes six weeks"],
+            "action_items": [{"action": "Send onboarding plan", "owner": "AE"}],
+            "suggested_follow_up": "Book a technical review.",
+        }
+    )
+    assert summary["summary"] == "They want faster onboarding."
+    assert summary["key_points"] == ["Onboarding takes six weeks"]
+    assert summary["action_items"][0]["action"] == "Send onboarding plan"
+    assert summary["suggested_follow_up"] == "Book a technical review."
+
+    stored = api_compat.normalise_conversation(
+        {
+            "id": 11,
+            "lead_id": 3,
+            "interaction_date": "2026-10-02T09:30:00Z",
+            "interaction_type": "call",
+            "summary": "Stored summary.",
+            "key_points": ["Budget approved"],
+        }
+    )
+    assert stored["id"] == 11
+    assert stored["created_at"].startswith("2026-10-02")
+    assert stored["summary"] == "Stored summary."
+
+
+def test_follow_up_row_is_normalised(transport):
+    transport.response = FakeResponse(
+        200,
+        [
+            {
+                "lead_id": 3,
+                "company_name": "Fabrikam",
+                "priority": "high",
+                "recommended_action": "Call today",
+                "score": 88,
+                "reason": "No contact for 9 days",
+            }
+        ],
+    )
+    ok, rows = api_compat.api_get("http://api.local", "/follow-ups")
+    assert ok is True
+    assert rows[0]["company_name"] == "Fabrikam"
+    assert rows[0]["action"] == "Call today"
+    assert rows[0]["priority"] == "high"
+    assert transport.calls[0]["url"] == "http://api.local/api/v1/follow-ups"
+
+
+def test_score_factors_expose_detail_for_the_breakdown_table():
+    score = api_compat.normalise_score(
+        {
+            "lead_id": 3,
+            "score": 61,
+            "qualification_category": "Nurture",
+            "model_version": "heuristic:deterministic-heuristic-v1",
+            "factors": [
+                {
+                    "name": "Company Fit",
+                    "dimension": "Fit",
+                    "weight": 0.3,
+                    "normalized_value": 0.8,
+                    "points": 24,
+                    "signal": "positive",
+                    "explanation": "Industry matches the ICP.",
+                }
+            ],
+        }
+    )
+    assert score["category"] == "Nurture"
+    assert score["model_version"].startswith("heuristic:")
+    assert score["factors_detail"][0]["points"] == 24
+    assert score["factors_detail"][0]["signal"] == "positive"
+
+
 def test_frontend_does_not_claim_a_fabricated_accuracy():
     """The UI must not present a made-up accuracy figure (SRS D-10, D-13)."""
     from pathlib import Path
