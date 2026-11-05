@@ -242,12 +242,72 @@ def test_outreach_request_is_translated_to_the_package_keys(stub, outreach_type,
     assert request["channel"] == channel
     assert request["campaign_objective"] == "book a discovery call"
     assert request["tone"] == "formal"
+    assert request["length"] == "short"
     assert "manual reporting" in request["company_insights"]
     assert "Met at a conference." in request["company_insights"]
-    # Frontend-only keys must not leak into the package request.
-    for key in ("outreach_type", "goal", "pain_points", "length"):
+    # Frontend-only keys must not leak into the package request; ``length`` is
+    # a supported prompt control (AI review A-11) and must be forwarded.
+    for key in ("outreach_type", "goal", "pain_points"):
         assert key not in request
     assert draft.channel == channel
+
+
+def test_outreach_variant_rotates_the_regenerated_section(stub):
+    stub["graph"].MODE["result"] = {
+        "channel": "Email",
+        "subject_line": "Subject",
+        "body": "Body text.",
+        "call_to_action": "Interested?",
+    }
+    engine = ExternalAIEngine(_settings(ai_provider="mock"))
+
+    engine.generate_outreach(LEAD, {"outreach_type": "cold_email", "variant": 2})
+
+    request = stub["graph"].CALLS[-1]["request"]
+    assert request["variation_label"] == "alternative-2"
+    assert request["section_to_regenerate"] == "Value proposition"
+
+
+def test_provider_auto_prefers_openai_then_gemini_then_mock(stub, monkeypatch):
+    import backend.intelligence.external as external
+
+    # The test image has no provider SDKs installed; treat them as available so
+    # this test isolates the key-preference order.
+    monkeypatch.setattr(external, "provider_sdk_installed", lambda provider: True)
+
+    openai_engine = ExternalAIEngine(
+        _settings(ai_provider="auto", openai_api_key="sk-test", google_api_key="g-test")
+    )
+    overrides = stub["config"].CALLS[-1]
+    assert openai_engine.provider == "stub"
+    assert overrides["llm_provider"] == "openai"
+    assert overrides["llm_model"] == "gpt-4o-mini"
+    assert overrides["demo_mode"] is False
+
+    ExternalAIEngine(_settings(ai_provider="auto", google_api_key="g-test"))
+    overrides = stub["config"].CALLS[-1]
+    assert overrides["llm_provider"] == "gemini"
+    assert overrides["llm_model"] == "gemini-2.5-flash"
+
+    ExternalAIEngine(_settings(ai_provider="auto"))
+    overrides = stub["config"].CALLS[-1]
+    assert overrides["llm_provider"] == "mock"
+    assert overrides["demo_mode"] is True
+
+
+def test_provider_auto_falls_back_to_mock_when_sdk_is_missing(monkeypatch):
+    import backend.intelligence.external as external
+
+    monkeypatch.setattr(external, "provider_sdk_installed", lambda provider: False)
+
+    provider, model = external.resolve_provider(
+        _settings(ai_provider="auto", openai_api_key="sk-test")
+    )
+    assert provider == "mock"
+    assert model == "deterministic-demo-v1"
+    assert "SDK is not installed" in external.auto_provider_note(
+        _settings(ai_provider="auto", openai_api_key="sk-test")
+    )
 
 
 def test_score_lead_forwards_thresholds_and_never_invents_probability(stub):

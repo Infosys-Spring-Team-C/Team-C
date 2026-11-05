@@ -1,0 +1,441 @@
+{
+  "health": {
+    "status": "ok",
+    "version": "1.0.0",
+    "database": "ok",
+    "database_dialect": "postgresql",
+    "auth_enabled": true,
+    "ai_backend": "external",
+    "ai_provider": "mock",
+    "ai_model": "deterministic-demo-v1",
+    "ai_used_mock": true,
+    "ai_mode": "offline-mock",
+    "ai_note": "",
+    "ai_status": "ok"
+  },
+  "leads": [
+    {
+      "id": "1",
+      "company": "Northwind Logistics",
+      "industry": "Logistics",
+      "stage": "discovery",
+      "score": {
+        "score": 30,
+        "priority": "cold",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 62,
+          "Decision readiness": 9,
+          "Engagement": 0,
+          "Intent": 0
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 5,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Enrich the record or use a lightweight, permissioned nurture touch."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 1150,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "1",
+        "related_lead": "Northwind Logistics",
+        "recommended_action": "Research and verify a relevant business priority before outreach.",
+        "reason": "The available record has no verified interaction or need, so enrichment should come first.",
+        "supporting_evidence": [],
+        "priority": "Low",
+        "suggested_timing": null,
+        "suggested_channel": null,
+        "status": "Open",
+        "follow_up_draft": null
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about Northwind Logistics's priorities",
+        "body": "Hi Ada,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Logistics. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 34,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 16,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Ada,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Logistics. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    },
+    {
+      "id": "2",
+      "company": "Contoso Manufacturing",
+      "industry": "Manufacturing",
+      "stage": "qualified",
+      "score": {
+        "score": 30,
+        "priority": "cold",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 62,
+          "Decision readiness": 9,
+          "Engagement": 0,
+          "Intent": 0
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 0,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Enrich the record or use a lightweight, permissioned nurture touch."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "2",
+        "related_lead": "Contoso Manufacturing",
+        "recommended_action": "Research and verify a relevant business priority before outreach.",
+        "reason": "The available record has no verified interaction or need, so enrichment should come first.",
+        "supporting_evidence": [],
+        "priority": "Low",
+        "suggested_timing": null,
+        "suggested_channel": null,
+        "status": "Open",
+        "follow_up_draft": null
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about Contoso Manufacturing's priorities",
+        "body": "Hi Lee,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Manufacturing. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 34,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 14,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Lee,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Manufacturing. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    },
+    {
+      "id": "3",
+      "company": "Fabrikam Retail",
+      "industry": "Retail",
+      "stage": "prospecting",
+      "score": {
+        "score": 30,
+        "priority": "cold",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 62,
+          "Decision readiness": 9,
+          "Engagement": 0,
+          "Intent": 0
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 0,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Enrich the record or use a lightweight, permissioned nurture touch."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "3",
+        "related_lead": "Fabrikam Retail",
+        "recommended_action": "Research and verify a relevant business priority before outreach.",
+        "reason": "The available record has no verified interaction or need, so enrichment should come first.",
+        "supporting_evidence": [],
+        "priority": "Low",
+        "suggested_timing": null,
+        "suggested_channel": null,
+        "status": "Open",
+        "follow_up_draft": null
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about Fabrikam Retail's priorities",
+        "body": "Hi Priya,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Retail. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 34,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 16,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Priya,\n\nIΓÇÖm reaching out to start a discovery conversation. I saw your team is in Retail. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    },
+    {
+      "id": "4",
+      "company": "InnovateAI Labs",
+      "industry": "Artificial Intelligence",
+      "stage": "proposal",
+      "score": {
+        "score": 82,
+        "priority": "hot",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 78,
+          "Decision readiness": 76,
+          "Engagement": 85,
+          "Intent": 96
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 0,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Schedule a discovery conversation and validate decision process."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "4",
+        "related_lead": "InnovateAI Labs",
+        "recommended_action": "Send a tailored recap and request a discovery meeting.",
+        "reason": "The lead record contains an interaction or a stated need.",
+        "supporting_evidence": [
+          {
+            "statement": "Two demos delivered; proposal sent; pricing review in progress.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          },
+          {
+            "statement": "Increase qualified pipeline while keeping sales headcount flat.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          }
+        ],
+        "priority": "High",
+        "suggested_timing": "Within one business day",
+        "suggested_channel": "email",
+        "status": "Open",
+        "follow_up_draft": "Hi Mark, thanks for the context. Would it be useful to align on the next discovery step?"
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about InnovateAI Labs's priorities",
+        "body": "Hi Mark,\n\nIΓÇÖm reaching out to increase qualified pipeline while keeping sales headcount flat. I saw your team is in Artificial Intelligence. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 39,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Mark,\n\nIΓÇÖm reaching out to increase qualified pipeline while keeping sales headcount flat. I saw your team is in Artificial Intelligence. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    },
+    {
+      "id": "5",
+      "company": "Bluebird Health",
+      "industry": "Healthcare AI",
+      "stage": "negotiation",
+      "score": {
+        "score": 75,
+        "priority": "hot",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 78,
+          "Decision readiness": 76,
+          "Engagement": 35,
+          "Intent": 96
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 0,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Schedule a discovery conversation and validate decision process."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "5",
+        "related_lead": "Bluebird Health",
+        "recommended_action": "Send a tailored recap and request a discovery meeting.",
+        "reason": "The lead record contains an interaction or a stated need.",
+        "supporting_evidence": [
+          {
+            "statement": "Security and legal review completed; commercial terms under negotiation.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          },
+          {
+            "statement": "Shorten the patient-intake cycle and standardise reporting across clinics.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          }
+        ],
+        "priority": "High",
+        "suggested_timing": "Within one business day",
+        "suggested_channel": "email",
+        "status": "Open",
+        "follow_up_draft": "Hi Sofia, thanks for the context. Would it be useful to align on the next discovery step?"
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about Bluebird Health's priorities",
+        "body": "Hi Sofia,\n\nIΓÇÖm reaching out to shorten the patient-intake cycle and standardise reporting across clinics. I saw your team is in Healthcare AI. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 40,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 17,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Sofia,\n\nIΓÇÖm reaching out to shorten the patient-intake cycle and standardise reporting across clinics. I saw your team is in Healthcare AI. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    },
+    {
+      "id": "6",
+      "company": "Vanguard Fintech",
+      "industry": "Fintech",
+      "stage": "converted",
+      "score": {
+        "score": 75,
+        "priority": "hot",
+        "conversion_probability": null,
+        "probability_band": "low",
+        "dimensions_pct": {
+          "Fit": 78,
+          "Decision readiness": 76,
+          "Engagement": 35,
+          "Intent": 96
+        },
+        "model_version": "external:rule-based",
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "rule-based",
+          "duration_ms": 0,
+          "used_mock": false,
+          "fallback_reason": null
+        },
+        "recommended_next_action": "Schedule a discovery conversation and validate decision process."
+      },
+      "recommendation": {
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 15,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "lead_id": "6",
+        "related_lead": "Vanguard Fintech",
+        "recommended_action": "Send a tailored recap and request a discovery meeting.",
+        "reason": "The lead record contains an interaction or a stated need.",
+        "supporting_evidence": [
+          {
+            "statement": "Closed-won pilot; expansion discussion scheduled.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          },
+          {
+            "statement": "Give partner managers a consistent view of lead quality and next actions.",
+            "source": "Lead record",
+            "source_type": "backend",
+            "confidence": "medium"
+          }
+        ],
+        "priority": "High",
+        "suggested_timing": "Within one business day",
+        "suggested_channel": "email",
+        "status": "Open",
+        "follow_up_draft": "Hi Noah, thanks for the context. Would it be useful to align on the next discovery step?"
+      },
+      "outreach": {
+        "channel": "Email",
+        "subject": "A question about Vanguard Fintech's priorities",
+        "body": "Hi Noah,\n\nIΓÇÖm reaching out to give partner managers a consistent view of lead quality and next actions. I saw your team is in Fintech. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "words": 42,
+        "execution": {
+          "engine": "external",
+          "provider": "mock",
+          "model": "deterministic-demo-v1",
+          "duration_ms": 14,
+          "used_mock": true,
+          "fallback_reason": null
+        },
+        "regenerated_body": "Hello Noah,\n\nIΓÇÖm reaching out to give partner managers a consistent view of lead quality and next actions. I saw your team is in Fintech. We help teams explore our solution. Would a 15-minute conversation next week be useful?\n\nBest,\n[Your name]",
+        "regeneration_changed_body": true
+      }
+    }
+  ]
+}

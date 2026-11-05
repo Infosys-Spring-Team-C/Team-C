@@ -16,7 +16,7 @@ from sqlalchemy import text
 from backend.config import get_settings
 from backend.db import SessionLocal, engine, get_db
 from backend.errors import ApiError, api_error_handler, validation_error_handler
-from backend.intelligence import IntelligenceError, get_engine
+from backend.intelligence import describe_engine
 from backend.routers import (
     analytics,
     auth,
@@ -37,9 +37,12 @@ SalesGenie AI backend - AI sales assistant and lead intelligence platform.
 * **Errors**: `{"detail": str, "code": str, "meta": object|null}`.
 * **Pagination**: list endpoints return a JSON array and expose
   `X-Total-Count`, `X-Page` and `X-Page-Size` response headers.
-* **AI**: company analysis, outreach, conversation summaries and
-  recommendations are produced behind `backend.intelligence`; the default
-  engine is deterministic and offline.
+* **AI**: company analysis, outreach, conversation summaries, scoring and
+  recommendations run through `backend.intelligence`. The default
+  `SALES_GENIE_AI_BACKEND=auto` uses the AI package (`ai.*`) and selects OpenAI
+  or Gemini when a key is configured, otherwise its deterministic mock
+  provider. The health endpoint reports `ai_provider`, `ai_model` and
+  `ai_used_mock` so demo output is never misrepresented as a live model.
 """
 
 
@@ -79,11 +82,17 @@ def create_app() -> FastAPI:
             database = f"unavailable: {exc.__class__.__name__}"
 
         try:
-            engine_name = get_engine().name
-            ai_status = "ok"
-        except IntelligenceError as exc:
-            engine_name = settings.ai_backend
-            ai_status = f"unavailable: {exc}"
+            engine_info = describe_engine()
+        except Exception as exc:  # pragma: no cover - defensive
+            engine_info = {
+                "ai_backend": settings.ai_backend,
+                "ai_provider": settings.ai_provider,
+                "ai_model": settings.ai_model or "",
+                "ai_used_mock": False,
+                "ai_mode": "unavailable",
+                "ai_note": "",
+                "ai_status": f"unavailable: {exc.__class__.__name__}",
+            }
 
         return {
             "status": "ok" if database == "ok" else "degraded",
@@ -91,8 +100,7 @@ def create_app() -> FastAPI:
             "database": database,
             "database_dialect": engine.dialect.name,
             "auth_enabled": settings.auth_enabled,
-            "ai_backend": engine_name,
-            "ai_status": ai_status,
+            **engine_info,
         }
 
     @application.get("/health", include_in_schema=False)

@@ -163,6 +163,22 @@ def test_outreach_tone_and_length_change_the_body(engine):
     assert len(short.body) < len(long.body)
 
 
+def test_outreach_greeting_skips_titles(engine):
+    lead = {**RICH_LEAD, "contact_name": "Dr. Sofia Alvarez"}
+    draft, _ = engine.generate_outreach(lead, _request())
+    assert draft.body.startswith("Hi Sofia,")
+    assert "Hi Dr.," not in draft.body
+
+
+def test_outreach_greeting_helper_skips_titles():
+    from ai.agents._base import contact_first_name
+
+    assert contact_first_name("Dr. Sofia Alvarez") == "Sofia"
+    assert contact_first_name("Prof. Lee Chan") == "Lee"
+    assert contact_first_name("Priya Nair") == "Priya"
+    assert contact_first_name("") == "there"
+
+
 def test_outreach_without_pain_points_declares_the_assumption(engine):
     draft, _ = engine.generate_outreach(RICH_LEAD, _request(pain_points=[]))
     assert any("No pain point was supplied" in item for item in draft.assumptions)

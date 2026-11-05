@@ -228,6 +228,9 @@ def normalise_lead(raw: dict[str, Any]) -> dict[str, Any]:
         "engagement_history": raw.get("engagement_history", ""),
         "response_behavior": raw.get("response_behavior", ""),
         "user_research": raw.get("user_research", ""),
+        "pain_points": raw.get("pain_points", ""),
+        "annual_revenue": raw.get("annual_revenue", ""),
+        "website": raw.get("website", ""),
     }
 
 
@@ -262,6 +265,7 @@ def normalise_score(raw: dict[str, Any]) -> dict[str, Any]:
             labels.append(name)
 
     detail = []
+    dimensions: dict[str, int] = {}
     for factor in factors:
         if not isinstance(factor, dict):
             continue
@@ -276,6 +280,14 @@ def normalise_score(raw: dict[str, Any]) -> dict[str, Any]:
                 "explanation": factor.get("explanation") or "",
             }
         )
+        dimension = factor.get("dimension")
+        if dimension:
+            try:
+                dimensions[str(dimension)] = int(
+                    round(float(factor.get("normalized_value", 0)) * 100)
+                )
+            except (TypeError, ValueError):
+                continue
 
     return {
         "lead_id": raw.get("lead_id"),
@@ -283,15 +295,20 @@ def normalise_score(raw: dict[str, Any]) -> dict[str, Any]:
         "priority_level": raw.get("priority_level", ""),
         "category": raw.get("qualification_category", ""),
         "conversion_probability": raw.get("conversion_probability"),
+        "probability_band": raw.get("probability_band"),
+        "probability_note": raw.get("probability_note", ""),
+        "methodology_note": raw.get("methodology_note", ""),
         "reason": raw.get("explanation") or raw.get("methodology_note") or "",
         "next_action": raw.get("recommended_next_action", ""),
         "scoring_factors": labels,
         "factors_detail": detail,
+        "dimensions": dimensions,
         "positive_signals": raw.get("positive_signals", []),
         "negative_signals": raw.get("negative_signals", []),
         "missing_information": raw.get("missing_information", []),
         "model_version": raw.get("model_version", ""),
         "created_at": raw.get("created_at", ""),
+        "execution": raw.get("execution") or {},
     }
 
 
@@ -367,12 +384,17 @@ def normalise_insight(raw: dict[str, Any]) -> dict[str, Any]:
 def normalise_draft(raw: dict[str, Any]) -> dict[str, Any]:
     """Team-C outreach draft -> the fields the email studio edits."""
     return {
+        "id": raw.get("id"),
+        "status": raw.get("status", "draft"),
         "email_subject": raw.get("subject_line") or raw.get("subject") or "",
         "email_content": raw.get("body") or "",
         "channel": raw.get("channel", ""),
+        "tone": raw.get("tone", ""),
         "call_to_action": raw.get("call_to_action", ""),
         "assumptions": raw.get("assumptions", []),
         "missing_context": raw.get("missing_context", []),
+        "execution": raw.get("execution") or {},
+        "created_at": raw.get("created_at", ""),
     }
 
 
@@ -637,6 +659,45 @@ def api_post(
         body = dict(json_data or {})
         ok, data = _request(
             "POST", base, "/api/v1/outreach/generate", json_data=body, timeout=timeout
+        )
+        return (True, normalise_draft(data)) if ok else (ok, data)
+
+    # The canonical API stores drafts as outreach campaigns.  The UI exposes a
+    # "save edits" action and a truthful "record as sent" action; neither sends
+    # an email (SRS D-05).
+    match = re.fullmatch(rf"/outreach/campaigns/(?P<campaign_id>\d+)/save/?", path)
+    if match:
+        ok, data = _request(
+            "PATCH",
+            base,
+            f"/api/v1/outreach/campaigns/{match.group('campaign_id')}",
+            json_data=json_data,
+            timeout=timeout,
+        )
+        return (True, normalise_draft(data)) if ok else (ok, data)
+
+    match = re.fullmatch(rf"/outreach/campaigns/(?P<campaign_id>\d+)/mark-sent/?", path)
+    if match:
+        ok, data = _request(
+            "POST",
+            base,
+            f"/api/v1/outreach/campaigns/{match.group('campaign_id')}/mark-sent",
+            json_data=json_data,
+            timeout=timeout,
+        )
+        return (True, normalise_draft(data)) if ok else (ok, data)
+
+    if re.fullmatch(r"/outreach/save/?", path):
+        body = dict(json_data or {})
+        lead_id = body.pop("lead_id", None)
+        if not lead_id:
+            return False, {"error": "lead_id is required to save a draft."}
+        ok, data = _request(
+            "POST",
+            base,
+            f"/api/v1/leads/{lead_id}/outreach-drafts",
+            json_data=body,
+            timeout=timeout,
         )
         return (True, normalise_draft(data)) if ok else (ok, data)
 

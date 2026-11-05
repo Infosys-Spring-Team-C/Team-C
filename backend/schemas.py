@@ -286,6 +286,9 @@ class OutreachRequest(BaseModel):
     pain_points: list[str] = Field(default_factory=list)
     product_service: str = Field(default="", max_length=500)
     call_to_action: str = Field(default="", max_length=500)
+    #: Regeneration counter.  The deterministic provider rotates the section it
+    #: rewrites so "Regenerate variation" visibly changes the draft offline.
+    variant: int = Field(default=0, ge=0, le=999)
 
     @field_validator("pain_points")
     @classmethod

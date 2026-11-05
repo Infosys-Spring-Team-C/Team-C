@@ -1,0 +1,18 @@
+SalesGenie AI - AI integration gate
+Date: 2026-11-05
+Environment: api container, SALES_GENIE_AI_BACKEND=external, SALES_GENIE_LLM_PROVIDER=mock
+
+PASS analyze_lead: engine=external provider=mock model=deterministic-demo-v1 used_mock=True category=Qualified
+PASS generate_outreach: engine=external provider=mock model=deterministic-demo-v1 used_mock=True channel=Email
+PASS summarize_conversation: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+PASS recommend: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+PASS score_lead: engine=external provider=mock model=rule-based used_mock=False score=82 factors=8 probability=None
+PASS interpret_analytics: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+
+6/6 operations passed
+External engine produced validated output for every operation.
+Note: this used the mock provider. Real model calls are still unverified.
+
+Database workspace drift check:
+OK    salesgenie-db-workspace/init_schema.sql
+OK    salesgenie-db-workspace/er_diagram.html

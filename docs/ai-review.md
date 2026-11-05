@@ -26,7 +26,15 @@ contract. See `backend/intelligence/external.py` and `backend/intelligence/contr
 > | A-08 `run_workflow` collects errors | **Accepted** - the adapter raises `IntelligenceError` when `errors` is non-empty |
 > | A-09 unbounded context | **Mitigated** - `max_transcript_chars` chunking retained |
 > | A-10 dependencies incomplete/unpinned | **Closed** - exact pins; `scikit-learn` dropped; `numpy` import is lazy |
-> | A-11 outreach request keys | **Closed** - the adapter translates `outreach_type`/`goal`/`pain_points` |
+> | A-11 outreach request keys | **Closed** - the adapter translates `outreach_type`/`goal`/`pain_points` and forwards `length` + regeneration controls |
+>
+> **Update, 5 November 2026 - AI is the default.** `SALES_GENIE_AI_BACKEND=auto` now selects the
+> merged package whenever it is importable, and `SALES_GENIE_LLM_PROVIDER=auto` selects OpenAI,
+> then Gemini, then the package's deterministic mock provider. Because no key exists in this
+> environment, the review demo runs the real agent workflow with the mock provider and labels it
+> `used_mock=true` / `ai_mode=offline-mock`. The heuristic is now an explicit fallback only.
+> AI factors are aggregated into the four persisted SRS dimensions in
+> `backend/routers/scoring.py`, and `tests/test_merge_integration.py` covers this path.
 
 ---
 
@@ -282,18 +290,16 @@ would be an e-mail with the default objective, regardless of what was selected i
 | `outreach_type` | `channel` (`cold_email`/`follow_up` -> `Email`, `linkedin_message` -> `LinkedIn`, `call_script` -> `Call script`, `short_message` -> `Short message`) |
 | `goal` | `campaign_objective` |
 | `pain_points` + `industry` + `lead.user_research` | `company_insights` (joined text) |
-| `tone`, `product_service`, `call_to_action` | passed through unchanged |
+| `tone`, `length`, `product_service`, `call_to_action` | passed through unchanged |
+| `variant` | `variation_label` + `section_to_regenerate`, so Refresh visibly changes the draft |
 
-`length` (`short`/`medium`/`long`) has **no equivalent** in the package - its prompt has no length
-control - so it is not forwarded. With the heuristic engine it is honoured; with the external
-engine it is ignored. This is recorded as a limitation, not hidden.
+`length` (`short`/`medium`/`long`) is now a first-class prompt control. The maintainer added the
+instruction to `ai/prompts/templates.py` and made the deterministic mock provider honour it in
+`ai/agents/outreach.py`. Both engines therefore respect the control, and the adapter forwards it
+instead of dropping it. This closes A-11; `tests/test_external_adapter.py` asserts the forwarding.
 
-**Optional action for Mahidhar.** If length control is wanted, add a `length` instruction to the
-outreach prompt and expose it in `generate_outreach`. The adapter already sends nothing that would
-conflict with such an addition.
-
-This behaviour is covered by `tests/test_external_adapter.py`, which uses a stub implementing the
-documented interface (not a copy of the package).
+The same contract is covered by `tests/test_external_adapter.py`, which uses a stub implementing
+the documented interface (not a copy of the package).
 
 ---
 

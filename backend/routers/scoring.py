@@ -1,9 +1,14 @@
 """Lead scoring and conversion-probability endpoints (Module 4).
 
-The score is an explainable heuristic over the four factors required by SRS
-FR-030.  ``conversion_probability`` is only populated when a calibrated model is
-configured; the shipped engine returns ``null`` plus an explicitly uncalibrated
-band, so a heuristic is never presented as a trained probability.
+The default AI engine returns eight explainable factors from the reviewed AI
+package; the adapter maps them onto the four SRS FR-030 dimensions and this
+router aggregates them into the canonical `fit/intent/engagement/decision
+readiness` columns.  The offline heuristic engine returns four factors that are
+already dimensions.
+
+``conversion_probability`` is only populated by a calibrated model.  Neither
+engine ships one, so it stays ``null`` with an explicitly uncalibrated band; a
+heuristic is never presented as a trained probability.
 """
 from __future__ import annotations
 
@@ -22,12 +27,53 @@ from backend.services.leads import lead_to_dict
 
 router = APIRouter(tags=["scoring"])
 
-_FACTOR_COLUMNS = {
-    "Company fit": "fit_score",
+_DIMENSION_COLUMNS = {
+    "Fit": "fit_score",
     "Intent": "intent_score",
     "Engagement": "engagement_score",
     "Decision readiness": "decision_readiness_score",
 }
+
+#: Heuristic factors already are the four SRS dimensions and carry no
+#: ``dimension`` annotation.  The AI package returns eight finer-grained
+#: factors that the adapter annotates with one of the four dimensions.
+_NAME_TO_DIMENSION = {
+    "Company fit": "Fit",
+    "Company Fit": "Fit",
+    "Intent": "Intent",
+    "Engagement": "Engagement",
+    "Decision readiness": "Decision readiness",
+}
+
+
+def dimension_scores(factors: list[Any]) -> dict[str, int]:
+    """Aggregate arbitrary score factors into the four SRS FR-030 dimensions.
+
+    Each dimension is reported as a 0-100 percentage of the weight it carries,
+    so the eight-factor AI model and the four-factor offline engine populate the
+    same database columns without inventing or discarding signal.
+    """
+    totals: dict[str, dict[str, float]] = {
+        dimension: {"points": 0.0, "weight": 0.0} for dimension in _DIMENSION_COLUMNS
+    }
+    for factor in factors:
+        dimension = getattr(factor, "dimension", None) or _NAME_TO_DIMENSION.get(
+            getattr(factor, "name", "")
+        )
+        if dimension not in totals:
+            continue
+        totals[dimension]["points"] += float(getattr(factor, "points", 0.0) or 0.0)
+        totals[dimension]["weight"] += float(getattr(factor, "weight", 0.0) or 0.0)
+
+    return {
+        column: (
+            max(0, min(100, int(round(bucket["points"] / bucket["weight"] * 100))))
+            if bucket["weight"]
+            else 0
+        )
+        for dimension, column in _DIMENSION_COLUMNS.items()
+        for bucket in (totals[dimension],)
+    }
 
 
 def _serialise(row: LeadScore) -> dict[str, Any]:
@@ -69,10 +115,7 @@ def score_lead(
     except IntelligenceError as exc:
         raise ApiError(502, "ai_failed", f"Lead scoring failed: {exc}") from exc
 
-    factor_points = {
-        _FACTOR_COLUMNS.get(factor.name, factor.name): int(round(factor.normalized_value * 100))
-        for factor in result.factors
-    }
+    factor_points = dimension_scores(result.factors)
     priority = "hot" if result.score >= 70 else "warm" if result.score >= 45 else "cold"
 
     row = LeadScore(
@@ -80,10 +123,10 @@ def score_lead(
         score=result.score,
         conversion_probability=result.conversion_probability,
         priority_level=priority,
-        fit_score=factor_points.get("fit_score", 0),
-        intent_score=factor_points.get("intent_score", 0),
-        engagement_score=factor_points.get("engagement_score", 0),
-        decision_readiness_score=factor_points.get("decision_readiness_score", 0),
+        fit_score=factor_points["fit_score"],
+        intent_score=factor_points["intent_score"],
+        engagement_score=factor_points["engagement_score"],
+        decision_readiness_score=factor_points["decision_readiness_score"],
         factors=[factor.model_dump() for factor in result.factors],
         explanation=result.probability_note,
         recommended_next_action=result.recommended_next_action,

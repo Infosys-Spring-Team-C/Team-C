@@ -70,10 +70,15 @@ class Settings:
     access_token_minutes: int = 120
 
     # --- AI / intelligence layer ---------------------------------------
-    # "external"  = adapter around the reviewed AI package (ai.*); default.
+    # "external"  = adapter around the reviewed AI package (ai.*) contributed
+    #               by Mahidhar (team-c-mahi). This is the product path and the
+    #               default; the package is included in this repository.
+    # "auto"      = AI package when importable, deterministic heuristic otherwise.
     # "heuristic" = deterministic offline engine, kept as an explicit fallback.
     ai_backend: str = "external"
-    ai_provider: str = "mock"  # mock | grok | gemini | openai
+    # "auto" = OpenAI when OPENAI_API_KEY is set, else Gemini when
+    # GOOGLE_API_KEY is set, else the package's deterministic mock provider.
+    ai_provider: str = "auto"  # auto | mock | gemini | openai | grok
     ai_model: str = ""
     ai_temperature: float = 0.2
     ai_timeout_seconds: float = 20.0
@@ -116,7 +121,7 @@ def get_settings() -> Settings:
         jwt_algorithm=_str("JWT_ALGORITHM", "HS256"),
         access_token_minutes=_int("ACCESS_TOKEN_MINUTES", 120),
         ai_backend=_str("SALES_GENIE_AI_BACKEND", "external").lower(),
-        ai_provider=_str("SALES_GENIE_LLM_PROVIDER", "mock").lower(),
+        ai_provider=_str("SALES_GENIE_LLM_PROVIDER", "auto").lower(),
         ai_model=_str("SALES_GENIE_LLM_MODEL"),
         ai_temperature=_float("SALES_GENIE_LLM_TEMPERATURE", 0.2),
         ai_timeout_seconds=_float("SALES_GENIE_AI_TIMEOUT_SECONDS", 20.0),

@@ -61,6 +61,22 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+_HONORIFICS = {"dr", "mr", "mrs", "ms", "prof", "sir", "madam"}
+
+
+def _first_name(contact: str) -> str:
+    """Return the greeting name, skipping titles such as ``Dr.`` or ``Prof.``.
+
+    Mirrors ``ai.agents._base.contact_first_name`` so the offline fallback and
+    the AI package greet the same way.
+    """
+    words = [word.strip(",;:") for word in _text(contact).replace(",", " ").split()]
+    for word in words:
+        if word and word.lower().rstrip(".") not in _HONORIFICS:
+            return word
+    return "there"
+
+
 def _contains(value: str, words: tuple[str, ...]) -> bool:
     lowered = value.lower()
     return any(word in lowered for word in words)
@@ -255,7 +271,7 @@ class HeuristicEngine:
         started = time.perf_counter()
         company = _text(lead.get("company_name")) or "your team"
         contact = _text(lead.get("contact_name"))
-        first_name = contact.split()[0] if contact else "there"
+        first_name = _first_name(contact)
         industry = _text(request.get("industry")) or _text(lead.get("industry"))
         goal = _text(request.get("goal")) or "start a discovery conversation"
         product = _text(request.get("product_service")) or "our solution"
@@ -306,7 +322,7 @@ class HeuristicEngine:
             else ""
         )
         greeting = f"Hi {first_name},"
-        opener = f"I am reaching out because {goal}."
+        opener = f"I am reaching out to {goal}."
 
         if channel == "Call script":
             subject = None
@@ -597,8 +613,7 @@ class HeuristicEngine:
             # No outreach is justified yet, so no channel is asserted.
             channel = None
 
-        contact = _text(lead.get("contact_name")).split()
-        first_name = contact[0] if contact else "there"
+        first_name = _first_name(_text(lead.get("contact_name")))
         result = Recommendation(
             lead_id=str(lead.get("id")) if lead.get("id") is not None else None,
             related_lead=company,

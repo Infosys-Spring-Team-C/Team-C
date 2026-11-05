@@ -1,0 +1,27 @@
+SalesGenie AI - Milestone 2 test evidence
+Date: 2026-11-05
+Environment: api container, PostgreSQL 16 (salesgenie_test)
+Command: docker compose run --rm --no-deps -e TEST_DATABASE_URL=... --entrypoint sh api -c "PYTHONPATH=/tmp/pt python -m pytest -q"
+
+docker :  Container team-c-api-run-391662e0e7c5 Creating 
+At line:1 char:38
++ ... am-C; $pg = docker compose run --rm --no-deps -e "TEST_DATABASE_URL=p ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container team...0e7c5 Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Container team-c-api-run-391662e0e7c5 Created 
+........................................................................ [ 40%]
+........................................................................ [ 81%]
+................................                                         [100%]
+=============================== warnings summary ===============================
+tests/test_api_auth.py::test_token_signed_with_wrong_secret_is_rejected
+  /usr/local/lib/python3.11/site-packages/jwt/api_jwt.py:149: InsecureKeyLengthWarning: The HMAC key is 25 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    return self._jws.encode(
+
+../tmp/pt/_pytest/cacheprovider.py:469
+  /tmp/pt/_pytest/cacheprovider.py:469: PytestCacheWarning: could not create cache path /app/.pytest_cache/v/cache/nodeids: [Errno 13] Permission denied: '/app/pytest-cache-files-rzy0k_ce'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+176 passed, 2 warnings in 93.80s (0:01:33)

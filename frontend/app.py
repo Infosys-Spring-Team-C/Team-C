@@ -70,6 +70,11 @@ DEFAULTS = {
     "email_subject": "",
     "email_body": "",
     "email_tone": "professional",
+    "email_draft_id": None,
+    "email_status": "draft",
+    "email_execution": {},
+    "outreach_variant": 0,
+    "outreach_flash": "",
     "leads_cache": [],
     "insights_cache": {},
     "scores_cache": {},
@@ -250,12 +255,34 @@ def status_badge(priority: str) -> str:
 
 
 def top_status(health_ok: bool, payload: dict) -> str:
-    engine = str(payload.get("ai_backend") or "heuristic").replace("_", " ").title()
+    engine = str(payload.get("ai_backend") or "unavailable").replace("_", " ").title()
+    provider = str(payload.get("ai_provider") or "unknown")
+    model = str(payload.get("ai_model") or "unspecified")
+    used_mock = bool(payload.get("ai_used_mock"))
+    ai_note = str(payload.get("ai_note") or "").strip()
     if health_ok:
+        if used_mock:
+            reason = (
+                esc(ai_note)
+                if ai_note
+                else "AI package running with the deterministic demo provider."
+            )
+            detail = (
+                f'<div class="sg-muted" style="margin-top:4px;">Scoring engine: {esc(engine)}</div>'
+                f'<div class="sg-muted">Demo provider: {esc(provider)} · {esc(model)}</div>'
+                '<div style="margin-top:4px;color:#B45309;font-size:0.78rem;font-weight:600;">'
+                f"{reason}"
+                "</div>"
+            )
+        else:
+            detail = (
+                f'<div class="sg-muted" style="margin-top:4px;">Scoring engine: {esc(engine)}</div>'
+                f'<div class="sg-muted">Model: {esc(provider)} · {esc(model)}</div>'
+            )
         return (
             '<div class="sg-card-cream" style="text-align:right;">'
             + theme.status_dot("Backend online", "success")
-            + f'<div class="sg-muted" style="margin-top:4px;">Scoring engine: {esc(engine)}</div>'
+            + detail
             + "</div>"
         )
     return (
@@ -379,6 +406,21 @@ with st.sidebar:
 
     if health_ok:
         st.markdown(theme.status_dot("Backend connected", "success"), unsafe_allow_html=True)
+        _provider = str(health_payload.get("ai_provider") or "unknown")
+        _model = str(health_payload.get("ai_model") or "unspecified")
+        if health_payload.get("ai_used_mock"):
+            st.markdown(
+                '<div class="sg-muted" style="margin-top:4px;">AI demo provider · '
+                f'{esc(_provider)} · {esc(_model)}<br>'
+                "Output is labelled <code>used_mock</code>.</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                f'<div class="sg-muted" style="margin-top:4px;">AI model · '
+                f'{esc(_provider)} · {esc(_model)}</div>',
+                unsafe_allow_html=True,
+            )
     else:
         st.markdown(theme.status_dot("Backend offline", "error"), unsafe_allow_html=True)
     st.markdown(
@@ -1054,6 +1096,10 @@ def page_outreach() -> None:
         health_payload,
     )
 
+    if st.session_state.outreach_flash:
+        st.success(st.session_state.outreach_flash)
+        st.session_state.outreach_flash = ""
+
     leads = st.session_state.leads_cache
     if not leads:
         theme.empty_state(
@@ -1073,6 +1119,10 @@ def page_outreach() -> None:
         st.session_state.draft_lead_id = lead_id
         st.session_state.email_subject = ""
         st.session_state.email_body = ""
+        st.session_state.email_draft_id = None
+        st.session_state.email_status = "draft"
+        st.session_state.email_execution = {}
+        st.session_state.outreach_variant = 0
         st.session_state.pop("studio_subject", None)
         st.session_state.pop("studio_body", None)
 
@@ -1083,6 +1133,9 @@ def page_outreach() -> None:
         if saved_ok:
             st.session_state.email_subject = saved.get("email_subject", "")
             st.session_state.email_body = saved.get("email_content", "")
+            st.session_state.email_draft_id = saved.get("id")
+            st.session_state.email_status = saved.get("status", "draft")
+            st.session_state.email_execution = saved.get("execution") or {}
 
     st.markdown(
         '<div class="sg-card-cream">'
@@ -1102,8 +1155,73 @@ def page_outreach() -> None:
     left, right = st.columns([1, 2], gap="large")
 
     with left:
-        theme.section("Recommendation", "From the stored score and lead signals")
-        if st.button("Load recommendation", icon=":material/lightbulb:", width="stretch"):
+        theme.section("Lead score", "Stored score, priority band and SRS dimensions")
+        score = load_score(lead_id)
+        if not score:
+            theme.empty_state(
+                "No score yet",
+                "Score this prospect in Lead Intelligence to see the priority band and "
+                "dimensions alongside outreach.",
+            )
+        else:
+            value = score.get("lead_score", 0)
+            label, tone = band_for(value)
+            color = theme.TONE.get(tone, theme.PALETTE["text"])
+            probability = score.get("conversion_probability")
+            if probability is None:
+                probability_display = "n/a"
+                probability_note = "No calibrated model configured"
+            else:
+                numeric = float(probability)
+                probability_display = (
+                    f"{numeric * 100:.1f}%" if numeric <= 1 else f"{numeric:.1f}%"
+                )
+                probability_note = "Reported by the backend"
+
+            dimensions = score.get("dimensions") or {}
+            bars = ""
+            for dimension in ("Fit", "Intent", "Engagement", "Decision readiness"):
+                if dimension not in dimensions:
+                    continue
+                pct = max(0, min(100, int(dimensions[dimension])))
+                bars += (
+                    '<div style="margin-top:0.55rem;">'
+                    '<div style="display:flex;justify-content:space-between;font-size:0.78rem;">'
+                    f'<span class="sg-muted">{esc(dimension)}</span>'
+                    f'<span style="font-weight:650;">{pct}</span></div>'
+                    '<div style="height:6px;border-radius:999px;background:#F6EDE5;'
+                    'margin-top:0.25rem;overflow:hidden;">'
+                    f'<div style="height:100%;width:{pct}%;'
+                    f'background:{theme.PALETTE["accent_strong"]};"></div></div></div>'
+                )
+            if not bars:
+                bars = (
+                    '<div class="sg-muted" style="margin-top:0.6rem;">'
+                    "Dimension breakdown is unavailable for this score.</div>"
+                )
+
+            st.markdown(
+                '<div class="sg-card">'
+                '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.8rem;">'
+                '<div><div class="sg-kpi-label">Score</div>'
+                f'<div style="font-size:2.4rem;font-weight:700;line-height:1;color:{color};">'
+                f'{esc(value)}<span style="font-size:0.95rem;color:#777487;">/100</span></div>'
+                f'<div style="margin-top:0.35rem;">{theme.badge(label, tone)}</div></div>'
+                '<div style="text-align:right;"><div class="sg-kpi-label">Conversion probability</div>'
+                f'<div style="font-size:1.15rem;font-weight:700;margin-top:0.15rem;">'
+                f"{esc(probability_display)}</div>"
+                f'<div class="sg-muted" style="font-size:0.72rem;">{esc(probability_note)}</div></div>'
+                "</div>"
+                f"{bars}"
+                f'<div class="sg-muted" style="margin-top:0.7rem;">Model: '
+                f'{esc(score.get("model_version") or "heuristic")}</div>'
+                "</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.write("")
+        theme.section("Outreach strategy", "Priority, timing, channel and content strategy")
+        if st.button("Load strategy", icon=":material/lightbulb:", width="stretch"):
             ok, data = api_get(f"/recommendations/{lead_id}", timeout=20)
             st.session_state.recommendation_cache[lead_id] = data if ok else None
             if not ok:
@@ -1113,25 +1231,38 @@ def page_outreach() -> None:
         if recommendation:
             priority = str(recommendation.get("priority") or "").lower()
             tone = {"high": "success", "medium": "warning", "low": "muted"}.get(priority, "muted")
+            content_strategy = recommendation.get("follow_up_draft") or ""
+            content_html = (
+                para(content_strategy)
+                if content_strategy
+                else '<span class="sg-muted">No content strategy returned.</span>'
+            )
             st.markdown(
                 '<div class="sg-card">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-                f'<span class="sg-kpi-label">Priority</span>{theme.badge(priority.capitalize() or "Unknown", tone)}</div>'
-                f'<div style="margin-top:0.6rem;font-weight:600;font-size:0.9rem;">{para(recommendation.get("recommended_action") or "-")}</div>'
-                f'<div class="sg-muted" style="margin-top:0.4rem;">Timing: {esc(recommendation.get("suggested_timing") or "Not set")}</div>'
-                f'<div class="sg-muted">Channel: {esc(recommendation.get("suggested_channel") or "Not set")}</div>'
-                f'<div class="sg-muted" style="margin-top:0.4rem;">{para(recommendation.get("reason") or "")}</div>'
+                f'<span class="sg-kpi-label">Priority</span>'
+                f'{theme.badge(priority.capitalize() or "Unknown", tone)}</div>'
+                f'<div style="margin-top:0.6rem;font-weight:600;font-size:0.9rem;">'
+                f'{para(recommendation.get("recommended_action") or "-")}</div>'
+                '<div style="display:flex;flex-wrap:wrap;gap:0.5rem 1.4rem;margin-top:0.65rem;">'
+                f'<div><div class="sg-kpi-label">Timing</div>'
+                f'<div style="font-size:0.85rem;">{esc(recommendation.get("suggested_timing") or "Not set")}</div></div>'
+                f'<div><div class="sg-kpi-label">Channel</div>'
+                f'<div style="font-size:0.85rem;">{esc(recommendation.get("suggested_channel") or "Not set")}</div></div>'
+                "</div>"
+                '<div style="margin-top:0.65rem;"><div class="sg-kpi-label">Content strategy</div>'
+                f'<div style="font-size:0.85rem;line-height:1.55;">'
+                f"{content_html}"
+                "</div></div>"
+                f'<div class="sg-muted" style="margin-top:0.6rem;">{para(recommendation.get("reason") or "")}</div>'
                 "</div>",
                 unsafe_allow_html=True,
             )
-            if recommendation.get("follow_up_draft"):
-                with st.expander("Suggested follow-up draft"):
-                    st.write(recommendation["follow_up_draft"])
         else:
-            st.caption("Load the recommendation to see priority, timing and channel.")
+            st.caption("Load the strategy to see priority, timing, channel and content.")
 
     with right:
-        theme.section("Draft", "Tone, length and channel are sent to the backend")
+        theme.section("Draft", "Tone, length, channel and context are sent to the backend")
         with st.form("outreach_form"):
             row_one, row_two, row_three = st.columns(3, gap="medium")
             tone_label = row_one.selectbox("Tone", ["Professional", "Friendly", "Direct", "Formal"])
@@ -1142,34 +1273,62 @@ def page_outreach() -> None:
                 format_func=lambda value: value.replace("_", " ").title(),
             )
             goal = st.text_input("Goal", value="start a discovery conversation")
-            cta = st.text_input("Call to action", value="Would a short conversation next week be useful?")
+            product = st.text_input(
+                "Product / service",
+                value="SalesGenie AI - AI sales assistant and lead-intelligence platform",
+            )
+            row_four, row_five = st.columns(2, gap="medium")
+            industry_context = row_four.text_input(
+                "Industry context", value=lead.get("industry") or ""
+            )
+            cta = row_five.text_input(
+                "Call to action", value="Would a short conversation next week be useful?"
+            )
             pain_points = st.text_area(
-                "Known pain points (one per line)", height=80, placeholder="Manual reporting\nSlow onboarding"
+                "Known pain points (one per line)",
+                value=lead.get("pain_points") or "",
+                height=80,
+                placeholder="Manual reporting\nSlow onboarding",
             )
             generate = st.form_submit_button(
                 "Generate draft", type="primary", icon=":material/auto_awesome:", width="stretch"
             )
 
-        if generate:
+        regenerate = st.button(
+            "Regenerate variation", icon=":material/refresh:", width="stretch"
+        )
+
+        if generate or regenerate:
+            variant = (
+                0
+                if generate
+                else int(st.session_state.get("outreach_variant", 0)) + 1
+            )
             payload = {
                 "lead_id": lead_id,
                 "tone": tone_label.lower(),
                 "length": length,
                 "outreach_type": channel,
                 "goal": goal.strip(),
+                "product_service": product.strip(),
                 "call_to_action": cta.strip(),
                 "pain_points": [line.strip() for line in pain_points.splitlines() if line.strip()],
-                "industry": lead.get("industry") or "",
+                "industry": industry_context.strip() or lead.get("industry") or "",
+                "variant": variant,
             }
-            with st.spinner("Generating the draft..."):
+            with st.spinner("Running the AI outreach agent..."):
                 ok, response = api_post("/intelligence/outreach", json_data=payload, timeout=60)
             if ok:
+                st.session_state.outreach_variant = variant
                 st.session_state.email_subject = response.get("email_subject", "")
                 st.session_state.email_body = response.get("email_content", "")
                 st.session_state.email_tone = tone_label.lower()
+                st.session_state.email_draft_id = response.get("id")
+                st.session_state.email_status = response.get("status", "draft")
+                st.session_state.email_execution = response.get("execution") or {}
                 st.session_state["studio_subject"] = st.session_state.email_subject
                 st.session_state["studio_body"] = st.session_state.email_body
-                st.toast("Draft generated.")
+                st.toast("Draft generated." if generate else "Variation generated.")
                 st.rerun()
             else:
                 theme.error_note(response.get("error", "Draft generation failed."))
@@ -1190,15 +1349,86 @@ def page_outreach() -> None:
         words = len(body.split()) if body else 0
         st.caption(f"{words} words · {len(body)} characters · tone {tone_label.lower()}")
 
-        action_one, action_two = st.columns(2, gap="medium")
+        if st.session_state.email_execution:
+            execution = st.session_state.email_execution
+            draft_state = st.session_state.email_status or "draft"
+            st.caption(
+                f"Draft #{st.session_state.email_draft_id or '-'} · status **{draft_state}** · "
+                f"engine **{execution.get('engine', 'unknown')}** · provider "
+                f"**{execution.get('provider', 'unknown')}** · model "
+                f"**{execution.get('model', 'unknown')}**"
+            )
+            if execution.get("used_mock"):
+                theme.warning_note(
+                    "This draft was produced by the deterministic demo provider. Set an "
+                    "OpenAI or Gemini key for a live model; the engine reports used_mock so "
+                    "demo output is never presented as a real model call.",
+                    "Demo provider",
+                )
+        elif st.session_state.email_draft_id:
+            st.caption(
+                f"Draft #{st.session_state.email_draft_id} · status "
+                f"**{st.session_state.email_status or 'draft'}**"
+            )
+
+        action_one, action_two, action_three = st.columns(3, gap="medium")
         with action_one:
             with st.expander("Copy message"):
                 st.code(f"Subject: {subject}\n\n{body}" if (subject or body) else "Nothing to copy yet.")
         with action_two:
+            save_draft = st.button("Save draft", icon=":material/save:", width="stretch")
+            record_sent = st.button("Record as sent", icon=":material/task_alt:", width="stretch")
+        with action_three:
             send = st.button(
-                "Send email", icon=":material/send:", width="stretch", disabled=not (subject and body)
+                "Attempt dispatch", icon=":material/send:", width="stretch", disabled=not (subject and body)
             )
-            st.caption("Delivery requires a configured provider in the backend.")
+            st.caption("Delivery is unavailable in this build (SRS D-05).")
+
+        if save_draft or record_sent:
+            if not body.strip():
+                theme.error_note("Cannot save an empty draft.")
+            else:
+                draft_body = {
+                    "subject": subject,
+                    "body": body,
+                    "tone": tone_label.lower(),
+                    "status": "draft",
+                }
+                campaign_id = st.session_state.email_draft_id
+                if campaign_id:
+                    ok, response = api_post(
+                        f"/outreach/campaigns/{campaign_id}/save", json_data=draft_body
+                    )
+                else:
+                    ok, response = api_post(
+                        "/outreach/save", json_data={"lead_id": lead_id, **draft_body}
+                    )
+                if not ok:
+                    theme.error_note(
+                        response.get("error") or response.get("message") or "Could not save the draft."
+                    )
+                else:
+                    campaign_id = response.get("id")
+                    st.session_state.email_draft_id = campaign_id
+                    st.session_state.email_status = response.get("status", "draft")
+                    if record_sent and campaign_id:
+                        ok, response = api_post(
+                            f"/outreach/campaigns/{campaign_id}/mark-sent"
+                        )
+                        if ok:
+                            st.session_state.email_status = "sent"
+                            st.session_state.outreach_flash = (
+                                "Recorded as sent. No e-mail was transmitted by this build."
+                            )
+                            st.rerun()
+                        else:
+                            theme.error_note(
+                                response.get("error") or response.get("message") or "Could not record the send."
+                            )
+                    else:
+                        st.session_state.outreach_flash = f"Draft #{campaign_id} saved."
+                        st.rerun()
+
         if send:
             if not lead.get("email"):
                 theme.error_note("This prospect has no email address on record.")

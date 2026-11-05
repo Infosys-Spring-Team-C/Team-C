@@ -33,6 +33,8 @@ workflow Â· Low: cosmetic, documentation or no user-visible impact.
 | BUG-014 | Frontend adapter mis-read the saved-analysis endpoint | High | P1 | Closed (fixed, 12/12) | Lead (frontend adapter) |
 | BUG-015 | Frontend displayed a fabricated "Scoring Accuracy 98.4%" | High | P1 | Closed (fixed) | Lead (frontend) |
 | BUG-016 | Clean install could not collect the frontend adapter tests (`requests` missing) | Medium | P2 | Closed (fixed) | Lead (build) |
+| BUG-017 | Outreach greeted titled contacts as "Hi Dr.," instead of their name | Low | P3 | Closed (fixed) | AI (Mahidhar) / Lead |
+| BUG-018 | `auto` provider selected a keyed provider whose SDK was absent, making the whole AI engine unavailable | High | P1 | Closed (fixed) | Lead (AI adapter) |
 
 ---
 
@@ -450,15 +452,81 @@ runtime does not use it.
 
 ---
 
+### BUG-017 - Outreach greeted titled contacts as "Hi Dr.,"
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Low / P3 |
+| Status | Closed - fixed 5 November 2026 |
+| Requirement | FR-020, FR-022 (personalised outreach) |
+| Found by | Live Milestone 2 outreach check over the six seeded industries |
+| Owner | AI (Mahidhar) / Lead |
+
+**Description.** Both outreach generators took the first whitespace token of
+`contact_name` as the greeting name. The seeded healthcare contact
+`Dr. Sofia Alvarez` therefore produced `Hi Dr.,`, which reads as a defect in a
+personalised draft.
+
+**Resolution.** Added `contact_first_name()` to `ai/agents/_base.py` and an
+equivalent `_first_name()` in the offline `HeuristicEngine`. Both skip leading
+honorifics (`Dr.`, `Mr.`, `Mrs.`, `Ms.`, `Prof.`, `Sir`, `Madam`) before choosing
+the greeting name. The follow-up recommendation uses the same helper.
+
+**Verification.** `tests/test_intelligence.py`:
+`test_outreach_greeting_skips_titles` and
+`test_outreach_greeting_helper_skips_titles`. The live check now returns
+`Hi Sofia,` for Bluebird Health
+(`docs/qa/evidence/2026-11-05-milestone2-live-check.json`).
+
+---
+
+### BUG-018 - A keyed provider without its SDK made the AI engine unavailable
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 5 November 2026 |
+| Requirement | NFR-002 (operable without credentials), FR-019 |
+| Found by | Compose health check after merging the `auto` provider selection |
+| Owner | Lead (AI adapter) |
+
+**Description.** `SALES_GENIE_LLM_PROVIDER=auto` selected OpenAI whenever
+`OPENAI_API_KEY` was present in the environment. The default image does not
+install the optional provider SDKs, so `create_provider` raised and
+`/api/v1/health` reported:
+
+```
+"ai_mode": "unavailable",
+"ai_status": "unavailable: Could not initialise the AI provider: Install the optional 'openai' package ..."
+```
+
+Every AI endpoint returned `502 ai_failed`. A key inherited from the host shell
+was enough to break a demo that needs no credentials.
+
+**Resolution.** `resolve_provider()` now consults `provider_sdk_installed()`
+before choosing a keyed provider. With `auto`, a configured key whose SDK is not
+installed falls back to the deterministic mock provider, and `describe_engine()`
+returns a non-secret `ai_note` explaining why. An explicit
+`SALES_GENIE_LLM_PROVIDER=openai` still fails loudly instead of silently
+degrading. `docker-compose.yml` gained an `INSTALL_AI_EXTRAS` build argument so
+a live-provider image can be built deliberately.
+
+**Verification.** `tests/test_external_adapter.py`:
+`test_provider_auto_falls_back_to_mock_when_sdk_is_missing`; health reports
+`ai_mode: offline-mock`, `ai_used_mock: true`, `ai_status: ok` in the rebuilt
+stack. The UI header shows the same state.
+
+---
+
 ## 4. Defect trend
 
 | Status | Count |
 |---|---|
-| Closed | 15 |
+| Closed | 17 |
 | Open | 1 |
-| **Total** | **16** |
+| **Total** | **18** |
 
-All 16 defects are listed in section 1 with the stage that found them. No defect has been
+All 18 defects are listed in section 1 with the stage that found them. No defect has been
 reopened, and every closed defect has a verification reference in its entry.
 
 The single open defect is BUG-011 (no way to dismiss a follow-up). It is a deliberate,

@@ -4,14 +4,17 @@ Canonical repository for the Infosys Springboard Team-C project **SalesGenie AI 
 Assistant & Lead Intelligence Platform**.
 
 This repository contains the **FastAPI backend, PostgreSQL schema and migrations, JWT/RBAC
-security, the AI intelligence layer, Docker packaging and the test suite**. The Streamlit
-frontend is owned by Maheksaba Akbar Shaikh and is integrated from her own repository/branch;
-no replacement UI is included here.
+security, the AI intelligence layer, the Streamlit frontend, Docker packaging and the test
+suite**. The frontend's original design is owned by Maheksaba Akbar Shaikh; the current
+peach-and-cream rewrite from the updated Team-C archive is integrated here on top of the
+canonical API, with the outreach and intelligence controls re-applied.
 
 > **Honesty statement.** This README distinguishes what is implemented and tested from what is
 > planned. Every test result quoted below was produced by running the command shown. The default
-> intelligence engine is a **deterministic heuristic, not a trained or calibrated model**, and the
-> API never presents it as one.
+> intelligence path is the merged **AI package** contributed by Mahidhar; when no model key is
+> configured it runs the package's deterministic mock provider and labels every result
+> `used_mock=true`. The heuristic engine remains an explicit offline fallback. Neither engine
+> ships a trained or calibrated model, and the API never presents one as calibrated.
 
 ---
 
@@ -22,17 +25,17 @@ no replacement UI is included here.
 | Lead CRUD, lifecycle stages, filtering, pagination | Implemented, tested | `tests/test_api_leads.py` |
 | CSV import with validation, duplicate policy, per-row reporting | Implemented, tested | `tests/test_api_import.py` |
 | JWT authentication, RBAC (`admin`/`manager`/`rep`/`viewer`) | Implemented, tested | `tests/test_api_auth.py` |
-| Company analysis / lead intelligence | Implemented; heuristic by default, external `ai.*` package available | `tests/test_api_ai.py`, `tests/test_intelligence.py` |
-| Outreach generation + draft persistence | Implemented, tested | `tests/test_api_ai.py` |
+| Company analysis / lead intelligence | Implemented; default AI package (external) | `tests/test_api_ai.py`, `tests/test_merge_integration.py` |
+| Outreach generation + draft persistence + prompt controls | Implemented, tested; generate/refresh, edit, copy, save and record-as-sent in the UI | `tests/test_api_ai.py`, `tests/test_frontend_compat.py` |
 | Email delivery | **Not implemented** - returns `501` by design (SRS D-05) | `POST /api/v1/outreach/send` |
-| Lead scoring + explainable factors | Implemented as heuristic; external package maps 8 factors to the 4 SRS dimensions | `tests/test_api_ai.py`, `tests/test_intelligence.py` |
+| Lead scoring + explainable factors | Implemented; AI package maps 8 factors onto the 4 SRS dimensions | `tests/test_merge_integration.py`, `tests/test_api_ai.py` |
 | Calibrated conversion probability | **Not implemented** - returns `null` | `lead_scores.conversion_probability` |
-| Conversation summaries | Implemented; heuristic by default, external package available | `tests/test_api_ai.py` |
+| Conversation summaries | Implemented; default AI package, heuristic fallback | `tests/test_api_ai.py` |
 | Analytics + follow-ups | Implemented; undefined KPIs return `null` | `tests/test_api_ai.py` |
-| CRM synchronisation transport | **Not implemented** - dry-run + failure logging only (SRS D-06) | `/api/v1/crm/*` |
+| CRM synchronisation transport | **Not implemented** - dry-run, labelled simulator and failure logging (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
-| Streamlit frontend | Merged from Maheksaba's `frontend-ui` branch; UI unchanged, API boundary adapted; 12/12 live checks and a browser check | `frontend/`, `tests/test_frontend_compat.py`, `docs/qa/evidence/2026-10-27-browser-ui-check.txt` |
+| Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
 
 Full details: [`docs/audit-report.md`](docs/audit-report.md),
 [`docs/test-report.md`](docs/test-report.md),
@@ -56,8 +59,10 @@ Full details: [`docs/audit-report.md`](docs/audit-report.md),
                            |             |
              SQLAlchemy ORM|             |IntelligenceEngine protocol
                     +------v------+   +--v---------------------------+
-                    | PostgreSQL  |   | HeuristicEngine (default)    |
-                    | 8 tables    |   | ExternalAIEngine (adapter)   |
+                    | PostgreSQL  |   | ExternalAIEngine (default)   |
+                    | 8 tables    |   |  -- ai.* package, auto       |
+                    |             |   |     provider selection       |
+                    |             |   | HeuristicEngine (fallback)   |
                     +-------------+   +------------------------------+
 ```
 
@@ -65,10 +70,15 @@ Design rules enforced by the code:
 
 * Routers never import an LLM SDK or an agent graph. They depend on
   `backend.intelligence.contract.IntelligenceEngine`.
-* The default engine is deterministic and offline, so the API is runnable and testable without
-  credentials.
+* `SALES_GENIE_AI_BACKEND=external` (default) always uses the merged AI package and fails loudly
+  if it is missing or returns invalid output. `auto` uses the package when importable and falls
+  back to the deterministic heuristic only when it is not; `heuristic` forces the offline engine.
+* `SALES_GENIE_LLM_PROVIDER=auto` (default) uses OpenAI when `OPENAI_API_KEY` is set, Gemini when
+  `GOOGLE_API_KEY` is set, and otherwise the package's deterministic mock provider. The health
+  endpoint and every execution record expose `used_mock`, so demo output is labelled honestly.
 * The adapter `backend/intelligence/external.py` integrates the reviewed `ai.*` package without
-  copying it. It is only activated with `SALES_GENIE_AI_BACKEND=external` after that PR is merged.
+  copying it. It forwards channel, tone, length, goal, pain points, product and CTA, and maps the
+  package's eight score factors onto the four SRS FR-030 dimensions.
 * Generation and delivery are separate. Nothing in this repository can send an email.
 * Scores are stored with their factor breakdown; conversion probability is `NULL` unless a
   calibrated model exists.
@@ -236,26 +246,31 @@ Full request/response documentation: [`docs/api-contract.md`](docs/api-contract.
 ## 8. AI provider configuration
 
 ```env
-SALES_GENIE_AI_BACKEND=external        # default; uses the merged ai.* package
-# SALES_GENIE_AI_BACKEND=heuristic     # optional: offline, deterministic fallback
-SALES_GENIE_LLM_PROVIDER=mock           # external package: mock | openai | gemini
-SALES_GENIE_LLM_MODEL=
+SALES_GENIE_AI_BACKEND=external         # external (default) | auto | heuristic
+SALES_GENIE_LLM_PROVIDER=auto           # auto | mock | openai | gemini
+SALES_GENIE_LLM_MODEL=                  # blank uses the provider default
 GOOGLE_API_KEY=
 OPENAI_API_KEY=
 ```
 
-* With `external` (default), the backend validates the AI package's structured output against its
-  own Pydantic contract. Missing package or invalid output produces `502 ai_failed`, never a silent
-  fallback. Install the package's extras with `pip install -r ai/requirements.txt`.
-* With `heuristic` (optional), no network calls and no credentials are needed. Outputs are labelled
-  `heuristic` in the `execution` block and `provider`/`model` columns.
+* `external` is the default product path: the AI package is included in this repository and is
+  always used. A missing package or invalid structured output produces `502 ai_failed`, never a
+  silent fallback. Install the package's extras with `pip install -r ai/requirements.txt`.
+* With `auto` and no provider key, the **AI package still runs** through its deterministic mock
+  provider. Every execution is labelled `used_mock=true`; the UI shows a warning and the health
+  endpoint reports `ai_mode=offline-mock`. This is the demo path used in this environment.
+* With an OpenAI or Gemini key present, `auto` selects that live provider. The backend validates
+  the AI package's structured output against its own Pydantic contract.
+* `auto` as an *engine* uses the AI package when importable and falls back to the heuristic only
+  when it is not; `heuristic` forces the offline deterministic engine and is kept as a tested
+  fallback.
 * `SALES_GENIE_LLM_PROVIDER=grok` is rejected by the external engine: the package implements
   mock, openai and gemini only.
-* The external engine is verified with the **mock** provider: `python scripts/check_ai_integration.py`
-  exercises all six operations and prints `6/6 operations passed` (evidence in
-  `docs/qa/evidence/2026-10-27-ai-integration-gate.txt`). Real OpenAI/Gemini calls are **not**
-  verified because no key was used.
-* Attribution and the list of maintainer corrections: [`docs/ai-handoff.md`](docs/ai-handoff.md).
+* The AI integration gate is `python scripts/check_ai_integration.py`; it exercises all six
+  operations and prints `6/6 operations passed`. Real OpenAI/Gemini calls are **not** verified
+  because no key was used.
+* Attribution and the list of maintainer corrections: [`docs/ai-handoff.md`](docs/ai-handoff.md),
+  [`CREDITS.md`](CREDITS.md).
 
 ---
 
@@ -271,10 +286,13 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgen
 python -m pytest -q
 ```
 
-Verified results in this environment:
+Verified results in this environment (Python 3.14, 5 November 2026):
 
-* SQLite only: **116 passed, 6 skipped** (the PostgreSQL module skips itself).
-* With PostgreSQL 16 on `127.0.0.1:55432`: **122 passed**.
+* SQLite only: **168 passed, 6 skipped** (the PostgreSQL module skips itself). This includes the
+  expanded frontend adapter/login/normaliser tests, the intelligence package tests and the new
+  merge-integration tests.
+* With PostgreSQL 16 (`TEST_DATABASE_URL` pointing at a `*test*` database): **174 passed,
+  0 skipped**, including schema, migration up/down and dialect-parity checks.
 
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
 recreates the `public` schema. Exact commands and output: [`docs/test-report.md`](docs/test-report.md).
@@ -319,21 +337,25 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
 
 1. **No email delivery.** `POST /outreach/send` returns `501`. Drafts can be generated, edited and
    marked as sent manually.
-2. **No calibrated conversion model.** `conversion_probability` is `NULL` for heuristic scores.
-   The returned `probability_band` is explicitly labelled uncalibrated.
+2. **No calibrated conversion model.** `conversion_probability` is `NULL` for every score,
+   including the default external/rule-based path. The returned `probability_band` is explicitly
+   labelled uncalibrated and the UI prints "No calibrated model configured".
 3. **Undefined KPIs are `null`.** `pipeline_value`, `average_response_time_days` and
    `average_sales_cycle_days` require decisions the schema cannot yet support (SRS D-10).
-4. **No live CRM transport.** Requests are validated, dry-run previews work, failures are logged.
-5. **Real model calls are unverified.** The external `ai.*` package passes its gate with the
-   deterministic **mock** provider; no OpenAI or Gemini key was used.
+4. **No live CRM transport.** Requests are validated, dry-run previews work, a clearly-labelled
+   simulator maps leads onto a provider-neutral payload, and failures are logged. The simulator
+   never contacts Salesforce or HubSpot.
+5. **Real model calls are unverified.** The default AI path runs the full agent workflow through
+   the package's deterministic **mock** provider because no OpenAI or Gemini key was available;
+   `used_mock` and `ai_mode=offline-mock` make this explicit. Live provider calls remain untested.
 6. **Docker verified locally, not production-hardened.** The Compose stack builds and runs, but
    there is no TLS termination, secrets manager or orchestrator configuration.
 7. **No CI workflow.** Adding one requires a decision on the target database service; the exact
    proposed workflow is in `docs/contributor-actions.md`.
-8. **No human usability acceptance of the UI.** The adapter passed 12/12 live checks, `AppTest`
-   ran with 0 exceptions, and the scoring path was exercised in a browser; the eight UI
-   requirements have not been formally accepted by a person. See
-   [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md).
+8. **No formal human usability acceptance of the UI.** The rewritten frontend was exercised in a
+   browser end to end (generate, regenerate, save, record-as-sent, dispatch refusal, score,
+   analyse, summarise, insights) and its adapter tests pass; the eight UI requirements have not
+   been formally signed off by a person. See [`docs/today-review.md`](docs/today-review.md).
 9. **Follow-ups are read-only.** There is no dismissal endpoint (BUG-011). FR-052 only requires
    the panel, which works.
 
@@ -348,18 +370,27 @@ This repository is the only source of truth. Individual repositories are review 
   `saisurekha914 <saisurekha914@gmail.com>`. The canonical schema was reconciled against her
   workspace in separate lead commits; the record is
   [`docs/database-merge-notes.md`](docs/database-merge-notes.md).
+* `Infosys-Spring-Team-C/team-c-doran` - backend contract and CRM work by **M Doran**. The
+  canonical backend is retained, but his provider-neutral CRM payload mapping, deterministic
+  simulator and CRM status endpoint are merged and adapted in `backend/services/crm.py` and
+  `backend/routers/analytics.py`. Merge record: [`CREDITS.md`](CREDITS.md),
+  [`docs/merge-report.md`](docs/merge-report.md).
 * `mahidar22/infosys-springboard-internship` - AI/ML work. **Merged** on 27 October 2026.
   The contributor could not push a branch, so his submitted archive was applied with him as
   git **author** (`Mahidhar Reddy <mahidarreddy.2005@gmail.com>`) and the lead as
   **committer**. Integration corrections are separate lead commits. Review:
   [`docs/ai-review.md`](docs/ai-review.md); disclosure and correction list:
   [`docs/ai-handoff.md`](docs/ai-handoff.md).
-* `Mahek-saba/frontend-infosys` - Streamlit frontend. Merged from her `frontend-ui` branch,
-  with her commits preserved; integration work (API adapter, packaging) is separate lead
-  commits. See [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md).
+* `Mahek-saba/frontend-infosys` - Streamlit frontend. Her original UI was merged from the
+  `frontend-ui` branch; the updated peach-and-cream rewrite delivered in the latest Team-C main
+  archive is the current UI baseline. Integration work (API adapter, packaging, outreach and
+  intelligence controls, browser verification) is separate maintainer work. See
+  [`docs/frontend-merge-notes.md`](docs/frontend-merge-notes.md) and
+  [`docs/today-review.md`](docs/today-review.md).
 
-The backend implementation in this repository was authored by Mohamed Isharak M under his own Git
-identity. It is not attributed to M Doran.
+The core backend implementation in this repository was authored by Mohamed Isharak M under his own
+Git identity. The CRM mapping/simulator and the AI package are credited to their contributors in
+[`CREDITS.md`](CREDITS.md); no contributor's work is presented as the maintainer's own.
 
 ---
 
@@ -367,6 +398,9 @@ identity. It is not attributed to M Doran.
 
 | Document | Contents |
 |---|---|
+| [`CREDITS.md`](CREDITS.md) | Contributor attribution and what each person's merged work covers |
+| [`docs/merge-report.md`](docs/merge-report.md) | Consolidation of the backend, AI/DevOps, database and frontend work |
+| [`docs/today-review.md`](docs/today-review.md) | Milestone 2 review demo script and verification commands |
 | [`docs/SRS.md`](docs/SRS.md) | Authoritative requirements (FR/NFR, decisions) |
 | [`docs/audit-report.md`](docs/audit-report.md) | Audit of all three repositories |
 | [`docs/database-review.md`](docs/database-review.md) | File-specific review for Sai |

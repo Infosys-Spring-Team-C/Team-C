@@ -1,0 +1,34 @@
+SalesGenie AI - Milestone 2 test evidence
+Date: 2026-11-05
+Environment: api container, SQLite (TEST_DATABASE_URL unset)
+Command: docker compose run --rm --no-deps --entrypoint sh api -c "PYTHONPATH=/tmp/pt python -m pytest -q -rs"
+
+docker :  Container team-c-api-run-6af88e2aac38 Creating 
+At line:1 char:42
++ ... ; $sqlite = docker compose run --rm --no-deps --entrypoint sh api -c  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ( Container team...aac38 Creating :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ Container team-c-api-run-6af88e2aac38 Created 
+........................................................................ [ 40%]
+........................................................................ [ 81%]
+......ssssss....................                                         [100%]
+=============================== warnings summary ===============================
+tests/test_api_auth.py::test_token_signed_with_wrong_secret_is_rejected
+  /usr/local/lib/python3.11/site-packages/jwt/api_jwt.py:149: InsecureKeyLengthWarning: The HMAC key is 25 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    return self._jws.encode(
+
+../tmp/pt/_pytest/cacheprovider.py:469
+  /tmp/pt/_pytest/cacheprovider.py:469: PytestCacheWarning: could not create cache path /app/.pytest_cache/v/cache/nodeids: [Errno 13] Permission denied: '/app/pytest-cache-files-237mi00p'
+    config.cache.set("cache/nodeids", sorted(self.cached_nodeids))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_postgres.py:97: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+SKIPPED [1] tests/test_postgres.py:106: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+SKIPPED [1] tests/test_postgres.py:128: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+SKIPPED [1] tests/test_postgres.py:148: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+SKIPPED [1] tests/test_postgres.py:194: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+SKIPPED [1] tests/test_postgres.py:203: TEST_DATABASE_URL is not set; PostgreSQL tests skipped
+170 passed, 6 skipped, 2 warnings in 93.18s (0:01:33)

@@ -15,6 +15,16 @@ RUN groupadd --system app \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# The AI package (ai/) is part of the product path.  Its base requirement is
+# pydantic (already installed above), so the deterministic mock provider works
+# without this step.  Build with --build-arg INSTALL_AI_EXTRAS=true to add the
+# optional LangGraph and OpenAI/Gemini SDKs for a live model provider.
+COPY ai/requirements.txt ./ai/requirements.txt
+ARG INSTALL_AI_EXTRAS=false
+RUN if [ "$INSTALL_AI_EXTRAS" = "true" ]; then \
+        pip install --no-cache-dir -r ai/requirements.txt; \
+    fi
+
 COPY --chown=app:app . .
 
 USER app

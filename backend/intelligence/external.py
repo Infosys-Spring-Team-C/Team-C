@@ -56,6 +56,68 @@ _DIMENSION_BY_FACTOR = {
     "Sales Stage": "Decision readiness",
 }
 
+#: Sensible defaults when the provider is automatic and no model is supplied.
+_DEFAULT_MODEL_BY_PROVIDER = {
+    "openai": "gpt-4o-mini",
+    "gemini": "gemini-2.5-flash",
+    "mock": "deterministic-demo-v1",
+}
+
+
+def provider_sdk_installed(provider: str) -> bool:
+    """Return ``True`` when the SDK for a concrete provider can be imported.
+
+    The AI package's provider boundary imports its SDK lazily, so a configured
+    key on an image built without ``INSTALL_AI_EXTRAS=true`` would otherwise
+    make the whole engine unavailable.  ``auto`` uses this check to fall back to
+    the mock provider instead; an explicit provider still fails loudly.
+    """
+    if provider == "openai":
+        try:
+            import openai  # noqa: F401
+        except ImportError:
+            return False
+    elif provider == "gemini":
+        try:
+            import google.genai  # noqa: F401
+        except ImportError:
+            return False
+    return True
+
+
+def resolve_provider(settings: Settings) -> tuple[str, str]:
+    """Resolve ``auto`` to a concrete provider and model without any network I/O.
+
+    A configured key wins *when its SDK is installed*.  Otherwise the package's
+    deterministic mock provider is used so the full AI workflow remains
+    demonstrable offline; the engine reports ``used_mock=True`` so callers never
+    present it as a live model.
+    """
+    provider = (settings.ai_provider or "auto").strip().lower()
+    if provider in {"", "auto"}:
+        if settings.openai_api_key and provider_sdk_installed("openai"):
+            provider = "openai"
+        elif settings.google_api_key and provider_sdk_installed("gemini"):
+            provider = "gemini"
+        else:
+            provider = "mock"
+    model = settings.ai_model.strip() or _DEFAULT_MODEL_BY_PROVIDER.get(provider, "")
+    return provider, model
+
+
+def auto_provider_note(settings: Settings) -> str:
+    """Explain an ``auto`` fallback caused by a missing provider SDK, if any."""
+    if (settings.ai_provider or "auto").strip().lower() not in {"", "auto"}:
+        return ""
+    wanted = "openai" if settings.openai_api_key else "gemini" if settings.google_api_key else ""
+    if wanted and not provider_sdk_installed(wanted):
+        return (
+            f"A {wanted} key is configured but its SDK is not installed in this image; "
+            "the deterministic mock provider is used. Rebuild with "
+            "--build-arg INSTALL_AI_EXTRAS=true for live model calls."
+        )
+    return ""
+
 
 class ExternalAIEngine:
     """Thin, validating adapter; it performs no AI work itself."""
@@ -77,32 +139,34 @@ class ExternalAIEngine:
 
         self._run_workflow = run_workflow
         self._provider_error = ProviderError
+        provider, model = resolve_provider(settings)
         # The package's provider boundary supports mock, openai and gemini only.
         # Grok was planned for the backend, so reject it here instead of letting
         # ``create_provider`` fail with an opaque message.
-        if settings.ai_provider == "grok":
+        if provider == "grok":
             raise IntelligenceError(
                 "SALES_GENIE_LLM_PROVIDER=grok is not supported by the external AI "
                 "engine. The reviewed package implements mock, openai and gemini. "
                 "Select openai/gemini, or set SALES_GENIE_AI_BACKEND=heuristic."
             )
         overrides: dict[str, Any] = {
-            "demo_mode": settings.ai_provider == "mock",
-            "llm_provider": settings.ai_provider,
+            "demo_mode": provider == "mock",
+            "llm_provider": provider,
+            "llm_model": model,
             "llm_temperature": settings.ai_temperature,
             "request_timeout_seconds": settings.ai_timeout_seconds,
             "google_api_key": settings.google_api_key,
+            "openai_api_key": settings.openai_api_key,
         }
-        # An empty model keeps the package's own default instead of blanking it.
-        if settings.ai_model:
-            overrides["llm_model"] = settings.ai_model
         try:
             self._provider = create_provider(ai_settings(overrides=overrides))
         except Exception as exc:  # pragma: no cover - provider configuration error
             raise IntelligenceError(f"Could not initialise the AI provider: {exc}") from exc
 
-        self.provider = getattr(self._provider, "name", settings.ai_provider)
-        self.model = settings.ai_model or "unspecified"
+        self.provider = getattr(self._provider, "name", provider)
+        self.model = model or "unspecified"
+        self.used_mock = bool(getattr(self._provider, "is_mock", provider == "mock"))
+        self.note = auto_provider_note(settings)
 
     # -- helpers ---------------------------------------------------------
     def _run(self, operation: str, request: dict[str, Any]):
@@ -175,8 +239,8 @@ class ExternalAIEngine:
         Without this mapping those choices would be silently dropped and every
         external draft would use the package defaults.
 
-        ``length`` has no equivalent in the package (its prompt has no length
-        control), so it is not forwarded; see ``docs/ai-review.md``.
+        ``length`` is forwarded as an instruction and honoured by the package's
+        outreach prompt (AI review A-11, closed).
         """
         payload: dict[str, Any] = {"lead": lead, **request}
         channel = _CHANNEL_BY_TYPE.get(str(request.get("outreach_type", "")).strip().lower())
@@ -199,8 +263,19 @@ class ExternalAIEngine:
         if context:
             payload["company_insights"] = " | ".join(context)
 
-        for key in ("outreach_type", "goal", "pain_points", "length"):
+        for key in ("outreach_type", "goal", "pain_points"):
             payload.pop(key, None)
+
+        # Regeneration: rotate which section the deterministic provider rewrites
+        # so the Refresh control is not a no-op in an offline demo.
+        try:
+            variant = int(request.get("variant") or 0)
+        except (TypeError, ValueError):
+            variant = 0
+        if variant > 0:
+            sections = ("Opening", "Value proposition", "Call to action", "Subject line")
+            payload["variation_label"] = f"alternative-{variant}"
+            payload["section_to_regenerate"] = sections[(variant - 1) % len(sections)]
         return payload
 
     def summarize_conversation(

@@ -28,7 +28,13 @@ services:
     restart: unless-stopped
 
   api:
-    build: .
+    build:
+      context: .
+      # Set INSTALL_AI_EXTRAS=true to add the optional OpenAI/Gemini SDKs and
+      # LangGraph to the image for live model calls. The deterministic mock
+      # provider needs none of them.
+      args:
+        INSTALL_AI_EXTRAS: ${INSTALL_AI_EXTRAS:-false}
     command: >
       sh -c "alembic upgrade head &&
              uvicorn main:app --host 0.0.0.0 --port 8000"
@@ -39,8 +45,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8501,http://127.0.0.1:8501}
       SALES_GENIE_AI_BACKEND: ${SALES_GENIE_AI_BACKEND:-external}
-      SALES_GENIE_LLM_PROVIDER: ${SALES_GENIE_LLM_PROVIDER:-mock}
+      SALES_GENIE_LLM_PROVIDER: ${SALES_GENIE_LLM_PROVIDER:-auto}
       SALES_GENIE_LLM_MODEL: ${SALES_GENIE_LLM_MODEL:-}
+      SALES_GENIE_LLM_TEMPERATURE: ${SALES_GENIE_LLM_TEMPERATURE:-0.2}
+      SALES_GENIE_AI_TIMEOUT_SECONDS: ${SALES_GENIE_AI_TIMEOUT_SECONDS:-20}
       GROK_API_KEY: ${GROK_API_KEY:-}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

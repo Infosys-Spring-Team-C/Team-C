@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Any
 from ai.schemas import OutreachDraft, EvidenceItem
 from ai.providers import BaseLLMProvider
-from ._base import structured_task
+from ._base import contact_first_name, structured_task
 
 
 def generate_outreach(request: dict[str, Any], provider: BaseLLMProvider) -> OutreachDraft:
@@ -12,9 +12,13 @@ def generate_outreach(request: dict[str, Any], provider: BaseLLMProvider) -> Out
     def mock() -> OutreachDraft:
         company = str(lead.get("company_name", "there")).strip() or "there"
         contact = str(lead.get("contact_name", "")).strip()
-        first = contact.split()[0] if contact else "there"
+        first = contact_first_name(contact)
         product = str(request.get("product_service", "our solution")).strip() or "our solution"
-        objective = str(request.get("campaign_objective", "start a discovery conversation")).strip()
+        objective = str(request.get("campaign_objective", "start a discovery conversation")).strip().rstrip(".")
+        if objective and objective[0].isupper() and not objective.split()[0].isupper():
+            # Goals are written as sentences in the UI ("Give partner managers...").
+            # Make them read naturally after "reaching out to ...".
+            objective = objective[0].lower() + objective[1:]
         cta = str(request.get("call_to_action", "Would a 15-minute conversation next week be useful?")).strip()
         tone = str(request.get("tone", "Professional")).lower()
         user_insights = str(request.get("company_insights", lead.get("user_research", ""))).strip()
@@ -29,18 +33,43 @@ def generate_outreach(request: dict[str, Any], provider: BaseLLMProvider) -> Out
         else: assumptions.append("No company-specific insight was supplied; keep the message broad and validate relevance.")
         context_line = f" I saw your team is in {lead['industry']}." if lead.get("industry") else ""
         if channel == "Call script":
-            body = f"Hi {first}, this is [Your name] from [Company]. I am reaching out because {objective}.{context_line} We help teams evaluate {product} when they are looking to improve a related process. Before I assume relevance, how are you approaching this today?"
+            body = f"Hi {first}, this is [Your name] from [Company]. I am reaching out to {objective}.{context_line} We help teams evaluate {product} when they are looking to improve a related process. Before I assume relevance, how are you approaching this today?"
             subject = None
         elif channel == "LinkedIn":
-            body = f"Hi {first} — I’m reaching out because {objective}.{context_line} We help teams explore {product}. If this is on your radar, {cta.lower()}"
+            body = f"Hi {first} — I’m reaching out to {objective}.{context_line} We help teams explore {product}. If this is on your radar, {cta.lower()}"
             subject = None
         elif channel == "Short message":
             body = f"Hi {first}, we help teams explore {product}.{context_line} {cta}"
             subject = None
         else:
             subject = f"A question about {company}'s priorities"
-            body = f"Hi {first},\n\nI’m reaching out because {objective}.{context_line}\n\nWe help teams explore {product} when it is relevant to their current priorities. I don’t want to assume this is a fit — would it be useful to compare notes on how you handle this today?\n\n{cta}\n\nBest,\n[Your name]"
-        if tone == "direct": body = body.replace("I don’t want to assume this is a fit — ", "")
+            body = f"Hi {first},\n\nI’m reaching out to {objective}.{context_line}\n\nWe help teams explore {product} when it is relevant to their current priorities. I don’t want to assume this is a fit — would it be useful to compare notes on how you handle this today?\n\n{cta}\n\nBest,\n[Your name]"
+        if tone in {"direct", "urgent"}:
+            body = body.replace("I don’t want to assume this is a fit — ", "")
+        elif tone == "friendly":
+            body = body.replace(
+                "I’m reaching out to ",
+                "I hope your week is going well. I’m reaching out to ",
+                1,
+            )
+        # Length is a first-class Module 3 prompt control (SRS FR-020).  The
+        # deterministic provider honours it too so the UI control is never a
+        # no-op in an offline demo.
+        length = str(request.get("length", "medium")).strip().lower()
+        if channel == "Email":
+            if length == "short":
+                body = (
+                    f"Hi {first},\n\nI’m reaching out to {objective}.{context_line} "
+                    f"We help teams explore {product}. {cta}\n\nBest,\n[Your name]"
+                )
+            elif length == "long":
+                detail = user_insights[:300] if user_insights else "the priorities recorded on your account"
+                body = (
+                    body
+                    + f"\n\nTo be concrete, the context I have is: {detail}. "
+                    "I would keep a first conversation focused on where that is already a priority, "
+                    "and only go deeper if it is useful to you."
+                )
         section = str(request.get("section_to_regenerate", ""))
         variation = str(request.get("variation_label", "primary"))
         if variation != "primary":
@@ -54,8 +83,12 @@ def generate_outreach(request: dict[str, Any], provider: BaseLLMProvider) -> Out
             elif section == "Value proposition":
                 body = body.replace(f"We help teams explore {product}", f"Teams use {product} to assess whether a focused process change is worthwhile")
             elif section == "Call to action":
+                original_cta = str(request.get("call_to_action", "")).strip()
                 cta = "Would it make sense to compare notes for 15 minutes?"
-                body = body.replace(str(request.get("call_to_action", "")), cta)
+                # ``str.replace("")`` would insert the replacement between every
+                # character, so only substitute a real, non-empty CTA.
+                if original_cta:
+                    body = body.replace(original_cta, cta)
             elif subject:
                 subject = f"A practical question for {company}"
         return OutreachDraft(channel=channel, subject_line=subject, body=body, call_to_action=cta,
