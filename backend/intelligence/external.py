@@ -5,7 +5,7 @@ this repository through its own pull request.  Until then the backend runs on
 ``backend.intelligence.heuristic``.  When the reviewed package is present, set::
 
     SALES_GENIE_AI_BACKEND=external
-    SALES_GENIE_LLM_PROVIDER=grok|gemini|mock
+    SALES_GENIE_LLM_PROVIDER=groq|gemini|mock
     SALES_GENIE_LLM_MODEL=<model>
 
 This module translates between the AI package's public interface
@@ -58,6 +58,7 @@ _DIMENSION_BY_FACTOR = {
 
 #: Sensible defaults when the provider is automatic and no model is supplied.
 _DEFAULT_MODEL_BY_PROVIDER = {
+    "groq": "openai/gpt-oss-120b",
     "openai": "gpt-4o-mini",
     "gemini": "gemini-2.5-flash",
     "mock": "deterministic-demo-v1",
@@ -72,7 +73,7 @@ def provider_sdk_installed(provider: str) -> bool:
     make the whole engine unavailable.  ``auto`` uses this check to fall back to
     the mock provider instead; an explicit provider still fails loudly.
     """
-    if provider == "openai":
+    if provider in {"openai", "groq"}:
         try:
             import openai  # noqa: F401
         except ImportError:
@@ -94,8 +95,13 @@ def resolve_provider(settings: Settings) -> tuple[str, str]:
     present it as a live model.
     """
     provider = (settings.ai_provider or "auto").strip().lower()
+    if provider == "grok":
+        # Historical spelling used by earlier drafts and env files.
+        provider = "groq"
     if provider in {"", "auto"}:
-        if settings.openai_api_key and provider_sdk_installed("openai"):
+        if settings.groq_api_key and provider_sdk_installed("groq"):
+            provider = "groq"
+        elif settings.openai_api_key and provider_sdk_installed("openai"):
             provider = "openai"
         elif settings.google_api_key and provider_sdk_installed("gemini"):
             provider = "gemini"
@@ -109,7 +115,15 @@ def auto_provider_note(settings: Settings) -> str:
     """Explain an ``auto`` fallback caused by a missing provider SDK, if any."""
     if (settings.ai_provider or "auto").strip().lower() not in {"", "auto"}:
         return ""
-    wanted = "openai" if settings.openai_api_key else "gemini" if settings.google_api_key else ""
+    wanted = (
+        "groq"
+        if settings.groq_api_key
+        else "openai"
+        if settings.openai_api_key
+        else "gemini"
+        if settings.google_api_key
+        else ""
+    )
     if wanted and not provider_sdk_installed(wanted):
         return (
             f"A {wanted} key is configured but its SDK is not installed in this image; "
@@ -140,21 +154,14 @@ class ExternalAIEngine:
         self._run_workflow = run_workflow
         self._provider_error = ProviderError
         provider, model = resolve_provider(settings)
-        # The package's provider boundary supports mock, openai and gemini only.
-        # Grok was planned for the backend, so reject it here instead of letting
-        # ``create_provider`` fail with an opaque message.
-        if provider == "grok":
-            raise IntelligenceError(
-                "SALES_GENIE_LLM_PROVIDER=grok is not supported by the external AI "
-                "engine. The reviewed package implements mock, openai and gemini. "
-                "Select openai/gemini, or set SALES_GENIE_AI_BACKEND=heuristic."
-            )
         overrides: dict[str, Any] = {
             "demo_mode": provider == "mock",
             "llm_provider": provider,
             "llm_model": model,
             "llm_temperature": settings.ai_temperature,
             "request_timeout_seconds": settings.ai_timeout_seconds,
+            "groq_api_key": settings.groq_api_key,
+            "groq_base_url": settings.groq_base_url,
             "google_api_key": settings.google_api_key,
             "openai_api_key": settings.openai_api_key,
         }
@@ -228,7 +235,29 @@ class ExternalAIEngine:
         response, info = self._run("outreach", self._outreach_payload(lead, request))
         if response.result is None:
             raise IntelligenceError("AI package returned no outreach draft.")
-        return self._validate(OutreachDraft, self._dump(response.result), "an outreach draft"), info
+        draft = self._validate(OutreachDraft, self._dump(response.result), "an outreach draft")
+        # The prompt asks the model for a subject line on Email drafts, but an
+        # open-weight model can still return null. A blank subject makes the
+        # draft unusable, so fill it from the supplied company name and record
+        # the substitution as an assumption instead of hiding it.
+        if draft.channel == "Email" and not (draft.subject_line or "").strip():
+            company = str(lead.get("company_name") or "").strip()
+            subject = (
+                f"A question about {company}'s priorities"
+                if company
+                else "A question about your priorities"
+            )
+            draft = draft.model_copy(
+                update={
+                    "subject_line": subject,
+                    "assumptions": [
+                        *draft.assumptions,
+                        "The model omitted the subject line; the adapter filled a neutral "
+                        "subject from the supplied lead record.",
+                    ],
+                }
+            )
+        return draft, info
 
     @staticmethod
     def _outreach_payload(lead: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:

@@ -2,12 +2,13 @@
 
 **Project:** SalesGenie AI - AI Sales Assistant and Lead Intelligence Platform
 **Team:** Team C (Infosys Springboard)
-**Date:** 5 November 2026
+**Date:** 6 November 2026
 **Author:** Mohamed Isharak M (QA / Project Lead)
 **Scope:** Milestone 2, Modules 3 and 4 - outreach generation, lead scoring,
 conversion-probability handling and next-best-action recommendations.
-**Build under test:** `main` at `66c1255` plus the 5 November 2026 merge commit,
-running in the Docker Compose stack (`db`, `api`, `frontend` all healthy).
+**Build under test:** `main` at `cf56b9f` plus the 6 November 2026 Groq
+provider changes, running in the Docker Compose stack (`db`, `api`, `frontend`
+all healthy).
 
 ---
 
@@ -17,29 +18,45 @@ Everything below was executed against the running stack, not inferred from code.
 
 | Step | Command / surface | Result |
 |---|---|---|
-| Health and engine metadata | `GET /api/v1/health` | `status: ok`, `ai_backend: external`, `ai_provider: mock`, `ai_used_mock: true`, `ai_mode: offline-mock` |
+| Health and engine metadata | `GET /api/v1/health` | `status: ok`, `ai_backend: external`, `ai_provider: groq`, `ai_model: openai/gpt-oss-120b`, `ai_used_mock: false`, `ai_mode: live-model` |
 | Seed data | `python -m backend.cli seed-demo --confirm` | 6 clearly-labelled fictional leads across 6 industries |
 | Scoring | `POST /api/v1/leads/{id}/scores` for all 6 leads | 6/6 returned a score, factors and an execution block |
 | Recommendation | `GET /api/v1/recommendations/{id}` for all 6 leads | 6/6 returned an action, evidence, priority, timing and channel |
 | Outreach, primary | `POST /api/v1/outreach/generate` for all 6 leads | 6/6 returned a draft, subject, CTA and execution block |
 | Outreach, regenerated | same endpoint with `variant: 1` | 6/6 bodies changed |
-| Automated suite | `pytest -q` with `TEST_DATABASE_URL` (PostgreSQL 16) | **176 passed, 0 skipped** |
-| Automated suite | `pytest -q` (SQLite) | **170 passed, 6 skipped** (PostgreSQL module self-skips) |
+| Automated suite | `pytest -q` with `TEST_DATABASE_URL` (PostgreSQL 16) | **177 passed, 0 skipped** |
+| Automated suite | `pytest -q` (SQLite) | **171 passed, 6 skipped** (PostgreSQL module self-skips) |
 
 Raw evidence: [`evidence/2026-11-05-milestone2-live-check.json`](evidence/2026-11-05-milestone2-live-check.json).
 
 ### Provider state, stated plainly
 
-The `ai.*` package ran through its **deterministic mock provider**. An
-`OPENAI_API_KEY` inherited from the host environment was tested first and
-rejected by the provider (`HTTP 401`), so no live model output exists for this
-build. The engine labels this honestly: `ai_used_mock: true`,
-`ai_mode: offline-mock`, and every generated record carries
-`execution.used_mock: true`.
+The `ai.*` package runs through **Groq's OpenAI-compatible endpoint** with the
+`openai/gpt-oss-120b` open-weight model. On 6 November 2026 the live gate passed
+all six operations with `used_mock=False`, and a live outreach draft was
+generated and stored with `provider=groq` and `used_mock=False`. The health
+endpoint reports `ai_provider: groq`, `ai_mode: live-model`,
+`ai_used_mock: false`.
+
+OpenAI and Gemini are **not** verified: the `OPENAI_API_KEY` inherited from the
+host environment was rejected by that provider (`HTTP 401`), and no Gemini key
+was supplied. Scoring stays deterministic (`model=rule-based`) and
+`conversion_probability` stays `null`; the live model is used for research,
+outreach, conversation summarisation, recommendations and analytics
+interpretation, not for inventing a calibrated score.
+
+The deterministic mock provider and the offline heuristic engine remain
+selectable (`SALES_GENIE_LLM_PROVIDER=mock`, `SALES_GENIE_AI_BACKEND=heuristic`)
+but are not the default.
 
 ---
 
 ## 2. Outreach generation across industries
+
+The six-industry sweep in this section was produced during the 5 November offline
+pass (deterministic mock provider). It remains valid as a grounding and
+regeneration check. A live Groq draft was generated on 6 November and is
+recorded separately below.
 
 Each lead used `tone=consultative`, `length=short`, `outreach_type=cold_email`,
 the lead's own stated need as the goal, its recorded pain points, and a common
@@ -84,6 +101,25 @@ Best,
   capability.
 * They do not send anything. Delivery is a separate endpoint and returns `501`
   because no provider is configured (SRS D-05).
+
+### Live Groq draft (6 November 2026)
+
+`POST /api/v1/outreach/generate` for Vanguard Fintech returned draft `#34` with:
+
+| Field | Value |
+|---|---|
+| Provider / model | `groq` / `openai/gpt-oss-120b` |
+| `used_mock` | `false` |
+| Subject | `Consistent Partner Lead Visibility for Vanguard Fintech` |
+| Body | Grounded in the supplied pilot, expansion goal and pain point; no invented research |
+| Stored row | Read back from `Outreach_Campaigns`; UTF-8 text intact |
+
+Raw evidence: [`evidence/2026-11-06-live-groq-outreach.md`](evidence/2026-11-06-live-groq-outreach.md).
+
+The prompt asks for a `subject_line` on Email drafts. Because an open-weight
+model can still omit it, the adapter now fills a neutral subject from the
+supplied company name and records the substitution in `assumptions`; this is
+covered by `test_email_draft_without_a_subject_gets_a_grounded_fallback`.
 
 ### Prompt and generation changes validated in this pass
 
@@ -224,8 +260,9 @@ Both are closed with tests and are recorded in [`bug-log.md`](bug-log.md).
 
 ## 7. Limitations
 
-1. No live OpenAI or Gemini call succeeded. The key available in this
-   environment returned `HTTP 401`; the mock provider was used and labelled.
+1. No live OpenAI or Gemini call succeeded. The OpenAI key available in this
+   environment returned `HTTP 401` and no Gemini key was supplied. Groq is the
+   only live-verified provider; OpenAI and Gemini remain untested.
 2. No scoring accuracy figure exists, for the reasons in section 3.3.
 3. Outreach quality was judged against grounding rules (no invented facts, no
    fabricated research), not by human sales reviewers.

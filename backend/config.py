@@ -76,14 +76,17 @@ class Settings:
     # "auto"      = AI package when importable, deterministic heuristic otherwise.
     # "heuristic" = deterministic offline engine, kept as an explicit fallback.
     ai_backend: str = "external"
-    # "auto" = OpenAI when OPENAI_API_KEY is set, else Gemini when
-    # GOOGLE_API_KEY is set, else the package's deterministic mock provider.
-    ai_provider: str = "auto"  # auto | mock | gemini | openai | grok
+    # "auto" = Groq when GROQ_API_KEY is set, else OpenAI when OPENAI_API_KEY
+    # is set, else Gemini when GOOGLE_API_KEY is set, else the package's
+    # deterministic mock provider. "heuristic" keeps the offline engine as an
+    # explicit, selectable fallback rather than the default.
+    ai_provider: str = "auto"  # auto | mock | groq | gemini | openai
     ai_model: str = ""
     ai_temperature: float = 0.2
     ai_timeout_seconds: float = 20.0
     ai_max_transcript_chars: int = 42000
-    grok_api_key: str = ""
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
     google_api_key: str = ""
     openai_api_key: str = ""
     openai_base_url: str = ""
@@ -126,7 +129,8 @@ def get_settings() -> Settings:
         ai_temperature=_float("SALES_GENIE_LLM_TEMPERATURE", 0.2),
         ai_timeout_seconds=_float("SALES_GENIE_AI_TIMEOUT_SECONDS", 20.0),
         ai_max_transcript_chars=_int("SALES_GENIE_MAX_TRANSCRIPT_CHARS", 42000),
-        grok_api_key=_str("GROK_API_KEY"),
+        groq_api_key=_str("GROQ_API_KEY") or _str("GROK_API_KEY"),
+        groq_base_url=_str("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
         google_api_key=_str("GOOGLE_API_KEY"),
         openai_api_key=_str("OPENAI_API_KEY"),
         openai_base_url=_str("OPENAI_BASE_URL"),

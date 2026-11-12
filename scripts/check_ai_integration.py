@@ -5,10 +5,11 @@ external engine works:
 
     python scripts/check_ai_integration.py
 
-It constructs the real ``ExternalAIEngine`` with the deterministic **mock**
-provider (no API key, no network) and exercises all six operations.  Every
-result is validated against ``backend.intelligence.contract``, so a schema
-drift between the package and the backend fails here rather than in the UI.
+It constructs the real ``ExternalAIEngine`` with the provider selected by
+``SALES_GENIE_LLM_PROVIDER`` (default: the deterministic **mock** provider, no
+API key and no network) and exercises all six operations.  Every result is
+validated against ``backend.intelligence.contract``, so a schema drift between
+the package and the backend fails here rather than in the UI.
 
 Exit codes: 0 = all operations passed, 1 = at least one failed,
 2 = the AI package is not installed in this checkout.
@@ -66,14 +67,24 @@ ANALYTICS = {
 
 
 def main() -> int:
+    import os
+
     from backend.config import Settings
     from backend.intelligence.contract import IntelligenceError
     from backend.intelligence.external import ExternalAIEngine
 
+    # Default to the deterministic mock so the gate stays offline-safe, but honour
+    # the configured provider when the caller explicitly selects one.
+    provider = os.getenv("SALES_GENIE_LLM_PROVIDER", "mock").strip() or "mock"
+    model = os.getenv("SALES_GENIE_LLM_MODEL", "").strip()
     settings = Settings(
         ai_backend="external",
-        ai_provider="mock",
-        ai_model="",
+        ai_provider=provider,
+        ai_model=model,
+        groq_api_key=os.getenv("GROQ_API_KEY", "") or os.getenv("GROK_API_KEY", ""),
+        groq_base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+        google_api_key=os.getenv("GOOGLE_API_KEY", ""),
+        openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         jwt_secret="smoke-only-secret-value-0123456789",
     )
 
@@ -122,7 +133,10 @@ def main() -> int:
         print("The external engine is NOT ready. Do not claim it works.")
         return 1
     print("External engine produced validated output for every operation.")
-    print("Note: this used the mock provider. Real model calls are still unverified.")
+    if provider == "mock":
+        print("Note: this used the mock provider. Real model calls are still unverified.")
+    else:
+        print(f"Live provider '{provider}' returned validated output for every operation.")
     return 0
 
 

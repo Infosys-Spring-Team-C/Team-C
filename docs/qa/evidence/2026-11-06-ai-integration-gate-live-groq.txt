@@ -1,0 +1,10 @@
+﻿PASS analyze_lead: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False category=Qualified
+PASS generate_outreach: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False channel=Email
+PASS summarize_conversation: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS recommend: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS score_lead: engine=external provider=groq model=rule-based used_mock=False score=82 factors=8 probability=None
+PASS interpret_analytics: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+
+6/6 operations passed
+External engine produced validated output for every operation.
+Live provider 'groq' returned validated output for every operation.

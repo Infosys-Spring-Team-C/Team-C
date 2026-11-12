@@ -30,10 +30,11 @@ was executed on this machine on the date above.
 
 ### Honest caveats
 
-1. **No model key is configured in this environment.** The default engine is the merged AI package
-   (`external`), but the provider falls back to the package's deterministic **mock** provider.
-   Every result therefore carries `used_mock=true` and the UI displays a clear warning. The full
-   agent workflow, schemas and adapter paths are exercised; real OpenAI/Gemini calls are not.
+1. **A Groq key is configured and live-verified.** The default engine is the merged AI package
+   (`external`) with `SALES_GENIE_LLM_PROVIDER=groq`, using `openai/gpt-oss-120b` through Groq's
+   OpenAI-compatible endpoint. All six operations and a live outreach draft completed with
+   `used_mock=false`. The deterministic **mock** provider and the offline heuristic engine remain
+   selectable fallbacks. OpenAI and Gemini calls are **not** verified.
 2. **No calibrated conversion model.** `conversion_probability` stays `null`. The UI shows
    "No calibrated model configured" rather than inventing a number.
 3. **No email transport.** "Record as sent" only changes the draft status; "Attempt dispatch"
@@ -93,18 +94,17 @@ curl -s http://127.0.0.1:8000/api/v1/health | python3 -m json.tool
   "database_dialect": "sqlite",
   "auth_enabled": true,
   "ai_backend": "external",
-  "ai_provider": "mock",
-  "ai_model": "deterministic-demo-v1",
-  "ai_used_mock": true,
-  "ai_mode": "offline-mock",
+  "ai_provider": "groq",
+  "ai_model": "openai/gpt-oss-120b",
+  "ai_used_mock": false,
+  "ai_mode": "live-model",
   "ai_note": "",
   "ai_status": "ok"
 }
 ```
 
 The same state is visible in the UI header and sidebar: **Backend connected**, scoring engine
-External, demo provider `mock · deterministic-demo-v1`, and the note that output is labelled
-`used_mock`.
+External, live provider `groq · openai/gpt-oss-120b`, and `used_mock=false`.
 
 The six seeded leads are clearly labelled fictional demo records (Northwind Logistics, Contoso
 Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Fintech).
@@ -117,9 +117,9 @@ Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Finte
 
 * Land on **Overview**.
 * Point out the KPI strip: 6 prospects, 3 qualified, average score, conversion rate.
-* Point out the AI status card: engine **External**, provider **mock**, and the amber
-  "deterministic demo provider" note. This is the honesty story: the AI package is running; the
-  model call is mocked because no key is present.
+* Point out the AI status card: engine **External**, provider **groq**, model
+  `openai/gpt-oss-120b`, `used_mock=false`. This is the honesty story: the live model is called
+  and the provider/model are reported per execution.
 
 ### Step 2 - Leads
 
@@ -141,8 +141,8 @@ Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Finte
 * Show the controls: **Tone**, **Length**, **Channel**, **Goal**, **Product / service**,
   **Industry context**, **Call to action**, **Known pain points**.
 * Click **Generate draft**. A subject and body appear, with a caption such as:
-  `Draft #N · status draft · engine external · provider mock · model deterministic-demo-v1`
-  plus the amber demo-provider warning.
+  `Draft #N · status draft · engine external · provider groq · model openai/gpt-oss-120b`
+  and `used_mock=false`.
 * Click **Regenerate variation** and show that the wording changes while staying on the same
   prospect and settings.
 * Edit the subject or body. Click **Copy message** to reveal the copy-ready text.
@@ -156,9 +156,8 @@ Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Finte
 ### Step 5 - Conversations
 
 * Open **Conversations**, paste a short transcript and click **Summarise**.
-* Show the summary, suggested follow-up and the saved history entry. The mock provider echoes
-  the supplied transcript rather than inventing facts, which is the correct behaviour for the
-  demo.
+* Show the summary, suggested follow-up and the saved history entry. The live model summarises
+  only the supplied transcript and leaves dates or owners empty when they are not explicit.
 
 ### Step 6 - Analytics
 
@@ -169,9 +168,9 @@ Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Finte
 
 ### Step 7 - Close
 
-* Restate the three boundaries: AI package runs but the provider is mocked without a key;
-  conversion probability is `null` because no calibrated model exists; email delivery is `501`
-  because no transport is configured.
+* Restate the three boundaries: the AI package runs against a live Groq model (OpenAI/Gemini
+  unverified); conversion probability is `null` because no calibrated model exists; email
+  delivery is `501` because no transport is configured.
 
 ---
 
@@ -180,15 +179,15 @@ Manufacturing, Fabrikam Retail, InnovateAI Labs, Bluebird Health, Vanguard Finte
 ```bash
 # Full automated suite (SQLite; PostgreSQL module self-skips)
 python -m pytest -q
-# expected: 168 passed, 6 skipped (the image had the optional AI extras installed)
+# expected: 171 passed, 6 skipped
 
 # With PostgreSQL 16 available:
 # TEST_DATABASE_URL=postgresql+psycopg://user:pass@host:5432/salesgenie_test
-# expected: 174 passed, 0 skipped
+# expected: 177 passed, 0 skipped
 
 # AI integration gate over all six operations
 ./.venv/bin/python scripts/check_ai_integration.py
-# expected: 6/6 operations passed, with the mock-provider note
+# expected: 6/6 operations passed, provider=groq, used_mock=False
 
 # Database workspace drift check
 ./.venv/bin/python scripts/render_db_workspace.py --check
@@ -216,8 +215,8 @@ Streamlit UI (frontend/)  ->  frontend/api_compat.py  ->  FastAPI /api/v1
 
 * Routers never import an LLM SDK; they depend on the `IntelligenceEngine` protocol.
 * `SALES_GENIE_AI_BACKEND=external` is the default and fails loudly if the package is missing.
-* `SALES_GENIE_LLM_PROVIDER=auto` selects OpenAI or Gemini when a key exists, otherwise the
-  package's deterministic mock provider.
+* `SALES_GENIE_LLM_PROVIDER=auto` selects Groq, then OpenAI, then Gemini when their keys exist,
+  otherwise the package's deterministic mock provider.
 * Generation and delivery are separate code paths. Nothing in the repository can send email.
 * Scores persist their factor breakdown. `conversion_probability` remains `null`.
 
@@ -227,17 +226,19 @@ Streamlit UI (frontend/)  ->  frontend/api_compat.py  ->  FastAPI /api/v1
 
 ```env
 SALES_GENIE_AI_BACKEND=external     # external (default) | auto | heuristic
-SALES_GENIE_LLM_PROVIDER=auto       # auto | mock | openai | gemini
-SALES_GENIE_LLM_MODEL=              # blank uses the provider default
+SALES_GENIE_LLM_PROVIDER=groq       # auto | groq | mock | openai | gemini
+SALES_GENIE_LLM_MODEL=openai/gpt-oss-120b
+GROQ_API_KEY=                       # private; never committed
 OPENAI_API_KEY=                     # optional; enables live OpenAI via auto
 GOOGLE_API_KEY=                     # optional; enables live Gemini via auto
 DATABASE_URL=sqlite:///./salesgenie.db
 JWT_SECRET=<long random value>
 ```
 
-To demonstrate a live model call, set `OPENAI_API_KEY` or `GOOGLE_API_KEY` and restart the API
-with `SALES_GENIE_LLM_PROVIDER=auto`. The health card should then report the live provider and
-`ai_used_mock=false`.
+The current environment sets `SALES_GENIE_LLM_PROVIDER=groq` and keeps `GROQ_API_KEY` only in
+`.env`. The health card reports `ai_provider=groq`, `ai_mode=live-model` and `ai_used_mock=false`.
+Set `SALES_GENIE_LLM_PROVIDER=heuristic` with `SALES_GENIE_AI_BACKEND=heuristic` to run the
+offline deterministic engine instead.
 
 ---
 

@@ -19,7 +19,7 @@ PROMPT_CATALOG = {
     "lead_scoring_explanation": "Explain a supplied heuristic score and its factors; never call it a conversion probability.",
     "cold_email_generation": "Write a truthful cold email using only supported facts; never imply prior research not supplied. Respect the requested tone and length (short, medium or long).",
     "follow_up_generation": "Write a truthful follow-up draft based only on supplied interaction evidence and approved context. Respect the requested tone and length.",
-    "outreach": "Write a truthful personalized sales draft. Use only supported facts; never imply prior research not supplied. Respect the requested channel, tone, and length (short, medium or long).",
+    "outreach": "Write a truthful personalized sales draft. Use only supported facts; never imply prior research not supplied. Respect the requested channel, tone, and length (short, medium or long). Always include a concise subject_line for Email drafts and a clear call_to_action.",
     "meeting_summarization": "Summarize only statements present in the supplied transcript/notes. Leave dates and owners empty when not explicit.",
     "action_item_extraction": "Extract only explicit actions, owners, and dates from supplied meeting material; leave absent fields empty.",
     "conversation": "Summarize only statements present in the supplied transcript/notes. Leave dates and owners empty when not explicit.",

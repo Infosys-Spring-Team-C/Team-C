@@ -10,7 +10,7 @@ from backend.intelligence import (
     reset_engine_cache,
 )
 from backend.intelligence.contract import LeadScoreResult, ScoreFactor
-from backend.intelligence.external import ExternalAIEngine
+from backend.intelligence.external import ExternalAIEngine, resolve_provider
 from backend.intelligence.heuristic import HeuristicEngine
 
 RICH_LEAD = {
@@ -282,13 +282,18 @@ def test_external_engine_initialises_with_the_mock_provider():
     assert engine.provider == "mock"
 
 
-def test_external_engine_rejects_grok_with_a_clear_message():
+def test_external_engine_maps_grok_alias_to_groq_and_requires_a_key():
+    provider, model = resolve_provider(
+        Settings(ai_provider="grok", groq_api_key="", jwt_secret="x" * 32)
+    )
+    assert provider == "groq"
+    assert model == "openai/gpt-oss-120b"
+
     with pytest.raises(IntelligenceError) as excinfo:
         ExternalAIEngine(
-            Settings(ai_backend="external", ai_provider="grok", jwt_secret="x" * 32)
+            Settings(ai_backend="external", ai_provider="groq", jwt_secret="x" * 32)
         )
-    assert "grok" in str(excinfo.value).lower()
-    assert "SALES_GENIE_AI_BACKEND=heuristic" in str(excinfo.value)
+    assert "GROQ_API_KEY" in str(excinfo.value)
 
 
 def test_external_score_maps_eight_factors_onto_four_dimensions():

@@ -11,10 +11,11 @@ canonical API, with the outreach and intelligence controls re-applied.
 
 > **Honesty statement.** This README distinguishes what is implemented and tested from what is
 > planned. Every test result quoted below was produced by running the command shown. The default
-> intelligence path is the merged **AI package** contributed by Mahidhar; when no model key is
-> configured it runs the package's deterministic mock provider and labels every result
-> `used_mock=true`. The heuristic engine remains an explicit offline fallback. Neither engine
-> ships a trained or calibrated model, and the API never presents one as calibrated.
+> intelligence path is the merged **AI package** contributed by Mahidhar; with a Groq key it calls
+> a live model and reports `used_mock=false`. Without a key it runs the package's deterministic
+> mock provider and labels every result `used_mock=true`. The heuristic engine remains an explicit
+> offline fallback. Neither engine ships a trained or calibrated model, and the API never presents
+> one as calibrated.
 
 ---
 
@@ -73,9 +74,10 @@ Design rules enforced by the code:
 * `SALES_GENIE_AI_BACKEND=external` (default) always uses the merged AI package and fails loudly
   if it is missing or returns invalid output. `auto` uses the package when importable and falls
   back to the deterministic heuristic only when it is not; `heuristic` forces the offline engine.
-* `SALES_GENIE_LLM_PROVIDER=auto` (default) uses OpenAI when `OPENAI_API_KEY` is set, Gemini when
-  `GOOGLE_API_KEY` is set, and otherwise the package's deterministic mock provider. The health
-  endpoint and every execution record expose `used_mock`, so demo output is labelled honestly.
+* `SALES_GENIE_LLM_PROVIDER=auto` (default) uses Groq when `GROQ_API_KEY` is set, OpenAI when
+  `OPENAI_API_KEY` is set, Gemini when `GOOGLE_API_KEY` is set, and otherwise the package's
+  deterministic mock provider. The health endpoint and every execution record expose `used_mock`,
+  so demo output is labelled honestly.
 * The adapter `backend/intelligence/external.py` integrates the reviewed `ai.*` package without
   copying it. It forwards channel, tone, length, goal, pain points, product and CTA, and maps the
   package's eight score factors onto the four SRS FR-030 dimensions.
@@ -247,8 +249,10 @@ Full request/response documentation: [`docs/api-contract.md`](docs/api-contract.
 
 ```env
 SALES_GENIE_AI_BACKEND=external         # external (default) | auto | heuristic
-SALES_GENIE_LLM_PROVIDER=auto           # auto | mock | openai | gemini
-SALES_GENIE_LLM_MODEL=                  # blank uses the provider default
+SALES_GENIE_LLM_PROVIDER=groq           # auto | groq | mock | openai | gemini
+SALES_GENIE_LLM_MODEL=openai/gpt-oss-120b
+GROQ_API_KEY=                           # private; never commit
+GROQ_BASE_URL=https://api.groq.com/openai/v1
 GOOGLE_API_KEY=
 OPENAI_API_KEY=
 ```
@@ -258,17 +262,20 @@ OPENAI_API_KEY=
   silent fallback. Install the package's extras with `pip install -r ai/requirements.txt`.
 * With `auto` and no provider key, the **AI package still runs** through its deterministic mock
   provider. Every execution is labelled `used_mock=true`; the UI shows a warning and the health
-  endpoint reports `ai_mode=offline-mock`. This is the demo path used in this environment.
-* With an OpenAI or Gemini key present, `auto` selects that live provider. The backend validates
-  the AI package's structured output against its own Pydantic contract.
+  endpoint reports `ai_mode=offline-mock`.
+* With a Groq key present (`GROQ_API_KEY`), `auto` selects Groq's OpenAI-compatible endpoint
+  and a JSON-mode open-weight model (`openai/gpt-oss-120b` by default). This environment is
+  configured that way: the health endpoint reports `ai_provider=groq`,
+  `ai_mode=live-model`, `ai_used_mock=false`. OpenAI and Gemini remain selectable with their
+  own keys and are **not** verified here. The backend validates the AI package's structured
+  output against its own Pydantic contract.
 * `auto` as an *engine* uses the AI package when importable and falls back to the heuristic only
   when it is not; `heuristic` forces the offline deterministic engine and is kept as a tested
-  fallback.
-* `SALES_GENIE_LLM_PROVIDER=grok` is rejected by the external engine: the package implements
-  mock, openai and gemini only.
+  fallback. It is never selected silently while the live provider is configured.
+* `SALES_GENIE_LLM_PROVIDER=grok` is accepted as a historical alias for `groq`; the canonical
+  provider name reported by the health endpoint is `groq`.
 * The AI integration gate is `python scripts/check_ai_integration.py`; it exercises all six
-  operations and prints `6/6 operations passed`. Real OpenAI/Gemini calls are **not** verified
-  because no key was used.
+  operations and prints `6/6 operations passed`.
 * Attribution and the list of maintainer corrections: [`docs/ai-handoff.md`](docs/ai-handoff.md),
   [`CREDITS.md`](CREDITS.md).
 
@@ -286,12 +293,12 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgen
 python -m pytest -q
 ```
 
-Verified results in this environment (Python 3.14, 5 November 2026):
+Verified results in this environment (Python 3.14, 6 November 2026):
 
-* SQLite only: **168 passed, 6 skipped** (the PostgreSQL module skips itself). This includes the
-  expanded frontend adapter/login/normaliser tests, the intelligence package tests and the new
-  merge-integration tests.
-* With PostgreSQL 16 (`TEST_DATABASE_URL` pointing at a `*test*` database): **174 passed,
+* SQLite only: **171 passed, 6 skipped** (the PostgreSQL module skips itself). This includes the
+  expanded frontend adapter/login/normaliser tests, the intelligence package tests, the Groq
+  provider tests and the merge-integration tests.
+* With PostgreSQL 16 (`TEST_DATABASE_URL` pointing at a `*test*` database): **177 passed,
   0 skipped**, including schema, migration up/down and dialect-parity checks.
 
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
@@ -345,9 +352,10 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
 4. **No live CRM transport.** Requests are validated, dry-run previews work, a clearly-labelled
    simulator maps leads onto a provider-neutral payload, and failures are logged. The simulator
    never contacts Salesforce or HubSpot.
-5. **Real model calls are unverified.** The default AI path runs the full agent workflow through
-   the package's deterministic **mock** provider because no OpenAI or Gemini key was available;
-   `used_mock` and `ai_mode=offline-mock` make this explicit. Live provider calls remain untested.
+5. **Live Groq calls are verified; OpenAI and Gemini are not.** The AI path runs the full agent
+   workflow through Groq's OpenAI-compatible endpoint with `used_mock=false` when `GROQ_API_KEY`
+   is configured. Without a key it uses the deterministic mock provider and reports
+   `ai_mode=offline-mock`. OpenAI and Gemini remain unverified.
 6. **Docker verified locally, not production-hardened.** The Compose stack builds and runs, but
    there is no TLS termination, secrets manager or orchestrator configuration.
 7. **No CI workflow.** Adding one requires a decision on the target database service; the exact

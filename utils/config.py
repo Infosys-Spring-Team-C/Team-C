@@ -45,8 +45,10 @@ class Settings:
     backend_endpoint_overrides: dict[str, str] = field(default_factory=dict)
     request_timeout_seconds: float = 15.0
     request_retries: int = 2
-    llm_provider: str = "mock"  # mock | openai | gemini
+    llm_provider: str = "mock"  # mock | groq | openai | gemini
     llm_model: str = "deterministic-demo-v1"
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
     openai_api_key: str = ""
     google_api_key: str = ""
     llm_temperature: float = 0.2
@@ -66,6 +68,8 @@ def get_settings(overrides: dict[str, Any] | None = None) -> Settings:
         request_retries=int(_secret("SALES_GENIE_REQUEST_RETRIES", "2")),
         llm_provider=_secret("SALES_GENIE_LLM_PROVIDER", "mock").lower(),
         llm_model=_secret("SALES_GENIE_LLM_MODEL", "deterministic-demo-v1"),
+        groq_api_key=_secret("GROQ_API_KEY") or _secret("GROK_API_KEY"),
+        groq_base_url=_secret("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
         openai_api_key=_secret("OPENAI_API_KEY"),
         google_api_key=_secret("GOOGLE_API_KEY"),
         llm_temperature=float(_secret("SALES_GENIE_LLM_TEMPERATURE", "0.2")),

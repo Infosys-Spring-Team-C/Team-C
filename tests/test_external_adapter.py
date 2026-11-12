@@ -252,6 +252,21 @@ def test_outreach_request_is_translated_to_the_package_keys(stub, outreach_type,
     assert draft.channel == channel
 
 
+def test_email_draft_without_a_subject_gets_a_grounded_fallback(stub):
+    stub["graph"].MODE["result"] = {
+        "channel": "Email",
+        "subject_line": None,
+        "body": "Body text.",
+        "call_to_action": "Interested?",
+    }
+    engine = ExternalAIEngine(_settings(ai_provider="mock"))
+
+    draft, _ = engine.generate_outreach(LEAD, {"outreach_type": "cold_email"})
+
+    assert draft.subject_line == "A question about Acme Systems's priorities"
+    assert any("subject line" in note.lower() for note in draft.assumptions)
+
+
 def test_outreach_variant_rotates_the_regenerated_section(stub):
     stub["graph"].MODE["result"] = {
         "channel": "Email",
@@ -268,12 +283,26 @@ def test_outreach_variant_rotates_the_regenerated_section(stub):
     assert request["section_to_regenerate"] == "Value proposition"
 
 
-def test_provider_auto_prefers_openai_then_gemini_then_mock(stub, monkeypatch):
+def test_provider_auto_prefers_groq_then_openai_then_gemini_then_mock(stub, monkeypatch):
     import backend.intelligence.external as external
 
     # The test image has no provider SDKs installed; treat them as available so
     # this test isolates the key-preference order.
     monkeypatch.setattr(external, "provider_sdk_installed", lambda provider: True)
+
+    ExternalAIEngine(
+        _settings(
+            ai_provider="auto",
+            groq_api_key="gsk-test",
+            openai_api_key="sk-test",
+            google_api_key="g-test",
+        )
+    )
+    overrides = stub["config"].CALLS[-1]
+    assert overrides["llm_provider"] == "groq"
+    assert overrides["llm_model"] == "openai/gpt-oss-120b"
+    assert overrides["groq_api_key"] == "gsk-test"
+    assert overrides["demo_mode"] is False
 
     openai_engine = ExternalAIEngine(
         _settings(ai_provider="auto", openai_api_key="sk-test", google_api_key="g-test")
@@ -301,12 +330,12 @@ def test_provider_auto_falls_back_to_mock_when_sdk_is_missing(monkeypatch):
     monkeypatch.setattr(external, "provider_sdk_installed", lambda provider: False)
 
     provider, model = external.resolve_provider(
-        _settings(ai_provider="auto", openai_api_key="sk-test")
+        _settings(ai_provider="auto", groq_api_key="gsk-test", openai_api_key="sk-test")
     )
     assert provider == "mock"
     assert model == "deterministic-demo-v1"
     assert "SDK is not installed" in external.auto_provider_note(
-        _settings(ai_provider="auto", openai_api_key="sk-test")
+        _settings(ai_provider="auto", groq_api_key="gsk-test", openai_api_key="sk-test")
     )
 
 

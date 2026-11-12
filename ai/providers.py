@@ -110,6 +110,36 @@ class MockLLMProvider(BaseLLMProvider):
         return fallback()
 
 
+class GroqProvider(BaseLLMProvider):
+    """Groq's OpenAI-compatible endpoint (JSON mode, open-weight models)."""
+
+    name = "groq"
+
+    def __init__(self, settings: Settings):
+        super().__init__(settings)
+        if not settings.groq_api_key:
+            raise ProviderError("GROQ_API_KEY is not configured. Enable demo mode or configure a provider key.")
+        try:
+            from openai import OpenAI
+            self.client = OpenAI(
+                api_key=settings.groq_api_key,
+                base_url=settings.groq_base_url,
+                timeout=settings.request_timeout_seconds,
+            )
+        except ImportError as exc:
+            raise ProviderError("Install the optional 'openai' package to use the Groq provider.") from exc
+
+    def _json_response(self, system: str, user: str) -> dict[str, Any]:
+        response = self.client.chat.completions.create(
+            model=self.settings.llm_model,
+            temperature=self.settings.llm_temperature,
+            response_format={"type": "json_object"},
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        )
+        text = response.choices[0].message.content or "{}"
+        return json.loads(text)
+
+
 class OpenAIProvider(BaseLLMProvider):
     name = "openai"
 
@@ -168,8 +198,10 @@ class GeminiProvider(BaseLLMProvider):
 def create_provider(settings: Settings) -> BaseLLMProvider:
     if settings.demo_mode or settings.llm_provider == "mock":
         return MockLLMProvider(settings)
+    if settings.llm_provider == "groq":
+        return GroqProvider(settings)
     if settings.llm_provider == "openai":
         return OpenAIProvider(settings)
     if settings.llm_provider == "gemini":
         return GeminiProvider(settings)
-    raise ProviderError(f"Unsupported LLM provider '{settings.llm_provider}'. Use mock, openai, or gemini.")
+    raise ProviderError(f"Unsupported LLM provider '{settings.llm_provider}'. Use mock, groq, openai, or gemini.")

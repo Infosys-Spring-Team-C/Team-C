@@ -2,12 +2,12 @@
 
 **Project:** SalesGenie AI - AI Sales Assistant and Lead Intelligence Platform
 **Team:** Team C (Infosys Springboard)
-**Report date:** 5 November 2026
+**Report date:** 6 November 2026
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Build under test:** `main` at `66c1255` plus the Milestone 2 consolidation commit of
-5 November 2026 (the AI package, the CRM simulator, the rewritten Streamlit client and
-the scoring/recommendation work merged into the canonical tree).
+**Build under test:** `main` at `cf56b9f` plus the 6 November 2026 Groq provider
+changes (live provider support, prompt subject line and the adapter fallback),
+running on the same canonical tree.
 **Milestone:** M2 evaluation (Modules 3 and 4 demonstrated; Modules 1-6 integrated)
 
 ---
@@ -15,11 +15,11 @@ the scoring/recommendation work merged into the canonical tree).
 ## 1. Executive summary
 
 The integrated backend, database, AI layer and Streamlit frontend are **functionally
-verified and safe to demonstrate**. **176 automated tests pass against PostgreSQL 16 with
-no skips**, and **170 pass on SQLite with 6 expected skips** (the PostgreSQL-only module).
+verified and safe to demonstrate**. **177 automated tests pass against PostgreSQL 16 with
+no skips**, and **171 pass on SQLite with 6 expected skips** (the PostgreSQL-only module).
 The AI integration gate returns **6/6 operations passed** through the merged `ai.*`
-package, and the database workspace drift check reports **OK** for the SQL baseline and
-the ER diagram.
+package against the live Groq provider (`used_mock=false`), and the database workspace
+drift check reports **OK** for the SQL baseline and the ER diagram.
 
 Milestone 2 delivered its two modules end to end:
 
@@ -37,10 +37,11 @@ which works.
 
 Two limits are stated openly and are not presented as achievements:
 
-1. **No live model call is verified.** The engine ran the full workflow through the
-   package's deterministic **mock** provider. A key present in the environment was
-   rejected by the provider (`HTTP 401`). Every result is labelled `used_mock=true` and
-   `ai_mode=offline-mock`, and the UI shows the same state.
+1. **Live Groq calls are verified; OpenAI and Gemini are not.** The engine ran all six
+   operations through Groq's OpenAI-compatible endpoint with `used_mock=false`, and a live
+   outreach draft was generated and stored. The OpenAI key available earlier in this
+   environment was rejected by the provider (`HTTP 401`), so no OpenAI or Gemini call is
+   claimed.
 2. **No scoring-accuracy percentage is claimed.** The 85% target from the plan requires a
    labelled outcome dataset and a calibrated model. Neither exists, so
    `conversion_probability` stays `null` with an explicitly uncalibrated band.
@@ -72,8 +73,8 @@ Two limits are stated openly and are not presented as achievements:
 
 | Environment | Command | Result |
 |---|---|---|
-| PostgreSQL 16 (final) | `pytest -q` with `TEST_DATABASE_URL` | **176 passed, 0 skipped** in 93.80 s |
-| SQLite (final) | `pytest -q` | **170 passed, 6 skipped** in 93.18 s |
+| PostgreSQL 16 (final) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** in 83.29 s |
+| SQLite (final) | `pytest -q` | **171 passed, 6 skipped** in 82.45 s |
 
 The 6 skips are the PostgreSQL-only module, which runs in the PostgreSQL command. The
 only warning is a JWT key-length warning from a test that deliberately uses a short key.
@@ -84,17 +85,19 @@ simulator, health metadata, rich demo seed) and the outreach greeting regression
 
 ### 3.2 AI integration gate
 
-`python scripts/check_ai_integration.py` exercises every operation through the adapter:
+`python scripts/check_ai_integration.py` exercises every operation through the adapter.
+The run below used the configured live provider:
 
 ```
-PASS analyze_lead: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
-PASS generate_outreach: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
-PASS summarize_conversation: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
-PASS recommend: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
-PASS score_lead: engine=external provider=mock model=rule-based used_mock=False score=82 factors=8 probability=None
-PASS interpret_analytics: engine=external provider=mock model=deterministic-demo-v1 used_mock=True
+PASS analyze_lead: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS generate_outreach: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS summarize_conversation: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS recommend: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
+PASS score_lead: engine=external provider=groq model=rule-based used_mock=False score=82 factors=8 probability=None
+PASS interpret_analytics: engine=external provider=groq model=openai/gpt-oss-120b used_mock=False
 
 6/6 operations passed
+Live provider 'groq' returned validated output for every operation.
 ```
 
 ### 3.3 Live user acceptance
@@ -198,7 +201,7 @@ Each item below was observed in a live run, not inferred:
 
 | # | Limitation | Why | Consequence |
 |---|---|---|---|
-| 1 | No live OpenAI/Gemini call | The available key was rejected (`HTTP 401`) | All AI evidence uses the labelled mock provider |
+| 1 | No live OpenAI or Gemini call | The OpenAI key available was rejected (`HTTP 401`); no Gemini key was supplied | Live AI evidence uses Groq; OpenAI and Gemini remain unverified |
 | 2 | No scoring-accuracy figure | No labelled outcome dataset or calibrated model (D-13) | The 85% target is reported as a target, not an outcome |
 | 3 | E-mail send does not exist | Provider unconfirmed (D-05) | Returns `501`; the UI surfaces that message |
 | 4 | CRM transport does not execute | Credentials unconfirmed (D-06) | Labelled simulator + audit rows only |
@@ -228,8 +231,8 @@ Each item below was observed in a live run, not inferred:
 
 * The frontend contract and rendering are tested, but no person has judged the screens for
   usability.
-* The external AI integration is proven with the mock provider; live provider behaviour is
-  untested.
+* The external AI integration is proven live with Groq; OpenAI and Gemini behaviour is
+  untested. Live-model latency and provider-side rate limits were not measured.
 * No performance or load testing exists.
 * Coverage is behavioural, not line-based; no coverage percentage is reported.
 
@@ -241,7 +244,7 @@ Each item below was observed in a live run, not inferred:
 |---|---|---|---|
 | A reviewer asks to see the UI | Medium | Low | Run the Compose stack and open `http://127.0.0.1:8501` |
 | A reviewer asks for an accuracy figure | High | Medium | Explain D-13; show the honest `null` probability and the `n/a` card |
-| A reviewer asks whether a live model is used | High | Low | Show `ai_mode=offline-mock` and `used_mock`; state that no key was available |
+| A reviewer asks whether a live model is used | High | Low | Show `ai_provider=groq`, `ai_mode=live-model` and `used_mock=false` in health |
 | A reviewer asks to see Docker | Medium | Low | `docker compose up --build -d`, then the health endpoint |
 | A schema change leaves workspace artefacts stale | Medium | Medium | The drift check runs in the suite and fails the build |
 | A dependency upgrade breaks the UI | Medium | Low | Streamlit is pinned; migration is a recorded maintenance item |
@@ -252,9 +255,11 @@ Each item below was observed in a live run, not inferred:
 
 | Artifact | Path |
 |---|---|
-| Pytest, PostgreSQL 16 (176 passed) | `docs/qa/evidence/2026-11-05-pytest-postgres.txt` |
-| Pytest, SQLite (170 passed, 6 skipped) | `docs/qa/evidence/2026-11-05-pytest-sqlite.txt` |
-| AI integration gate, 6/6 | `docs/qa/evidence/2026-11-05-ai-integration-gate.txt` |
+| Pytest, PostgreSQL 16 (177 passed) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
+| Pytest, SQLite (171 passed, 6 skipped) | `docs/qa/evidence/2026-11-06-pytest-sqlite.txt` |
+| AI integration gate, 6/6, live Groq | `docs/qa/evidence/2026-11-06-ai-integration-gate-live-groq.txt` |
+| Live Groq outreach draft #34 | `docs/qa/evidence/2026-11-06-live-groq-outreach.md` |
+| AI integration gate, 6/6, mock (historical) | `docs/qa/evidence/2026-11-05-ai-integration-gate.txt` |
 | Live Milestone 2 outreach/scoring check | `docs/qa/evidence/2026-11-05-milestone2-live-check.json` |
 | Outreach and scoring validation notes | [`outreach-scoring-validation.md`](outreach-scoring-validation.md) |
 | Docker Compose verification | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
@@ -286,7 +291,8 @@ Conditions:
    `conversion_probability` is withheld rather than invented.
 3. Do not claim the 85% accuracy target. It requires a labelled dataset and a calibration
    split that do not exist in this build.
-4. Do not claim live model calls. Show the labelled mock-provider state instead.
+4. Do not claim OpenAI or Gemini calls. Show the live Groq state (`ai_provider=groq`,
+   `used_mock=false`) and keep the model name visible.
 5. Re-run the full suite after any further merge and update this report.
 
 ---
