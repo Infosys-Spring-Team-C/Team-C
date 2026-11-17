@@ -109,8 +109,8 @@ Team-C/
 |   |-- env.py                  # DATABASE_URL always from settings
 |   `-- versions/0001_canonical_schema.py
 |-- tests/                      # backend + AI + frontend-adapter tests
-|-- scripts/                    # render_db_workspace.py, qa_uat.py, check_ai_integration.py,
-|                               #   check_frontend_integration.py
+|-- scripts/                    # render_db_workspace.py, qa_uat.py, qa_conversations_render.py,
+|                               #   check_ai_integration.py, check_frontend_integration.py
 |-- ai/                         # AI package (Mahidhar): graph, agents, prompts, providers, scoring
 |-- frontend/                   # Streamlit UI (Maheksaba) + api_compat.py adapter
 |-- salesgenie-db-workspace/    # generated PostgreSQL baseline, ER diagram, DB-only Compose
@@ -308,23 +308,23 @@ recreates the `public` schema. Exact commands and output: [`docs/test-report.md`
 
 ### QA / test-engineering pack
 
-The full QA deliverables for the milestone - test plan, scenarios, 75 test cases, traceability
+The full QA deliverables for the milestone - test plan, scenarios, 81 test cases, traceability
 matrix, API and database matrices, AI quality validation, regression procedure, defect log,
-UAT plan and results, and the milestone test report - are in
+UAT plan and results, and the milestone test reports - are in
 [`docs/qa/`](docs/qa/README.md). Every result there is backed by a captured artifact in
 [`docs/qa/evidence/`](docs/qa/evidence/).
 
-A live acceptance run against a real server and PostgreSQL is also reproducible:
+A live acceptance run against a real server is also reproducible:
 
 ```powershell
 python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
   --email qa.admin@example.com --password "<UAT password>"
 ```
 
-Verified result: **20 of 21 workflows passed, 1 partial, 0 failed**. The partial was the
-missing recommendation channel (BUG-006); the contract now carries `suggested_channel` and
-`test_recommendation_endpoint` asserts it. The 21-workflow run itself was not repeated after
-that fix.
+Verified result: **25 of 25 workflows passed, 0 partial, 0 failed** (17 November 2026). The
+Module 5 workflows cover CRM field mappings, the three simulated syncs, a rejected operation
+and the Conversations data contract. The page is additionally rendered headlessly against the
+same server with `scripts/qa_conversations_render.py` (PASS - 7 sections).
 
 ### Database deployment baseline
 

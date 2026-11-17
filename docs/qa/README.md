@@ -39,6 +39,7 @@ estimated, inferred or copied from a plan.
 | Module 5 focused tests | **14 passed** | `evidence/2026-11-17-pytest-module5-focused.txt` |
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** | `evidence/2026-11-17-uat-live-milestone3.md` |
+| Conversations page render (headless) | **PASS** - 7 sections, no exception | `evidence/2026-11-17-conversations-headless-render.txt` |
 | Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 (27 Oct 2026; not rebuilt 17 Nov) | `evidence/2026-10-27-docker-compose-verification.txt` |
 | Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
 | Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
@@ -76,6 +77,10 @@ python -m pytest -q
 # 3. Live UAT against a running server (see uat-plan.md for setup)
 python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
   --email qa.admin@example.com --password "<UAT password>"
+
+# 4. Headless render of the Conversations page against the same server
+python scripts/qa_conversations_render.py --base-url http://127.0.0.1:8011 `
+  --email qa.admin@example.com --password "<UAT password>"
 ```
 
 ---
@@ -89,6 +94,8 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 | `evidence/2026-11-17-pytest-module5-focused.txt` | The 14 Module 5 tests, verbose |
 | `evidence/2026-11-17-uat-live-milestone3.md` | Live UAT, 25 workflows, human readable |
 | `evidence/2026-11-17-uat-live-milestone3.json` | Same run, machine readable |
+| `evidence/2026-11-17-conversations-headless-render.txt` | Headless Streamlit render of the Conversations page, 7 sections |
+| `evidence/2026-11-17-browser-walkthrough-attempt.md` | Browser walkthrough attempt, blocked by host memory |
 | `evidence/2026-10-26-environment.txt` | Python, package versions, PostgreSQL version, commit under test |
 | `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite (pre-merge baseline) |
 | `evidence/2026-10-26-pytest-postgres.txt` | Full pytest output, PostgreSQL 16 (pre-merge baseline) |

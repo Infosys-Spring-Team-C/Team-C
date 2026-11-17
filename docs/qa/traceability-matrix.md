@@ -31,8 +31,10 @@ missing sync path moved to `PARTIAL`, not `PASS`:
   activity and deal-stage workflows. A simulator is not synchronisation with a real CRM, so
   the live half stays open under Decision D-06.
 * `FR-044` has the Conversations page, including the CRM status, field-mapping and activity
-  sections. The API contract behind it is verified; a browser walkthrough of the new
-  sections is still outstanding.
+  sections. The API contract behind it is verified and a headless Streamlit render confirms
+  the seven sections reach the page with live data. A visual browser walkthrough was
+  attempted on 17 November 2026 and blocked by host memory, so the visual check is still
+  outstanding.
 
 The remaining `BLOCKED` rows are the CRM transport (SRS D-06), the undefined accuracy
 dataset (SRS D-13), or UI interactions that no one has clicked through yet. None is a hidden
@@ -87,7 +89,7 @@ failure.
 | FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
 | FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage` (`update_stage`), UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
 | FR-043 | Record CRM sync logs | M5 | TC-M5-008, TC-M5-011 | `test_crm_simulation_covers_contact_activity_and_stage`, `test_crm_sync_records_failure_and_retry`, UAT-23 | PASS - attempt, outcome, entity type, timestamp and error detail |
-| FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PARTIAL - page and data contract verified; browser walkthrough pending |
+| FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014, TC-M5-015 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25, `scripts/qa_conversations_render.py` | PARTIAL - page, data contract and headless render verified; visual browser check pending |
 | FR-045 | Handle CRM failure without losing the local record | M5 | TC-M5-009 | `test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |
 | FR-046 | Display conversion rate | M6 | TC-M6-001 | `test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
 | FR-047 | Display pipeline value | M6 | TC-M6-002 | `null` + `pending_definition` while D-10 is open | PARTIAL |
@@ -126,7 +128,7 @@ failure.
 | AC-020 | Scoring accuracy meets the agreed target | TC-M4-007 | BLOCKED - D-13 |
 | AC-021 | Notes produce summary, points and actions | TC-M5-001, TC-M5-002, TC-M5-003 | PASS |
 | AC-022 | Empty/invalid notes give a clear message, no fabrication | TC-M5-005, TC-M5-006 | PASS |
-| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004, TC-M5-014 | PARTIAL - stored, listed and contract-verified; browser walkthrough pending |
+| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004, TC-M5-014, TC-M5-015 | PARTIAL - stored, listed, contract-verified and rendered headlessly; visual browser check pending |
 | AC-024 | Sync attempts, successes and failures logged | TC-M5-008, TC-M5-011, TC-M5-012 | PASS |
 | AC-025 | Failed sync does not delete or corrupt the local record | TC-M5-009 | PASS |
 | AC-026 | All four KPIs render with agreed definitions | TC-M6-001 to TC-M6-005 | BLOCKED - three definitions open (D-10); rendering not walked through |

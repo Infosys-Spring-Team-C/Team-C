@@ -22,10 +22,12 @@ database.
 authentication and role-based access.
 
 **Out of scope:** anything that requires clicking through the Streamlit interface. The
-frontend exists and its data contract is exercised (UAT-25 and the adapter tests), but the
-purely visual workflows (FR-006, FR-017, FR-023, FR-027, FR-033, FR-044, FR-050, FR-051)
-are not accepted on the strength of an API response. They stay `PARTIAL` or `BLOCKED` in
-the traceability matrix until someone walks the screen.
+frontend exists and its data contract is exercised (UAT-25 and the adapter tests), and the
+Conversations page is additionally rendered headlessly with live data
+(`scripts/qa_conversations_render.py`), but the purely visual workflows (FR-006, FR-017,
+FR-023, FR-027, FR-033, FR-044, FR-050, FR-051) are not accepted on the strength of an API
+response or a render check. They stay `PARTIAL` or `BLOCKED` in the traceability matrix
+until someone walks the screen.
 
 This is stated plainly because a UAT report that claims a UI works when no one has opened
 it is worthless.

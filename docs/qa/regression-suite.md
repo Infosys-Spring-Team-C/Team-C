@@ -17,6 +17,7 @@ result differs.
 | PostgreSQL module | `tests/test_postgres.py` | 7 | included | Yes |
 | Database workspace drift | `tests/test_db_workspace.py` | 5 | ~3 s | No |
 | Live UAT | `scripts/qa_uat.py` | 25 workflows | ~15 s | Yes, plus a running API |
+| Conversations page render | `scripts/qa_conversations_render.py` | 7 sections | ~10 s | Yes, plus a running API |
 | External AI gate | `scripts/check_ai_integration.py` | 6 operations | seconds | No, needs the `ai` package or a stub |
 | Contributor AI suite | `contributions/mahidhar-ai-layer/` | 86 | ~90 s | No |
 
@@ -81,7 +82,26 @@ three simulated sync workflows, the rejected-operation path and the Conversation
 contract. A run that reports `0 failed` is the current known-good state: **182 passed** on
 PostgreSQL and **175 passed, 7 skipped** on SQLite.
 
-### 2.4 External AI gate
+### 2.4 Conversations page render (headless)
+
+```powershell
+python scripts/qa_conversations_render.py --base-url http://127.0.0.1:8011 `
+  --email qa.admin@example.com --password "<UAT password>"
+```
+
+Expected:
+
+```
+PASS - 7 sections rendered with live data, no exception, simulated-transport disclaimer present.
+```
+
+The script creates a probe prospect with one stored summary and three simulated syncs,
+runs `frontend/app.py` through Streamlit's `AppTest` harness, asserts that the seven
+Conversations sections reach the rendered element tree, then deletes the probe. It is a
+render check, not a browser walkthrough: it does not judge layout or styling. A
+`missing ScriptRunContext` warning is expected in bare mode.
+
+### 2.5 External AI gate
 
 ```powershell
 python scripts/check_ai_integration.py

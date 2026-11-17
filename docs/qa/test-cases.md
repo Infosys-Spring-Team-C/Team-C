@@ -2,7 +2,7 @@
 
 **Date:** 17 November 2026 (Module 5 cases refreshed; earlier modules unchanged)
 **Author:** Mohamed Isharak M
-**Total cases:** 80
+**Total cases:** 81
 **Verdict key:** `PASS` executed and met · `PARTIAL` executed, requirement partly met ·
 `FAIL` executed, requirement not met · `BLOCKED` cannot execute yet ·
 `NOT RUN` designed but not executed
@@ -74,7 +74,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 ---
 
-## Module 5 - Conversations and CRM (14 cases)
+## Module 5 - Conversations and CRM (15 cases)
 
 | ID | Case | Level | Req | Automated / method | Verdict |
 |---|---|---|---|---|---|
@@ -92,6 +92,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M5-012 | An unknown CRM operation is refused and not audited | API | FR-041, AC-024 | `test_api_ai.py::test_crm_sync_rejects_an_unknown_operation`, UAT-24 | PASS - `422 invalid_operation`, log count unchanged |
 | TC-M5-013 | The UI's CRM routes resolve to the canonical API | Frontend contract | FR-040, FR-044 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api` | PASS |
 | TC-M5-014 | The Conversations page receives every field it renders | API + UAT | FR-044, AC-023 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PASS - API contract verified; browser walkthrough pending |
+| TC-M5-015 | The Conversations page renders its sections with live data | Frontend render | FR-044, AC-023 | `scripts/qa_conversations_render.py` (Streamlit `AppTest`, headless) | PASS - 7 sections, no exception, simulated-transport disclaimer present; visual browser walkthrough still pending |
 
 ---
 
@@ -180,12 +181,12 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 | Verdict | Count |
 |---|---|
-| PASS | 68 |
+| PASS | 69 |
 | PARTIAL | 2 |
 | BLOCKED | 2 |
 | NOT RUN | 8 |
 | FAIL | 0 |
-| **Total** | **80** |
+| **Total** | **81** |
 
 A `NOT RUN` case is a coverage gap, not a pass. Each is explained in the row above and
 carried into [`milestone-test-report.md`](milestone-test-report.md) and

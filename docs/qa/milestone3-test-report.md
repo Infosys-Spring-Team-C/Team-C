@@ -24,10 +24,11 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Canonical pytest suite (SQLite) | **175 passed, 7 skipped** in 142.01 s |
 | Module 5 focused tests | **14 passed** |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
+| Conversations page render (headless) | **PASS** - 7 sections, no exception |
 | Defects found this pass | 1 (BUG-019, closed the same day) |
 | Defects open | 1 (BUG-011, Low, accepted limitation) |
 | Requirements fully verified (FR-036 to FR-045) | 7 of 10 |
-| Requirements partly verified | 3 of 10 - two blocked by D-06, one awaiting a browser walkthrough |
+| Requirements partly verified | 3 of 10 - two blocked by D-06, one awaiting a visual browser check |
 
 Three limits are stated openly and are **not** presented as achievements:
 
@@ -40,10 +41,13 @@ Three limits are stated openly and are **not** presented as achievements:
    on the test machine throughout 17 November 2026. The last PostgreSQL run (177 passed)
    and the last Compose verification are from 6 November and 27 October 2026 respectively
    and are cited as such.
-3. **The new Conversations sections have not been walked through in a browser.** The page,
-   its adapter routes and the exact data contract it reads are verified by tests and by the
-   live UAT, but no one has clicked the CRM status, field-map, sync-form and activity-feed
-   sections on screen since they were added.
+3. **The new Conversations sections have not been seen in a browser.** The page, its adapter
+   routes, the exact data contract it reads and the rendered element tree are verified by
+   tests, by the live UAT and by a headless Streamlit render. A browser walkthrough was
+   attempted on 17 November 2026 and blocked: the host ran out of memory, Streamlit aborted
+   with an OpenBLAS allocation error and Chromium reported `ERR_INSUFFICIENT_RESOURCES`.
+   No one has judged the visual layout of the CRM status, field-map, sync-form and
+   activity-feed sections, so the verdict stays `PARTIAL`.
 
 A fourth honesty note: the UAT in this pass ran the deterministic heuristic engine so that
 the results are reproducible. Live Groq summarisation is evidenced by the 6 November 2026
@@ -61,6 +65,7 @@ documented SKIP here; the container image installs it via `INSTALL_AI_EXTRAS`.
 | API - conversations, summaries, storage and read-back | `tests/test_api_ai.py` | PASS |
 | API - CRM providers, field maps, validation, preview, sync, logs, retry, status | `tests/test_api_ai.py` | PASS |
 | Frontend contract - every CRM route the page calls | `tests/test_frontend_compat.py` | PASS |
+| Frontend render - Conversations page through Streamlit `AppTest` | `scripts/qa_conversations_render.py` | PASS (7 sections, no exception) |
 | Database - `sales_interactions`, `crm_sync_logs`, entity type, JSON metadata | `tests/test_schema.py`, `tests/test_postgres.py` | PASS (SQLite this pass) |
 | Integration - API to AI engine, API to database, API to frontend | suite + live UAT | PASS |
 | Live UAT - 25 workflows over HTTP | `scripts/qa_uat.py` | 25/25 PASS |
@@ -79,12 +84,14 @@ documented SKIP here; the container image installs it via `INSTALL_AI_EXTRAS`.
 | Module 5 focus | `pytest tests/test_api_ai.py tests/test_frontend_compat.py -k "crm or conversation"` | **14 passed**, 45 deselected |
 | PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** - not repeated |
 | Contributor AI suite | `pytest -q` inside `contributions/mahidhar-ai-layer` | **86 passed** |
+| Conversations render | `python scripts/qa_conversations_render.py` | **PASS** - 7 sections, no exception |
 
 The 7 skips are the PostgreSQL-only module. The only warning is the deliberate short-key JWT
 test.
 
 Evidence: `docs/qa/evidence/2026-11-17-pytest-sqlite.txt`,
-`docs/qa/evidence/2026-11-17-pytest-module5-focused.txt`.
+`docs/qa/evidence/2026-11-17-pytest-module5-focused.txt`,
+`docs/qa/evidence/2026-11-17-conversations-headless-render.txt`.
 
 ### 3.2 Live user acceptance
 
@@ -122,11 +129,12 @@ Evidence: `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` and `.json`.
 | FR-041 Sync contacts and activities | **PARTIAL** | Simulator covers `sync_contact`, `activity_log` and `upsert`; no live transport (D-06). `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 |
 | FR-042 Sync deal stage | **PARTIAL** | Simulator covers `update_stage` -> deal record; no live transport (D-06) |
 | FR-043 Record CRM sync logs | **PASS** | Attempt, outcome, entity type, timestamp, error detail and attempt count; `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 |
-| FR-044 Conversations UI | **PARTIAL** | Page exists with notes entry, summary, key points, action items, CRM status, field map, sync form, activity feed and history; data contract verified; browser walkthrough pending |
+| FR-044 Conversations UI | **PARTIAL** | Page exists with notes entry, summary, key points, action items, CRM status, field map, sync form, activity feed and history; data contract verified and the page renders all seven sections headlessly with live data; visual browser check still pending |
 | FR-045 Failure keeps the local record | **PASS** | `test_failed_crm_sync_keeps_the_local_interaction`, UAT-17 |
 
 Acceptance criteria `AC-021` to `AC-025` are covered: `AC-021` to `AC-022` pass, `AC-024`
-and `AC-025` pass, `AC-023` is `PARTIAL` for the same browser-walkthrough reason as FR-044.
+and `AC-025` pass, `AC-023` is `PARTIAL` because no one has judged the page in a browser
+yet; the stored data and the rendered sections are both verified.
 
 ### 3.4 Module 5 schedule items
 
@@ -189,9 +197,10 @@ check and an assertion on `created_at` where the API contract field is `interact
 7. **Rejection path.** An unknown operation or provider is refused with `422` and writes no
    audit row.
 8. **Failure safety.** A failed sync leaves the lead and its stored interaction untouched.
-9. **Conversations page data.** The page's five data sources - conversation list, CRM
-   status, field map, sync logs and the sync action - all resolve through
-   `frontend/api_compat.py` to the canonical API.
+9. **Conversations page data and render.** The page's five data sources - conversation list,
+   CRM status, field map, sync logs and the sync action - all resolve through
+   `frontend/api_compat.py` to the canonical API, and a headless `AppTest` run confirms the
+   seven sections reach the rendered element tree with live data.
 10. **Frontend discipline.** The page states that the transport is simulated; no accuracy,
     probability or live-CRM claim is rendered.
 
@@ -203,7 +212,7 @@ check and an assertion on `created_at` where the API contract field is `interact
 |---|---|---|---|
 | 1 | No live CRM synchronisation | Credentials and access unconfirmed (D-06) | Simulator and audit rows only; FR-041/FR-042 stay `PARTIAL` |
 | 2 | Field maps not confirmed against a real org | No sandbox org available | Maps use documented vendor field names; a CRM admin must confirm custom fields |
-| 3 | No browser walkthrough of the new Conversations sections | Docker daemon unavailable | FR-044 and AC-023 stay `PARTIAL` until someone opens the page |
+| 3 | No visual browser walkthrough of the new Conversations sections | Host ran out of memory on 17 Nov 2026 (Streamlit OpenBLAS allocation error, Chromium `ERR_INSUFFICIENT_RESOURCES`); Docker daemon unavailable | FR-044 and AC-023 stay `PARTIAL`. The page renders headlessly with live data, so this is a visual-acceptance gap, not a functional one |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |
 | 5 | Compose stack not rebuilt this pass | Same | Last verification 27 October 2026 |
 | 6 | Live Groq summarisation not re-run this pass | Host venv lacks the optional `openai` SDK | Live-model evidence is the 6 November gate (6/6, `used_mock=false`) |
@@ -260,6 +269,8 @@ check and an assertion on `created_at` where the API contract field is `interact
 | Pytest, Module 5 focused (14 passed) | `docs/qa/evidence/2026-11-17-pytest-module5-focused.txt` |
 | Live UAT, 25/25 (Markdown) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` |
 | Live UAT, 25/25 (JSON) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.json` |
+| Conversations page headless render (PASS) | `docs/qa/evidence/2026-11-17-conversations-headless-render.txt` |
+| Browser walkthrough attempt (BLOCKED) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
 | AI integration gate attempt (documented SKIP) | `docs/qa/evidence/2026-11-17-ai-integration-gate.txt` |
 | AI integration gate, 6/6 live Groq (6 Nov) | `docs/qa/evidence/2026-11-06-ai-integration-gate-live-groq.txt` |
 | Pytest, PostgreSQL 16 (177 passed, 6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
@@ -289,9 +300,11 @@ Conditions:
    audit rows and the `mode: simulated` note. Do not describe it as a live sync.
 4. Show the refused operation (`422 invalid_operation`) and the refused live sync (`501`).
    Both are deliberate and both are tested.
-5. Do not claim a browser walkthrough, a live CRM call, a PostgreSQL run or a live model call
-   that did not happen in this pass.
-6. Re-run the full suite and the UAT after any further merge, and update this report.
+5. Do not claim a visual browser walkthrough, a live CRM call, a PostgreSQL run or a live
+   model call that did not happen in this pass. The headless render may be described as a
+   render check, never as a browser walkthrough.
+6. Re-run the full suite, the UAT and the render check after any further merge, and update
+   this report.
 
 ---
 
@@ -303,4 +316,4 @@ Conditions:
 | Backend owner | M Doran | Pending |
 | Database owner | Marri Sai Surekha | Pending - PostgreSQL re-run required |
 | AI owner | Mahidhar Reddy | Pending - summarisation quality review outstanding |
-| Frontend owner | Maheksaba Akbar Shaikh | Pending - browser walkthrough of the Conversations sections |
+| Frontend owner | Maheksaba Akbar Shaikh | Pending - visual browser check of the Conversations sections |

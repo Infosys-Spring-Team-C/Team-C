@@ -235,9 +235,10 @@ unchanged, so a typo cannot create a row that claims a sync happened. Evidence:
 paths the page uses.
 *Acceptance:* `AC-023`
 *Verdict:* **PARTIAL** - the data contract is verified end to end and the adapter maps every
-field the page reads (`interaction_date` -> `created_at`). The page has not been walked
-through in a browser since the CRM sections were added. Evidence: `TC-M5-013`,
-`TC-M5-014`, UAT-25.
+field the page reads (`interaction_date` -> `created_at`). A headless Streamlit render then
+confirmed that all seven sections reach the rendered element tree with live data. The page
+has not been judged visually in a browser: the attempt on 17 November 2026 was blocked by
+host memory. Evidence: `TC-M5-013`, `TC-M5-014`, `TC-M5-015`, UAT-25.
 
 ---
 

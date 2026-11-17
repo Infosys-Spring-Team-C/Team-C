@@ -1,0 +1,39 @@
+# Conversations page - headless render check
+
+**Captured:** 2026-11-17 20:24 UTC
+**Script:** `scripts/qa_conversations_render.py`
+**Target API:** `http://127.0.0.1:8011` (SQLite, heuristic AI engine)
+**Harness:** Streamlit `AppTest` (headless, no browser)
+**Result:** PASS - 7 sections rendered with live data, no exception,
+simulated-transport disclaimer present.
+
+## Captured output
+
+```
+Seeded probe lead 3 with one summary and three simulated syncs.
+PASS - 7 sections rendered with live data, no exception, simulated-transport disclaimer present.
+exit=0
+```
+
+## What this proves, and what it does not
+
+It runs the real `frontend/app.py` script in Streamlit's own runtime against a live
+API and asserts that these sections reach the rendered element tree:
+
+* `New summary`
+* `Latest summary`
+* `CRM sync status`
+* `Run a sync`
+* `Field mapping`
+* `Recent activity`
+* `History`
+
+plus the "Simulated transport" disclaimer. The probe lead is created with one stored
+conversation summary and three simulated CRM syncs, then deleted.
+
+It does **not** prove visual layout, colour contrast or interaction timing in a browser.
+The desktop browser walkthrough was attempted on the same date and is recorded as blocked
+in `2026-11-17-browser-walkthrough-attempt.md`.
+
+`Streamlit AppTest` prints a "missing ScriptRunContext" warning in bare mode; Streamlit
+documents this as expected and harmless.
