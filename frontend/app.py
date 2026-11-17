@@ -1552,16 +1552,215 @@ def page_conversations() -> None:
                     unsafe_allow_html=True,
                 )
 
-    st.write("")
-    theme.section("History", "Previous summaries for this prospect")
     history_key = f"_conversation_history_{lead_id}"
     history_stamp = f"_conversation_history_at_{lead_id}"
     if history_key not in st.session_state or not _fresh(history_stamp, 20):
         ok, rows = api_get(f"/leads/{lead_id}/conversations", timeout=10)
         st.session_state[history_key] = rows if ok and isinstance(rows, list) else []
         st.session_state[history_stamp] = time.time()
-
     history = st.session_state.get(history_key) or []
+
+    st.write("")
+    theme.section(
+        "CRM sync status",
+        "Simulated transport: no Salesforce or HubSpot request is made (SRS D-06)",
+    )
+    status_key, status_stamp = "_crm_status", "_crm_status_at"
+    if status_key not in st.session_state or not _fresh(status_stamp, 20):
+        ok_status, status = api_get("/crm/status", timeout=8)
+        st.session_state[status_key] = status if ok_status and isinstance(status, dict) else {}
+        st.session_state[status_stamp] = time.time()
+    crm_status = st.session_state.get(status_key) or {}
+    if crm_status:
+        failure_rate = crm_status.get("failure_rate", 0) or 0
+        cards = [
+            theme.kpi(
+                "Connectivity",
+                str(crm_status.get("connectivity") or "unknown").capitalize(),
+                "Live transport unavailable",
+                "warning",
+            ),
+            theme.kpi("Syncs (24h)", crm_status.get("recent_syncs", 0), "Recorded attempts"),
+            theme.kpi(
+                "Failures (24h)",
+                crm_status.get("recent_failures", 0),
+                f"{failure_rate * 100:.1f}% failure rate",
+                "accent" if crm_status.get("recent_failures") else "success",
+            ),
+        ]
+        st.markdown(theme.kpi_row(cards), unsafe_allow_html=True)
+        providers = crm_status.get("providers") or {}
+        if providers:
+            st.caption(
+                "Providers: "
+                + " · ".join(
+                    f"{str(name).title()}: {state}" for name, state in providers.items()
+                )
+            )
+        if crm_status.get("note"):
+            st.caption(crm_status["note"])
+
+    sync_left, sync_right = st.columns([1, 1], gap="large")
+    operation_labels = {
+        "sync_contact": "Contact added / updated",
+        "activity_log": "Activity logged",
+        "update_stage": "Deal stage moved",
+        "upsert": "Upsert contact",
+    }
+    with sync_left:
+        theme.section("Run a sync", "Contact, activity or deal-stage record")
+        with st.form("crm_sync_form"):
+            provider = st.selectbox(
+                "CRM provider",
+                ["salesforce", "hubspot"],
+                format_func=lambda value: value.title(),
+            )
+            operation = st.selectbox(
+                "Workflow",
+                list(operation_labels),
+                format_func=lambda value: operation_labels[value],
+            )
+            simulate = st.form_submit_button(
+                "Run simulated sync",
+                type="primary",
+                icon=":material/sync:",
+                width="stretch",
+            )
+        if simulate:
+            with st.spinner("Recording the simulated CRM sync..."):
+                ok, result = api_post(
+                    "/crm/sync",
+                    json_data={
+                        "provider": provider,
+                        "operation": operation,
+                        "lead_ids": [lead_id],
+                        "simulate": True,
+                    },
+                    timeout=30,
+                )
+            if ok:
+                st.session_state["_crm_sync_result"] = result
+                st.session_state.pop(status_key, None)
+                st.session_state.pop(f"_crm_logs_{lead_id}", None)
+                st.toast("Simulated CRM sync recorded.")
+                st.rerun()
+            else:
+                theme.error_note(result.get("error", "The CRM sync could not be simulated."))
+        sync_result = st.session_state.get("_crm_sync_result")
+        if sync_result:
+            record = (sync_result.get("records") or [{}])[0]
+            st.markdown(
+                theme.card(
+                    "Last simulated sync",
+                    para(sync_result.get("note") or ""),
+                    "accent",
+                    footer=(
+                        f"Provider: {sync_result.get('provider')} · "
+                        f"Operation: {sync_result.get('operation')} · "
+                        f"Status: {record.get('status', sync_result.get('status'))}"
+                    ),
+                ),
+                unsafe_allow_html=True,
+            )
+
+    with sync_right:
+        theme.section("Field mapping", "Canonical field → CRM field")
+        ok_map, mapping = api_get("/crm/field-mappings", timeout=8)
+        if ok_map and isinstance(mapping, dict):
+            entity = (
+                "deal"
+                if operation == "update_stage"
+                else "activity"
+                if operation == "activity_log"
+                else "contact"
+            )
+            fields = ((mapping.get("mappings") or {}).get(provider) or {}).get(entity) or {}
+            if fields:
+                st.dataframe(
+                    pd.DataFrame(
+                        [
+                            {"SalesGenie field": key, "CRM field": value}
+                            for key, value in fields.items()
+                        ]
+                    ),
+                    width="stretch",
+                    hide_index=True,
+                )
+            else:
+                theme.empty_state(
+                    "No mapping",
+                    "This provider and record combination has no documented mapping.",
+                )
+            supported = mapping.get("supported_operations") or []
+            if supported:
+                st.caption("Simulated operations: " + ", ".join(supported))
+        else:
+            theme.empty_state(
+                "Field map unavailable",
+                "The backend did not return the CRM field map.",
+            )
+
+    st.write("")
+    theme.section(
+        "Recent activity",
+        "CRM sync attempts and stored conversation summaries for this prospect",
+    )
+    logs_key, logs_stamp = f"_crm_logs_{lead_id}", f"_crm_logs_at_{lead_id}"
+    if logs_key not in st.session_state or not _fresh(logs_stamp, 20):
+        ok_logs, rows = api_get("/crm/sync-logs", timeout=10)
+        all_logs = rows if ok_logs and isinstance(rows, list) else []
+        st.session_state[logs_key] = [
+            row for row in all_logs if str(row.get("lead_id")) == str(lead_id)
+        ][:10]
+        st.session_state[logs_stamp] = time.time()
+    crm_logs = st.session_state.get(logs_key) or []
+
+    feed: list[dict] = []
+    for item in history[:10]:
+        feed.append(
+            {
+                "at": item.get("created_at"),
+                "kind": "Conversation",
+                "title": f"{str(item.get('interaction_type') or 'interaction').capitalize()} summary",
+                "detail": item.get("summary") or "",
+                "tone": "success",
+            }
+        )
+    for row in crm_logs:
+        detail = f"{row.get('entity_type') or 'record'} · {row.get('status') or 'unknown'}"
+        if row.get("error_message"):
+            detail += f" · {row['error_message']}"
+        feed.append(
+            {
+                "at": row.get("created_at"),
+                "kind": "CRM",
+                "title": (
+                    f"{str(row.get('provider') or '').title()} "
+                    f"{str(row.get('operation') or '').replace('_', ' ')}"
+                ),
+                "detail": detail,
+                "tone": "success" if row.get("status") == "success" else "warning",
+            }
+        )
+    feed.sort(key=lambda item: str(item.get("at") or ""), reverse=True)
+    if not feed:
+        theme.empty_state(
+            "No recent activity",
+            "Summarise a conversation or run a simulated CRM sync to populate this feed.",
+        )
+    else:
+        for item in feed[:10]:
+            st.markdown(
+                theme.card(
+                    f"{item['kind']} · {when(item['at'])}",
+                    f"<strong>{esc(item['title'])}</strong><br>{para(item['detail'])}",
+                    item["tone"],
+                ),
+                unsafe_allow_html=True,
+            )
+
+    st.write("")
+    theme.section("History", "Previous summaries for this prospect")
     if not history:
         theme.empty_state("No stored conversations", "Summaries are saved against the prospect automatically.")
     else:

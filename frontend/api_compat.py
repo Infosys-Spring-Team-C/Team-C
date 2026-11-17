@@ -603,6 +603,20 @@ def api_get(
         rows = data if isinstance(data, list) else []
         return True, [normalise_conversation(item) for item in rows]
 
+    if re.fullmatch(r"/crm/providers/?", path):
+        return _request("GET", base, "/api/v1/crm/providers", timeout=timeout)
+
+    if re.fullmatch(r"/crm/field-mappings/?", path):
+        return _request(
+            "GET", base, "/api/v1/crm/field-mappings", params=params, timeout=timeout
+        )
+
+    if re.fullmatch(r"/crm/status/?", path):
+        return _request("GET", base, "/api/v1/crm/status", timeout=timeout)
+
+    if re.fullmatch(r"/crm/sync-logs/?", path):
+        return _request("GET", base, "/api/v1/crm/sync-logs", timeout=timeout)
+
     return _request("GET", base, path, params=params, timeout=timeout)
 
 
@@ -723,6 +737,20 @@ def api_post(
             "POST",
             base,
             "/api/v1/analytics/insights",
+            json_data=json_data or {},
+            timeout=timeout,
+        )
+
+    if re.fullmatch(r"/crm/sync/?", path):
+        return _request(
+            "POST", base, "/api/v1/crm/sync", json_data=json_data or {}, timeout=timeout
+        )
+
+    if re.fullmatch(r"/crm/mappings/validate/?", path):
+        return _request(
+            "POST",
+            base,
+            "/api/v1/crm/mappings/validate",
             json_data=json_data or {},
             timeout=timeout,
         )

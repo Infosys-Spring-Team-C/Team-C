@@ -403,6 +403,111 @@ def test_crm_sync_rejects_unknown_provider(client, rep):
     assert response.json()["code"] == "invalid_provider"
 
 
+def test_crm_field_mappings_are_documented_for_both_providers(client, rep):
+    response = client.get("/api/v1/crm/field-mappings", headers=rep)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body["mappings"]) == {"salesforce", "hubspot"}
+    assert body["mappings"]["salesforce"]["contact"]["company_name"] == "Account.Name"
+    assert body["mappings"]["hubspot"]["deal"]["stage"] == "dealstage"
+    assert set(body["supported_operations"]) == {
+        "upsert",
+        "sync_contact",
+        "update_stage",
+        "activity_log",
+    }
+    assert body["live_transport_available"] is False
+
+    one = client.get(
+        "/api/v1/crm/field-mappings?provider=hubspot", headers=rep
+    )
+    assert one.status_code == 200
+    assert set(one.json()["mappings"]) == {"hubspot"}
+
+    bad = client.get(
+        "/api/v1/crm/field-mappings?provider=pipedrive", headers=rep
+    )
+    assert bad.status_code == 422
+    assert bad.json()["code"] == "invalid_provider"
+
+
+def test_crm_simulation_covers_contact_activity_and_stage(client, lead, rep):
+    expected = {
+        "sync_contact": ("contact", "contact"),
+        "activity_log": ("activity", "activity"),
+        "update_stage": ("deal", "deal"),
+        "upsert": ("contact", "contact"),
+    }
+    for operation, (record_type, entity_type) in expected.items():
+        response = client.post(
+            "/api/v1/crm/sync",
+            headers=rep,
+            json={
+                "provider": "salesforce",
+                "operation": operation,
+                "lead_ids": [int(lead["id"])],
+                "simulate": True,
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["mode"] == "simulated"
+        assert body["simulated"] is True
+        assert body["records"][0]["payload"]["record_type"] == record_type
+
+        log = next(
+            row
+            for row in client.get("/api/v1/crm/sync-logs", headers=rep).json()
+            if row["id"] == body["sync_log_ids"][0]
+        )
+        assert log["entity_type"] == entity_type
+        assert log["operation"] == operation
+        assert log["status"] == "success"
+
+
+def test_crm_sync_rejects_an_unknown_operation(client, lead, rep):
+    response = client.post(
+        "/api/v1/crm/sync",
+        headers=rep,
+        json={
+            "provider": "hubspot",
+            "operation": "delete_everything",
+            "lead_ids": [int(lead["id"])],
+            "simulate": True,
+        },
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_operation"
+
+
+def test_failed_crm_sync_keeps_the_local_interaction(client, lead, rep):
+    summary = client.post(
+        "/api/v1/conversations/summarize",
+        headers=rep,
+        json={
+            "lead_id": int(lead["id"]),
+            "transcript": "Dana will send the spreadsheet by Friday.",
+            "interaction_type": "call",
+        },
+    )
+    assert summary.status_code == 200, summary.text
+    interaction_id = summary.json()["id"]
+
+    failed = client.post(
+        "/api/v1/crm/sync",
+        headers=rep,
+        json={"provider": "hubspot", "lead_ids": [int(lead["id"])]},
+    )
+    assert failed.status_code == 501
+    assert failed.json()["code"] == "crm_not_configured"
+
+    still_there = client.get(
+        f"/api/v1/conversations/{interaction_id}", headers=rep
+    )
+    assert still_there.status_code == 200
+    assert still_there.json()["id"] == interaction_id
+
+
 # ---------------------------------------------------------------------------
 # System surface
 # ---------------------------------------------------------------------------

@@ -17,7 +17,13 @@ from backend.intelligence import IntelligenceError, get_engine
 from backend.routers._helpers import get_lead_or_404
 from backend.schemas import AnalyticsResponse, FollowUpItem
 from backend.services.analytics import build_follow_ups, compute_analytics
-from backend.services.crm import build_standardized_payload, simulate_sync
+from backend.services.crm import (
+    ACTION_TO_RECORD_TYPE,
+    SUPPORTED_OPERATIONS,
+    build_standardized_payload,
+    field_mappings,
+    simulate_sync,
+)
 from backend.services.leads import lead_to_dict
 
 router = APIRouter(tags=["analytics"])
@@ -30,7 +36,11 @@ _CRM_FIELDS = {
     "industry",
     "website",
     "company_size",
+    "annual_revenue",
+    "lifecycle_stage",
     "stage",
+    "owner_id",
+    "activity",
 }
 
 
@@ -116,6 +126,27 @@ def crm_providers(_: Principal = Depends(get_current_user)) -> list[dict[str, An
     ]
 
 
+@router.get("/api/v1/crm/field-mappings")
+def crm_field_mappings(
+    provider: str | None = None,
+    _: Principal = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Return the documented canonical-to-CRM field map.
+
+    The map is descriptive: the simulator sends a provider-neutral payload and
+    no Salesforce/HubSpot request is made (SRS D-06). Keeping the map in one
+    place lets the UI and the test suite agree on the field names.
+    """
+    try:
+        return {
+            "mappings": field_mappings(provider),
+            "supported_operations": list(SUPPORTED_OPERATIONS),
+            "live_transport_available": False,
+        }
+    except ValueError as exc:
+        raise ApiError(422, "invalid_provider", str(exc)) from exc
+
+
 @router.post("/api/v1/crm/mappings/validate")
 def validate_mapping(
     body: dict[str, Any], _: Principal = Depends(require_writer)
@@ -180,6 +211,12 @@ def crm_sync(
         raise ApiError(422, "invalid_provider", "provider must be salesforce or hubspot.")
 
     operation = str(body.get("operation", "upsert"))[:40]
+    if operation not in SUPPORTED_OPERATIONS:
+        raise ApiError(
+            422,
+            "invalid_operation",
+            f"operation must be one of: {', '.join(SUPPORTED_OPERATIONS)}.",
+        )
     simulate = bool(body.get("simulate", False))
     raw_ids = body.get("lead_ids", [])
     if raw_ids is None:
@@ -208,6 +245,7 @@ def crm_sync(
             log = CRMSyncLog(
                 lead_id=lead.id,
                 provider=provider,
+                entity_type=ACTION_TO_RECORD_TYPE.get(operation, "contact"),
                 operation=operation,
                 status=str(result["status"]),
                 external_record_id=str(result.get("external_record_id") or ""),
@@ -253,6 +291,7 @@ def crm_sync(
 
     log = CRMSyncLog(
         provider=provider,
+        entity_type=ACTION_TO_RECORD_TYPE.get(operation, "contact"),
         operation=operation,
         status="failed",
         request_metadata={
@@ -320,8 +359,10 @@ def sync_logs(
             "id": row.id,
             "lead_id": row.lead_id,
             "provider": row.provider,
+            "entity_type": row.entity_type,
             "operation": row.operation,
             "status": row.status,
+            "external_record_id": row.external_record_id,
             "error_message": row.error_message,
             "attempt_count": row.attempt_count,
             "created_at": row.created_at.isoformat(),

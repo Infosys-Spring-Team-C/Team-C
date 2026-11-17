@@ -436,6 +436,42 @@ def test_score_factors_expose_detail_for_the_breakdown_table():
     assert score["factors_detail"][0]["signal"] == "positive"
 
 
+def test_crm_endpoints_are_mapped_to_the_canonical_api(transport):
+    transport.response = FakeResponse(200, {"connectivity": "simulated"})
+    ok, status = api_compat.api_get("http://api.local", "/crm/status")
+    assert ok is True
+    assert status["connectivity"] == "simulated"
+    assert transport.calls[-1]["url"] == "http://api.local/api/v1/crm/status"
+
+    transport.response = FakeResponse(200, [])
+    api_compat.api_get("http://api.local", "/crm/sync-logs")
+    assert transport.calls[-1]["url"] == "http://api.local/api/v1/crm/sync-logs"
+
+    transport.response = FakeResponse(200, {"mappings": {}})
+    api_compat.api_get(
+        "http://api.local", "/crm/field-mappings", params={"provider": "hubspot"}
+    )
+    assert transport.calls[-1]["url"] == "http://api.local/api/v1/crm/field-mappings"
+    assert transport.calls[-1]["params"] == {"provider": "hubspot"}
+
+    transport.response = FakeResponse(
+        200, {"provider": "salesforce", "mode": "simulated"}
+    )
+    ok, result = api_compat.api_post(
+        "http://api.local",
+        "/crm/sync",
+        json_data={
+            "provider": "salesforce",
+            "operation": "sync_contact",
+            "lead_ids": [1],
+            "simulate": True,
+        },
+    )
+    assert ok is True
+    assert result["mode"] == "simulated"
+    assert transport.calls[-1]["url"] == "http://api.local/api/v1/crm/sync"
+
+
 def test_frontend_does_not_claim_a_fabricated_accuracy():
     """The UI must not present a made-up accuracy figure (SRS D-10, D-13)."""
     from pathlib import Path

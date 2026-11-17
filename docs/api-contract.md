@@ -676,19 +676,23 @@ Runs the engine for one lead. `200`:
 
 ---
 
-## 9. CRM surface (Module 5, planned transport - SRS D-06)
+## 9. CRM surface (Module 5, simulated transport - SRS D-06)
 
 | Endpoint | Behaviour |
 |---|---|
 | `GET /crm/providers` | `[{"provider":"salesforce","configured":false,"live_sync_available":false}, ...]` |
+| `GET /crm/field-mappings?provider=` | Documented canonical-to-CRM field map for `salesforce` and `hubspot` (contact, activity, deal) |
 | `POST /crm/mappings/validate` | Validates target fields against the lead contract; never persists |
 | `POST /crm/sync/preview` | Dry run; returns each lead's export payload or an error |
-| `POST /crm/sync` | Records a failed `crm_sync_logs` row and returns `501 crm_not_configured` with `meta.sync_log_id` |
-| `GET /crm/sync-logs` | Last 250 attempts |
+| `POST /crm/sync` | Without `simulate`, records a failed `crm_sync_logs` row and returns `501 crm_not_configured`. With `"simulate": true`, maps contacts/activities/deal stages onto the provider-neutral payload and records a `mode=simulated` audit row |
+| `GET /crm/sync-logs` | Last 250 attempts, including `entity_type`, `operation`, `status` and `external_record_id` |
 | `POST /crm/sync-logs/{id}/retry` | Increments `attempt_count`, records that transport is unavailable; `409` if already successful |
 
-No CRM credentials are used because no transport is implemented. `SALESFORCE_ACCESS_TOKEN` and
-`HUBSPOT_ACCESS_TOKEN` are read only to report `configured` state.
+Supported operations are `upsert`, `sync_contact`, `update_stage` and `activity_log`; an unknown
+operation returns `422 invalid_operation`. A simulation returns
+`mode: "simulated"`, `simulated: true` and a note stating that no Salesforce or HubSpot request
+was made. No CRM credentials are used because no transport is implemented.
+`SALESFORCE_ACCESS_TOKEN` and `HUBSPOT_ACCESS_TOKEN` are read only to report `configured` state.
 
 ---
 

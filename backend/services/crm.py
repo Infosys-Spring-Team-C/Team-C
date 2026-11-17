@@ -28,6 +28,79 @@ ACTION_TO_RECORD_TYPE: dict[str, str] = {
     "activity_log": "activity",
 }
 
+#: Operations the simulator understands.  Anything else is rejected so a typo
+#: cannot create an audit row that claims to have synchronised something.
+SUPPORTED_OPERATIONS = tuple(ACTION_TO_RECORD_TYPE)
+
+#: Canonical lead field -> provider field, per provider and record type.
+#: These are documentation-grade mappings used by the mapping endpoint and the
+#: Conversations UI; the simulator itself sends the provider-neutral payload so
+#: the same contract works for either vendor.
+FIELD_MAPPINGS: dict[str, dict[str, dict[str, str]]] = {
+    "salesforce": {
+        "contact": {
+            "company_name": "Account.Name",
+            "contact_name": "Contact.Name",
+            "email": "Contact.Email",
+            "phone": "Contact.Phone",
+            "industry": "Account.Industry",
+            "website": "Account.Website",
+            "company_size": "Account.NumberOfEmployees",
+            "annual_revenue": "Account.AnnualRevenue",
+            "lifecycle_stage": "Opportunity.StageName",
+            "owner_id": "OwnerId",
+        },
+        "activity": {
+            "company_name": "Account.Name",
+            "contact_name": "Who.Name",
+            "activity": "Task.Subject",
+            "lifecycle_stage": "Opportunity.StageName",
+        },
+        "deal": {
+            "company_name": "Opportunity.Account.Name",
+            "contact_name": "Opportunity.Contact.Name",
+            "stage": "Opportunity.StageName",
+            "annual_revenue": "Opportunity.Amount",
+        },
+    },
+    "hubspot": {
+        "contact": {
+            "company_name": "company",
+            "contact_name": "firstname + lastname",
+            "email": "email",
+            "phone": "phone",
+            "industry": "industry",
+            "website": "website",
+            "company_size": "numberofemployees",
+            "annual_revenue": "annualrevenue",
+            "lifecycle_stage": "lifecyclestage",
+            "owner_id": "hubspot_owner_id",
+        },
+        "activity": {
+            "company_name": "associations.company",
+            "contact_name": "associations.contact",
+            "activity": "hs_task_subject",
+            "lifecycle_stage": "lifecyclestage",
+        },
+        "deal": {
+            "company_name": "associations.company",
+            "contact_name": "associations.contact",
+            "stage": "dealstage",
+            "annual_revenue": "amount",
+        },
+    },
+}
+
+
+def field_mappings(provider: str | None = None) -> dict[str, Any]:
+    """Return the documented field map for one provider or both."""
+    if provider:
+        key = provider.strip().lower()
+        if key not in FIELD_MAPPINGS:
+            raise ValueError(f"Unsupported CRM provider: {provider}")
+        return {key: FIELD_MAPPINGS[key]}
+    return dict(FIELD_MAPPINGS)
+
 
 def build_standardized_payload(lead: Lead, action: str = "upsert") -> dict[str, Any]:
     """Map a canonical lead onto the provider-neutral CRM record shape.
