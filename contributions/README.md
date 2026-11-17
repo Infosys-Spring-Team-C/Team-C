@@ -9,6 +9,14 @@ in `backend/`, `frontend/` or `ai/`.
 |---|---|---|---|
 | `mahidhar-ai-layer/` | Mahidhar Reddy | mahidarreddy.2005@gmail.com | `ai-layer.zip` |
 | `mahek-frontend-milestone3/` | Mahek Saba Shaikh | shaikh.akbar86691@gmail.com | `Infosys_TeamC_Frontend_Milestone3_Mahek_Saba_Shaikh.zip` |
+| `team-c-doran/` | M. Doran | doranmallidi123@gmail.com | `team-c-doran` repository snapshot |
+
+## M. Doran — backend contribution
+
+`team-c-doran/` preserves the standalone FastAPI backend repository and its
+milestone reports as an attributable source snapshot. The canonical application
+remains in `backend/`; CRM work from this backend was adapted there, and the
+standalone snapshot is retained for review and contribution provenance.
 
 ## Mahidhar Reddy — AI/ML layer
 
