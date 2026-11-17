@@ -1,0 +1,6 @@
+company_name,industry,contact_name,email,phone,company_size,funding_stage,business_need
+Nexus Data Systems,Big Data,Alex Rivera,alex@nexusdata.io,+14155552671,100-250 employees,Series B,Automating ETL pipelines and accelerating query throughput
+Apex HealthTech,Healthcare AI,Dr. Elena Rostova,elena@apexhealth.org,+14155558923,50-100 employees,Series A,HIPAA-compliant patient data processing and predictive diagnostics
+Quantum Security,Cybersecurity,Marcus Vance,marcus@quantumsec.net,+12125553412,250-500 employees,Series C,Zero-trust cloud infrastructure monitoring and threat response
+Veloce Logistics,Supply Chain,David Kim,david@velocelogistics.com,+13125557788,500+ employees,Growth,Real-time fleet route optimization and predictive maintenance
+BrightWave Media,Digital Marketing,Chloe Bennett,chloe@brightwave.co,+16465559012,1-50 employees,Seed,Automated campaign content generation and ad attribution analytics
