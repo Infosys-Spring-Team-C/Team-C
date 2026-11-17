@@ -25,8 +25,8 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Module 5 focused tests | **14 passed** |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception |
-| Defects found this pass | 1 (BUG-019, closed the same day) |
-| Defects open | 1 (BUG-011, Low, accepted limitation) |
+| Defects found this pass | 2 (BUG-019 closed; BUG-020 open) |
+| Defects open | 2 (BUG-011 and BUG-020, both Low) |
 | Requirements fully verified (FR-036 to FR-045) | 7 of 10 |
 | Requirements partly verified | 3 of 10 - two blocked by D-06, one awaiting a visual browser check |
 
@@ -157,8 +157,8 @@ yet; the stored data and the rendered sections are both verified.
 | Critical | 0 | 2 |
 | High | 0 | 10 |
 | Medium | 0 | 3 |
-| Low | 1 (BUG-011) | 3 |
-| **Total** | **1** | **18** |
+| Low | 2 (BUG-011, BUG-020) | 3 |
+| **Total** | **2** | **18** |
 
 Found and closed in this pass:
 
@@ -168,6 +168,14 @@ Found and closed in this pass:
   Fixed with a root `pytest.ini` that excludes `contributions/` from root collection; each
   contribution still runs from its own folder. Verified: 182 collected, 175 passed, 7
   skipped; Mahidhar's 86 tests still pass in place.
+
+Found open in this pass:
+
+* **BUG-020** - the newly merged `contributions/team-c-doran` suite reports 24 passed, 1
+  failed. `test_delete_lead` calls `DELETE /leads/{lead_id}` without a token while the
+  endpoint requires a manager or admin role, so it gets `401` instead of `204`. It is a
+  single incorrect test in a standalone contribution; the canonical application is
+  unaffected. Left as an owner action rather than edited in QA.
 
 No Module 5 functional defect was found. The two failures seen during the first UAT attempt
 were defects in the new UAT assertions, not in the application: a case-sensitive substring
@@ -275,6 +283,7 @@ check and an assertion on `created_at` where the API contract field is `interact
 | AI integration gate, 6/6 live Groq (6 Nov) | `docs/qa/evidence/2026-11-06-ai-integration-gate-live-groq.txt` |
 | Pytest, PostgreSQL 16 (177 passed, 6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
 | Docker Compose verification (27 Oct) | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
+| Contributor backend suite (24 passed, 1 failed - BUG-020) | `docs/qa/evidence/2026-11-17-pytest-doran-contribution.txt` |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) |
 | Test cases | [`test-cases.md`](test-cases.md) |
 | API matrix | [`api-test-matrix.md`](api-test-matrix.md) |

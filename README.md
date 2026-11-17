@@ -431,6 +431,6 @@ Git identity. The CRM mapping/simulator and the AI package are credited to their
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
 | [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the Milestone 2 review |
 | [`docs/qa/milestone3-test-report.md`](docs/qa/milestone3-test-report.md) | Milestone 3 test report for Module 5 (conversations and CRM) |
-| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 19 defects with severity, reproduction and status |
+| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 20 defects with severity, reproduction and status |
 | [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
 | [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 46-request Postman collection |

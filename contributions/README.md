@@ -18,6 +18,13 @@ milestone reports as an attributable source snapshot. The canonical application
 remains in `backend/`; CRM work from this backend was adapted there, and the
 standalone snapshot is retained for review and contribution provenance.
 
+Verification (17 November 2026): running `python -m pytest -q` inside this folder
+gives **24 passed, 1 failed**. The failure is
+`tests/test_leads.py::test_delete_lead`, which calls the protected
+`DELETE /leads/{lead_id}` route without a token and expects `204` but receives
+`401`. It is recorded as BUG-020 in `docs/qa/bug-log.md` and left as an owner
+action; the canonical suite is unaffected.
+
 ## Mahidhar Reddy — AI/ML layer
 
 The `sales_intel` package is the standalone DealFlow AI layer (v0.3.0):

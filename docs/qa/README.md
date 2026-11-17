@@ -44,7 +44,8 @@ estimated, inferred or copied from a plan.
 | Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
 | Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
 | Contributor AI suite | **86 passed** from its own folder | `contributions/mahidhar-ai-layer` |
-| Defects open | 1 (0 critical, 0 high, 0 medium, 1 low) | [`bug-log.md`](bug-log.md) |
+| Contributor backend suite | **24 passed, 1 failed** - BUG-020 (test calls a protected route without a token) | `contributions/team-c-doran` |
+| Defects open | 2 (0 critical, 0 high, 0 medium, 2 low) | [`bug-log.md`](bug-log.md) |
 | Requirements fully verified | 35 of 53 FRs (8 partial, 9 blocked, 1 not run) | [`traceability-matrix.md`](traceability-matrix.md) |
 
 The 7 skipped tests are the PostgreSQL-only module; they run whenever

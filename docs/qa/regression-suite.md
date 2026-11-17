@@ -20,6 +20,7 @@ result differs.
 | Conversations page render | `scripts/qa_conversations_render.py` | 7 sections | ~10 s | Yes, plus a running API |
 | External AI gate | `scripts/check_ai_integration.py` | 6 operations | seconds | No, needs the `ai` package or a stub |
 | Contributor AI suite | `contributions/mahidhar-ai-layer/` | 86 | ~90 s | No |
+| Contributor backend suite | `contributions/team-c-doran/` | 25 | ~4 s | No (24 passed, 1 failed - BUG-020) |
 
 `pytest.ini` at the repository root excludes `contributions/` from root collection
 (BUG-019): the contributor archives have their own import roots and reuse module names.

@@ -1,9 +1,9 @@
 # Defect Log
 
-**Date:** 27 October 2026
+**Date:** 17 November 2026
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
-**Open defects:** 1 (0 Critical, 0 High, 0 Medium, 1 Low)
+**Open defects:** 2 (0 Critical, 0 High, 0 Medium, 2 Low)
 **Closed defects:** 18
 
 **Severity** - Critical: cannot start / data loss Â· High: a Must requirement unmet or the
@@ -36,6 +36,7 @@ workflow Â· Low: cosmetic, documentation or no user-visible impact.
 | BUG-017 | Outreach greeted titled contacts as "Hi Dr.," instead of their name | Low | P3 | Closed (fixed) | AI (Mahidhar) / Lead |
 | BUG-018 | `auto` provider selected a keyed provider whose SDK was absent, making the whole AI engine unavailable | High | P1 | Closed (fixed) | Lead (AI adapter) |
 | BUG-019 | Contributing the member archives broke bare `pytest` collection | High | P1 | Closed (fixed 17 November 2026) | QA / Lead |
+| BUG-020 | M. Doran's contributed suite calls the protected delete route without a token and fails | Low | P3 | Open - owner action | M. Doran |
 
 ---
 
@@ -567,17 +568,56 @@ passes from its folder: **86 passed**. Evidence:
 
 ---
 
+### BUG-020 - M. Doran's contributed suite calls the protected delete route without a token
+
+| Field | Value |
+|---|---|
+| Severity / Priority | Low / P3 |
+| Status | Open - contribution owner action |
+| Requirement | NFR-011 (reproducible regression suite) |
+| Found by | Milestone 3 QA run of the merged `contributions/team-c-doran` snapshot |
+| Owner | M. Doran |
+
+**Description.** Running the contributed suite from its own folder gives
+**24 passed, 1 failed**:
+
+```
+FAILED tests/test_leads.py::test_delete_lead - assert 401 == 204
+```
+
+`app/api/leads.py` protects `DELETE /leads/{lead_id}` with
+`require_role(["admin", "manager"])`, but `tests/test_leads.py::test_delete_lead`
+sends no `Authorization` header, so the request is refused with `401`. The test
+contradicts the endpoint it is testing.
+
+**Impact.** None on the canonical application: the suite is a standalone
+contribution and `pytest.ini` excludes `contributions/` from root collection. A
+reviewer running the contribution sees one red test, which weakens confidence in
+an otherwise sound snapshot.
+
+**Workaround.** The contributed `tests/test_crm.py` already shows the correct
+pattern (`_auth("manager")` with a signed test JWT). The same header is what
+`test_delete_lead` needs.
+
+**Status.** Left as an owner action rather than edited in QA: the archive is
+M. Doran's deliverable and may be updated upstream. Evidence:
+`docs/qa/evidence/2026-11-17-pytest-doran-contribution.txt`.
+
+---
+
 ## 4. Defect trend
 
 | Status | Count |
 |---|---|
 | Closed | 18 |
-| Open | 1 |
-| **Total** | **19** |
+| Open | 2 |
+| **Total** | **20** |
 
-All 18 defects are listed in section 1 with the stage that found them. No defect has been
+All 20 defects are listed in section 1 with the stage that found them. No defect has been
 reopened, and every closed defect has a verification reference in its entry.
 
-The single open defect is BUG-011 (no way to dismiss a follow-up). It is a deliberate,
-documented scope decision: `FR-052` requires the panel, which works, and adding persisted
-dismissal state would change the eight-table schema and its generated artefacts.
+The two open defects are both Low and both documented. BUG-011 (no way to dismiss a
+follow-up) is a deliberate scope decision: `FR-052` requires the panel, which works, and
+adding persisted dismissal state would change the eight-table schema and its generated
+artefacts. BUG-020 is a single incorrect test in M. Doran's contributed snapshot and does
+not affect the canonical application.

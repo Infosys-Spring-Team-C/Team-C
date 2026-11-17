@@ -105,15 +105,15 @@ Exact versions are recorded in [`evidence/2026-10-26-environment.txt`](evidence/
 
 | # | Criterion | Target | Actual |
 |---|---|---|---|
-| 1 | All automated tests pass on SQLite | 100% | Met - 150 passed, 6 skipped |
-| 2 | All automated tests pass on PostgreSQL | 100% | Met - 156 passed |
-| 3 | No open Critical defects; every open High defect has an external blocker | 0 critical | Met - 0 critical, 0 High; one Low accepted (BUG-011) |
+| 1 | All automated tests pass on SQLite | 100% | Met - 175 passed, 7 skipped (17 November 2026) |
+| 2 | All automated tests pass on PostgreSQL | 100% | Met - 177 passed (6 November 2026; not re-run 17 November) |
+| 3 | No open Critical defects; every open High defect has an external blocker | 0 critical | Met - 0 critical, 0 High; two Low open (BUG-011, BUG-020) |
 | 4 | Every Must-priority FR has a verdict | 100% | Met - see traceability matrix |
-| 5 | Live UAT covers all six modules | 100% of workflows executed | Met - 21 workflows |
+| 5 | Live UAT covers all six modules | 100% of workflows executed | Met - 25 workflows (17 November 2026) |
 | 6 | Every failed or partial result is logged as a defect | 100% | Met - BUG-006 logged from UAT-15 and now fixed |
 | 7 | Deployment verified | Docker Compose starts | Met - db, api and frontend healthy |
 
-All exit criteria are met. The single open defect is Low and accepted (BUG-011); the
+All exit criteria are met. The two open defects are Low: BUG-011 (accepted limitation) and BUG-020 (a contributed test, owner action). The
 remaining limitations are recorded in `milestone-test-report.md` section 5 rather than
 waived silently.
 
