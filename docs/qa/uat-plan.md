@@ -1,6 +1,6 @@
 # User Acceptance Test Plan
 
-**Date:** 26 October 2026
+**Date:** 17 November 2026 (Module 5 workflows added)
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI - backend API and data layer
 **Execution result:** [`uat-results.md`](uat-results.md)
@@ -21,13 +21,14 @@ database.
 **In scope:** every workflow reachable through the API, for all six modules plus
 authentication and role-based access.
 
-**Out of scope:** anything that requires the Streamlit interface. The frontend has not been
-delivered, so the five workflows that are purely visual (FR-006, FR-017, FR-023, FR-027,
-FR-033, FR-044, FR-050, FR-051) cannot be accepted by a user yet. They are marked `BLOCKED`
-in the traceability matrix rather than accepted on the strength of an API response.
+**Out of scope:** anything that requires clicking through the Streamlit interface. The
+frontend exists and its data contract is exercised (UAT-25 and the adapter tests), but the
+purely visual workflows (FR-006, FR-017, FR-023, FR-027, FR-033, FR-044, FR-050, FR-051)
+are not accepted on the strength of an API response. They stay `PARTIAL` or `BLOCKED` in
+the traceability matrix until someone walks the screen.
 
-This is stated plainly because a UAT report that claims a UI works when no UI exists is
-worthless.
+This is stated plainly because a UAT report that claims a UI works when no one has opened
+it is worthless.
 
 ---
 
@@ -110,6 +111,10 @@ the runner.
 | UAT-19 | manager | Open the follow-up panel data | Well-formed list of scored, non-terminal leads | FR-052 |
 | UAT-20 | admin | Create a viewer and act as that viewer | Admin creates the user; viewer can read; viewer write is `403`; viewer cannot administer users | NFR-005 |
 | UAT-21 | manager | Delete a prospect | `204`, then `404` on read | FR-004 |
+| UAT-22 | rep | Read the CRM field map for both providers | Salesforce and HubSpot maps cover contact, activity and deal; unknown provider is `422` | FR-040 |
+| UAT-23 | rep | Run the three simulated CRM workflows | Contact, activity and stage syncs report `mode: simulated` and each writes an audit row | FR-041 to FR-043 |
+| UAT-24 | rep | Request an unknown CRM operation | `422 invalid_operation`, no audit row written, status stays `simulated` | FR-041, AC-024 |
+| UAT-25 | rep | Load the Conversations page data | Interaction list carries every field the page renders | FR-044, AC-023 |
 
 ---
 
@@ -130,11 +135,11 @@ the runner.
 
 | Criterion | Target | Result |
 |---|---|---|
-| Workflows executed | 21 of 21 | Met |
+| Workflows executed | 25 of 25 | Met (17 November 2026) |
 | Workflows failed | 0 | Met |
-| Partials documented with a defect | All | Met - UAT-15 → BUG-006 |
+| Partials documented with a defect | All | Met - UAT-15 → BUG-006 (closed) |
 | Evidence written | Markdown and JSON | Met |
-| Business-critical workflows (create, analyse, generate, score, delete) | All pass | Met |
+| Business-critical workflows (create, analyse, generate, score, summarise, sync, delete) | All pass | Met |
 
 ---
 

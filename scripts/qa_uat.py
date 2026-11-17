@@ -563,6 +563,192 @@ class Runner:
         expect(gone.status_code == 404, f"deleted lead still readable: {gone.status_code}")
         self.note(r, "delete returned 204 and the record is gone")
 
+    # -- Module 5 additions (CRM field mapping and simulated sync) --------
+    def probe_lead(self, tag: str) -> int:
+        """Create a throwaway prospect so a workflow never depends on ordering."""
+        suffix = datetime.now(timezone.utc).strftime("%H%M%S%f")
+        response = self.client.post(
+            "/api/v1/leads",
+            json={
+                "company_name": f"UAT CRM {tag} {suffix}",
+                "contact_name": "Noor Haddad",
+                "email": f"crm.{tag}.{suffix}@example.com",
+                "industry": "Manufacturing",
+                "company_size": "500-1000",
+                "annual_revenue": "USD 120M",
+                "stage": "qualified",
+            },
+            headers=self.auth(),
+        )
+        expect(response.status_code == 201,
+               f"probe lead not created: {response.status_code} {response.text[:200]}")
+        return response.json()["id"]
+
+    def uat_22_crm_field_mappings(self, r: Result) -> None:
+        response = self.client.get("/api/v1/crm/field-mappings", headers=self.auth())
+        expect(response.status_code == 200,
+               f"expected 200, got {response.status_code}: {response.text[:200]}")
+        body = response.json()
+        mappings = body.get("mappings") or {}
+        expect(set(mappings) == {"salesforce", "hubspot"},
+               f"unexpected providers: {sorted(mappings)}")
+        for provider in ("salesforce", "hubspot"):
+            for entity in ("contact", "activity", "deal"):
+                expect(bool(mappings[provider].get(entity)),
+                       f"{provider}/{entity} has no documented mapping")
+        expect(mappings["salesforce"]["contact"].get("company_name") == "Account.Name",
+               "salesforce contact mapping for company_name is wrong")
+        expect(mappings["hubspot"]["deal"].get("stage") == "dealstage",
+               "hubspot deal stage mapping is wrong")
+        expect(set(body.get("supported_operations") or []) == {
+            "upsert", "sync_contact", "update_stage", "activity_log",
+        }, f"unexpected operations: {body.get('supported_operations')}")
+        expect(body.get("live_transport_available") is False,
+               "the API must not claim a live CRM transport")
+        self.note(r, "providers=salesforce,hubspot entities=contact,activity,deal")
+        self.note(r, f"operations={sorted(body['supported_operations'])}")
+
+        single = self.client.get(
+            "/api/v1/crm/field-mappings", params={"provider": "hubspot"},
+            headers=self.auth(),
+        )
+        expect(single.status_code == 200, f"single-provider read returned {single.status_code}")
+        expect(set(single.json().get("mappings") or {}) == {"hubspot"},
+               "provider filter did not narrow the map")
+
+        bad = self.client.get(
+            "/api/v1/crm/field-mappings", params={"provider": "pipedrive"},
+            headers=self.auth(),
+        )
+        expect(bad.status_code == 422,
+               f"unknown provider should be 422, got {bad.status_code}")
+        expect(bad.json().get("code") == "invalid_provider",
+               f"unexpected code: {bad.text[:200]}")
+        self.note(r, "unknown provider -> 422 invalid_provider")
+
+    def uat_23_crm_simulated_sync(self, r: Result) -> None:
+        lead_id = self.probe_lead("sync")
+        expected = {
+            "sync_contact": ("contact", "contact"),
+            "activity_log": ("activity", "activity"),
+            "update_stage": ("deal", "deal"),
+        }
+        log_ids: list[int] = []
+        for operation, (record_type, entity_type) in expected.items():
+            response = self.client.post(
+                "/api/v1/crm/sync",
+                json={
+                    "provider": "salesforce",
+                    "operation": operation,
+                    "lead_ids": [lead_id],
+                    "simulate": True,
+                },
+                headers=self.auth(),
+            )
+            expect(response.status_code == 200,
+                   f"{operation} returned {response.status_code}: {response.text[:200]}")
+            body = response.json()
+            expect(body.get("mode") == "simulated",
+                   f"{operation} did not report a simulated mode: {body.get('mode')!r}")
+            expect(body.get("simulated") is True, f"{operation} missing simulated flag")
+            expect("no salesforce or hubspot request" in str(body.get("note", "")).lower(),
+                   f"{operation} note does not disclaim a live call: {body.get('note')!r}")
+            record = (body.get("records") or [{}])[0]
+            expect(record.get("status") == "success",
+                   f"{operation} record status: {record.get('status')!r}")
+            expect((record.get("payload") or {}).get("record_type") == record_type,
+                   f"{operation} produced the wrong record type")
+            log_ids.extend(body.get("sync_log_ids") or [])
+            self.note(r, f"{operation}: record_type={record_type} "
+                         f"external_id={record.get('external_record_id')}")
+
+        logs = self.client.get("/api/v1/crm/sync-logs", headers=self.auth())
+        expect(logs.status_code == 200, f"sync-logs returned {logs.status_code}")
+        by_id = {row["id"]: row for row in logs.json()}
+        for log_id in log_ids:
+            expect(log_id in by_id, f"sync log {log_id} was not persisted")
+            row = by_id[log_id]
+            expect(row.get("status") == "success",
+                   f"log {log_id} status: {row.get('status')!r}")
+            expect(row.get("entity_type") in {"contact", "activity", "deal"},
+                   f"log {log_id} entity_type: {row.get('entity_type')!r}")
+        self.note(r, f"audit rows verified: {sorted(log_ids)}")
+
+        lead = self.client.get(f"/api/v1/leads/{lead_id}", headers=self.auth())
+        expect(lead.status_code == 200, "probe lead disappeared after simulated sync")
+        self.client.delete(f"/api/v1/leads/{lead_id}", headers=self.auth())
+
+    def uat_24_crm_rejects_invalid_operation(self, r: Result) -> None:
+        lead_id = self.probe_lead("invalid")
+        before = self.client.get("/api/v1/crm/sync-logs", headers=self.auth())
+        before_count = len(before.json())
+
+        response = self.client.post(
+            "/api/v1/crm/sync",
+            json={
+                "provider": "hubspot",
+                "operation": "delete_everything",
+                "lead_ids": [lead_id],
+                "simulate": True,
+            },
+            headers=self.auth(),
+        )
+        expect(response.status_code == 422,
+               f"expected 422, got {response.status_code}: {response.text[:200]}")
+        expect(response.json().get("code") == "invalid_operation",
+               f"unexpected code: {response.text[:200]}")
+        after = self.client.get("/api/v1/crm/sync-logs", headers=self.auth())
+        expect(len(after.json()) == before_count,
+               "a rejected operation must not write an audit row")
+        self.note(r, f"422 invalid_operation; sync log rows stayed at {before_count}")
+
+        status = self.client.get("/api/v1/crm/status", headers=self.auth())
+        expect(status.status_code == 200, f"/crm/status returned {status.status_code}")
+        body = status.json()
+        for key in ("connectivity", "recent_syncs", "recent_failures", "providers", "note"):
+            expect(key in body, f"/crm/status missing {key!r}")
+        expect(body.get("connectivity") == "simulated",
+               f"connectivity should be labelled simulated: {body.get('connectivity')!r}")
+        self.note(r, f"status={json.dumps({k: body[k] for k in ('connectivity', 'recent_syncs', 'recent_failures')}, sort_keys=True)}")
+        self.client.delete(f"/api/v1/leads/{lead_id}", headers=self.auth())
+
+    def uat_25_conversations_ui_contract(self, r: Result) -> None:
+        lead_id = self.probe_lead("ui")
+        created = self.client.post(
+            "/api/v1/conversations/summarize",
+            json={
+                "lead_id": lead_id,
+                "transcript": (
+                    "Noor said the current forecast is a spreadsheet. "
+                    "Noor will share the file by Thursday. "
+                    "They want a pricing review next week."
+                ),
+                "interaction_type": "call",
+            },
+            headers=self.auth(),
+        )
+        expect(created.status_code == 200,
+               f"summary returned {created.status_code}: {created.text[:200]}")
+
+        listed = self.client.get(
+            f"/api/v1/leads/{lead_id}/conversations", headers=self.auth()
+        )
+        expect(listed.status_code == 200, f"conversation list returned {listed.status_code}")
+        rows = listed.json()
+        expect(len(rows) >= 1, "no stored conversation for the Conversations page")
+        row = rows[0]
+        for key in ("id", "lead_id", "interaction_type", "interaction_date", "summary",
+                    "key_points", "action_items"):
+            expect(key in row, f"stored interaction missing {key!r} (UI reads it)")
+        expect(bool(row.get("summary")), "stored summary is empty")
+        expect(isinstance(row.get("key_points"), list), "key_points must be a list")
+        expect(isinstance(row.get("action_items"), list), "action_items must be a list")
+        self.note(r, f"interaction id={row.get('id')} "
+                     f"points={len(row.get('key_points') or [])} "
+                     f"actions={len(row.get('action_items') or [])}")
+        self.note(r, "api_compat maps interaction_date -> created_at for the page")
+        self.client.delete(f"/api/v1/leads/{lead_id}", headers=self.auth())
+
     # -- driver -----------------------------------------------------------
     def execute(self) -> None:
         workflows = [
@@ -587,6 +773,10 @@ class Runner:
             ("UAT-19", "Follow-up panel data", "FR-052", self.uat_19_follow_ups),
             ("UAT-20", "Role-based access control", "NFR-005", self.uat_20_rbac),
             ("UAT-21", "Delete a prospect", "FR-004", self.uat_21_delete),
+            ("UAT-22", "CRM field mappings cover both providers", "FR-040", self.uat_22_crm_field_mappings),
+            ("UAT-23", "Simulated CRM sync covers contact, activity and deal stage", "FR-041..FR-043", self.uat_23_crm_simulated_sync),
+            ("UAT-24", "An invalid CRM operation is refused and not audited", "FR-041, AC-024", self.uat_24_crm_rejects_invalid_operation),
+            ("UAT-25", "Conversations page data contract", "FR-044, AC-023", self.uat_25_conversations_ui_contract),
         ]
         for result_id, title, requirement, fn in workflows:
             self.run(result_id, title, requirement, fn)

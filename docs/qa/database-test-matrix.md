@@ -71,6 +71,7 @@ is a point-in-time aggregate, not a per-lead row.
 | DB-R-06 | Store and retrieve JSONB on PostgreSQL | Structured values round-trip unchanged | `test_postgres.py::test_jsonb_columns_accept_structured_values` | PASS |
 | DB-R-07 | Score history grows without mutating earlier rows | Row count increases, prior rows unchanged | `test_api_ai.py::test_scoring_history_is_append_only` | PASS |
 | DB-R-08 | CRM sync log survives lead deletion | Log row remains with `lead_id` nulled | `test_postgres.py::test_foreign_keys_use_cascade_and_set_null` | PASS |
+| DB-R-09 | A simulated sync stores its entity type and JSON metadata | `entity_type` matches the operation (`contact`/`activity`/`deal`) and `request_metadata.mode` is `simulated` | `test_api_ai.py::test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 | PASS |
 
 ---
 

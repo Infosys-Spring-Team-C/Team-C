@@ -163,7 +163,7 @@ the evidence is attached to the bug record.
 |---|---|---|---|
 | M1 | 20 Oct 2026 | Baseline audit, Module 1 and 2 test design | Baseline defect list (BUG-001, BUG-002, BUG-003) |
 | M2 | 30 Oct 2026 | Module 3 and 4 verification, AI quality validation, regression | This pack |
-| M3 | 10 Nov 2026 | Module 5 verification, CRM failure paths, integration tests | Updated pack + integration report |
+| M3 | 10 Nov 2026 (QA executed 17 Nov 2026) | Module 5 verification, CRM field maps, simulated sync, rejected-operation path, Conversations contract, integration tests | [`milestone3-test-report.md`](milestone3-test-report.md) and the refreshed pack |
 | M4 | 20 Nov 2026 | UAT with the frontend, performance measurement, deployment verification | Final test report and sign-off |
 
 ---

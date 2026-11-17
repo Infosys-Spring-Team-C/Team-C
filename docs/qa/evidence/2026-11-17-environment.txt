@@ -1,0 +1,10 @@
+﻿Environment evidence - SalesGenie AI (Team C)
+Captured: 2026-11-17
+Commit under test: f0596cb
+OS: Microsoft Windows 11 Home Single Language
+Python 3.11.14
+pytest 9.1.1
+fastapi=0.162.0 starlette=1.10.0 sqlalchemy=2.0.55 pydantic=2.14.1 streamlit=1.65.0 httpx=0.28.1
+Database: SQLite (host UAT run)
+AI backend: heuristic (deterministic, offline)
+Docker: unavailable on this machine at capture time
