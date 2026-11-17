@@ -19,7 +19,7 @@ document records what was connected, how it was exercised, and what actually hap
 | INT-D | FastAPI → external AI package | In-process adapter | `ExternalAIEngine`, package `ai.*` | Verified against a stub only - **BUG-008** |
 | INT-E | FastAPI → Streamlit frontend | HTTP + JSON | Documented contract | Verified - 12/12 gate with auth enabled, plus a browser check |
 | INT-F | API container → PostgreSQL container | TCP | Docker Compose | Verified - db, api and frontend healthy; migration applied |
-| INT-G | API → CRM provider | HTTPS | Not configured | **Blocked** - SRS D-06 |
+| INT-G | API → CRM provider | HTTPS | Not configured | **Blocked** - SRS D-06. A labelled simulator covers contact, activity and deal-stage payloads and writes audit rows |
 | INT-H | API → e-mail provider | SMTP/API | Not configured | **Blocked** - SRS D-05 |
 
 ---
@@ -134,7 +134,9 @@ Both are refused visibly and safely:
 * `POST /outreach/send` → `501 email_transport_not_configured`, nothing sent, campaign
   unchanged.
 * `POST /crm/sync` → `501 crm_not_configured`, a failure row written to `crm_sync_logs`,
-  local records intact.
+  local records intact. With `"simulate": true` the same endpoint maps the lead onto a
+  provider-neutral contact, activity or deal record and writes a `mode=simulated` audit row;
+  the response states that no Salesforce or HubSpot request was made.
 
 **Result:** PASS as specified. A silent success here would have been a defect.
 
@@ -147,6 +149,8 @@ Both are refused visibly and safely:
 | INT-S-01 | Prospect → intelligence → outreach → score → recommendation | Create a lead, analyse it, generate outreach, score it, request the recommendation. All five steps use the same stored lead. | PASS (UAT-05, 11, 12, 14, 15) |
 | INT-S-02 | Prospect → conversation → follow-up | Create a lead, summarise a call, score it, read the follow-up list. | PASS (UAT-05, 16, 14, 19) |
 | INT-S-03 | Prospect → CRM failure → local integrity | Attempt a CRM sync, confirm `501`, confirm the sync log grew and the lead still exists. | PASS (UAT-17) |
+| INT-S-07 | Prospect → field map → simulated sync → audit row | Read the field map, run `sync_contact`, `activity_log` and `update_stage` with `simulate: true`, confirm each audit row carries its entity type and the response disclaims a live call. | PASS (UAT-22, UAT-23) |
+| INT-S-08 | Conversations page → conversation list → CRM sections | Read the conversation list plus `/crm/status`, `/crm/field-mappings` and `/crm/sync-logs`, the four data sources the page renders. | PASS (UAT-25, UAT-24) |
 | INT-S-04 | Prospect → delete → analytics | Delete a lead and confirm the dashboard counts and follow-up list recompute. | PASS (UAT-21 then UAT-18 ran before deletion; counts recompute on read) |
 | INT-S-05 | Import → list → filter | Import a CSV, list with search and pagination, confirm totals. | PASS (UAT-09, UAT-07) |
 | INT-S-06 | Auth → RBAC → business call | Log in as a viewer, attempt a write, confirm `403`; confirm read still works. | PASS (UAT-20) |

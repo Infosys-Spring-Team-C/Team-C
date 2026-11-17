@@ -1,6 +1,6 @@
 # Regression Suite
 
-**Date:** 26 October 2026
+**Date:** 17 November 2026
 **Author:** Mohamed Isharak M
 
 A regression run answers one question: *did this change break something that used to
@@ -13,11 +13,16 @@ result differs.
 
 | Suite | Location | Tests | Time (observed) | Needs a database server |
 |---|---|---|---|---|
-| Full automated suite | `tests/` | 122 collected (116 on SQLite + 6 PostgreSQL-only) | ~90 s | No (PostgreSQL module skipped) |
-| PostgreSQL module | `tests/test_postgres.py` | 6 | included | Yes |
+| Full automated suite | `tests/` | 182 collected (175 on SQLite + 7 PostgreSQL-only) | ~142 s | No (PostgreSQL module skipped) |
+| PostgreSQL module | `tests/test_postgres.py` | 7 | included | Yes |
 | Database workspace drift | `tests/test_db_workspace.py` | 5 | ~3 s | No |
-| Live UAT | `scripts/qa_uat.py` | 21 workflows | ~10 s | Yes, plus a running API |
+| Live UAT | `scripts/qa_uat.py` | 25 workflows | ~15 s | Yes, plus a running API |
 | External AI gate | `scripts/check_ai_integration.py` | 6 operations | seconds | No, needs the `ai` package or a stub |
+| Contributor AI suite | `contributions/mahidhar-ai-layer/` | 86 | ~90 s | No |
+
+`pytest.ini` at the repository root excludes `contributions/` from root collection
+(BUG-019): the contributor archives have their own import roots and reuse module names.
+Run them from inside their own folders.
 
 ---
 
@@ -34,10 +39,10 @@ python -m pytest -q
 Expected:
 
 ```
-116 passed, 6 skipped
+175 passed, 7 skipped
 ```
 
-The 6 skips are `tests/test_postgres.py`. They are not failures.
+The 7 skips are `tests/test_postgres.py`. They are not failures.
 
 ### 2.2 Full regression (PostgreSQL)
 
@@ -51,10 +56,10 @@ python -m pytest -q
 Expected:
 
 ```
-122 passed
+182 passed
 ```
 
-If the PostgreSQL port is not listening, the 6 tests error at fixture setup with
+If the PostgreSQL port is not listening, the 7 tests error at fixture setup with
 `psycopg.errors.ConnectionTimeout`. That is an environment problem, not a code regression;
 start the database and re-run before logging a defect.
 
@@ -68,13 +73,13 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 Expected:
 
 ```
-20/21 workflows passed, 1 partial
+25/25 workflows passed
 ```
 
-The partial was UAT-15, which was **BUG-006**; the recommendation now carries
-`suggested_channel` and the endpoint test asserts it. A run that reports `0 failed` is the
-current known-good state: **156 passed** on PostgreSQL and **150 passed, 6 skipped** on
-SQLite.
+UAT-22 to UAT-25 cover the Module 5 CRM surface: field mappings for both providers, the
+three simulated sync workflows, the rejected-operation path and the Conversations page
+contract. A run that reports `0 failed` is the current known-good state: **182 passed** on
+PostgreSQL and **175 passed, 7 skipped** on SQLite.
 
 ### 2.4 External AI gate
 
@@ -92,7 +97,9 @@ the current known state in this repository (**BUG-008**).
 
 | Date | Branch / commit | SQLite | PostgreSQL | UAT | Notes |
 |---|---|---|---|---|---|
-| 26 Oct 2026 | `feature/backend-integration` @ merge `fbe1fbc` + reconciliation | 116 passed, 6 skipped | 122 passed | 20 passed, 1 partial | **Current known-good baseline** |
+| 17 Nov 2026 | `main` @ `f0596cb` + Module 5 QA | 175 passed, 7 skipped | not run (Docker down) | 25/25 passed | **Current known-good baseline**; BUG-019 fixed |
+| 6 Nov 2026 | `main` @ `cf56b9f` + Groq provider | 171 passed, 6 skipped | 177 passed | 20 passed, 1 partial | Milestone 2 baseline |
+| 26 Oct 2026 | `feature/backend-integration` @ merge `fbe1fbc` + reconciliation | 116 passed, 6 skipped | 122 passed | 20 passed, 1 partial | Pre-Milestone 2 baseline |
 | 26 Oct 2026 | `feature/backend-integration` @ `711fee3` | 111 passed, 6 skipped | 117 passed | 20 passed, 1 partial | Pre-merge baseline |
 | 26 Oct 2026 | `f3724a2` (baseline as committed) | collection error | not run | not run | `ModuleNotFoundError: No module named 'ai'` - BUG-001 |
 
@@ -154,10 +161,16 @@ re-running it against the same database does not produce false duplicate failure
 
 ## 7. What regression testing cannot cover
 
-* **Frontend behaviour.** No UI exists, so UI regressions are invisible.
-* **Container startup.** Docker was unavailable, so a Compose regression would not be
-  caught.
-* **Real AI package behaviour.** The package is absent; only the stub is exercised.
+* **Rendered UI behaviour.** The adapter and page contract are tested, and Streamlit
+  `AppTest` runs headless, but no test asserts that a pixel looks right. The new
+  Conversations sections have not been walked through in a browser (Docker was unavailable
+  on 17 November 2026).
+* **Container startup.** The Compose stack was verified on 27 October 2026 and again for
+  Milestone 2, but it was not rebuilt in this pass.
+* **Real AI provider behaviour.** The suite runs the deterministic engine. The live Groq
+  path is exercised by `scripts/check_ai_integration.py`, not by pytest.
 * **Performance regressions.** No benchmark exists, so a slowdown would not fail a test.
+* **Live CRM transport.** It does not exist (SRS D-06), so no regression can be caught
+  there. The simulator and its audit rows are covered.
 
-These are recorded as limitations in [`milestone-test-report.md`](milestone-test-report.md).
+These are recorded as limitations in [`milestone3-test-report.md`](milestone3-test-report.md).

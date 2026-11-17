@@ -429,7 +429,8 @@ Git identity. The CRM mapping/simulator and the AI package are credited to their
 | [`docs/database-merge-notes.md`](docs/database-merge-notes.md) | Merge of the database contributor's branch and the column-by-column reconciliation |
 | [`salesgenie-db-workspace/README.md`](salesgenie-db-workspace/README.md) | Database deployment baseline: DDL, ER diagram, DB-only Compose |
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
-| [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the milestone review |
-| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 16 defects with severity, reproduction and status |
+| [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the Milestone 2 review |
+| [`docs/qa/milestone3-test-report.md`](docs/qa/milestone3-test-report.md) | Milestone 3 test report for Module 5 (conversations and CRM) |
+| [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 19 defects with severity, reproduction and status |
 | [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
-| [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 40-request Postman collection |
+| [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 46-request Postman collection |

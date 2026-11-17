@@ -1,6 +1,6 @@
 # API Test Matrix
 
-**Date:** 26 October 2026
+**Date:** 17 November 2026 (Module 5 surface refreshed)
 **Author:** Mohamed Isharak M
 **Base URL:** `http://127.0.0.1:8000` (local) or `http://127.0.0.1:8011` (UAT run)
 **Contract reference:** [`../api-contract.md`](../api-contract.md)
@@ -89,8 +89,14 @@ to send e-mail when no provider is configured.
 |---|---|---|---|---|---|
 | POST | `/conversations/summarize` | writer | `200` summary + `execution` + interaction `id` | `404`, `422` when both transcript and notes are empty, `502` | `test_conversation_summary_persists_interaction`, `test_conversation_requires_content` |
 | POST | `/leads/{lead_id}/conversations` | writer | `201` interaction | `404` | `test_conversation_summary_persists_interaction` |
-| GET | `/leads/{lead_id}/conversations` | any | `200` interaction list | `404` | Same test |
+| GET | `/leads/{lead_id}/conversations` | any | `200` interaction list (`interaction_date`, `summary`, `key_points`, `action_items`) | `404` | `test_conversation_summary_persists_interaction`, UAT-25 |
 | GET | `/conversations/{interaction_id}` | any | `200` interaction | `404` | `test_conversation_unknown_lead_returns_404` |
+
+The Conversations page reads the list rows directly. `frontend/api_compat.py` maps
+`interaction_date` onto the `created_at` label it renders, so the UI never shows a blank
+timestamp. The page's CRM sections call `/crm/status`, `/crm/sync-logs`, `/crm/field-mappings`
+and `/crm/sync`; those routes are asserted in
+`test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api`.
 
 ---
 
@@ -104,11 +110,19 @@ to send e-mail when no provider is configured.
 | GET | `/follow-ups` | any | `200` derived follow-up list | — | `test_follow_ups_are_derived_from_stored_scores` |
 | POST | `/analytics/insights` | any | `200` observations + disclaimer | `502` | `test_analytics_insights_are_labelled_observations` |
 | GET | `/crm/providers` | any | `200` provider configuration state | — | `test_crm_providers_report_configuration_state` |
+| GET | `/crm/field-mappings` | any | `200` documented Salesforce/HubSpot maps plus `supported_operations` and `live_transport_available: false` | `422 invalid_provider` for an unknown provider | `test_crm_field_mappings_are_documented_for_both_providers`, UAT-22 |
 | POST | `/crm/mappings/validate` | writer | `200` per-field validation result | `422` invalid mapping | `test_crm_mapping_validation` |
-| POST | `/crm/sync/preview` | writer | `200` dry-run plan, nothing written | — | `test_crm_sync_preview_is_dry_run` |
-| POST | `/crm/sync` | writer | **`501 crm_not_configured`** and a failure row in the sync log | — | `test_crm_sync_records_failure_and_retry` |
-| GET | `/crm/sync-logs` | any | `200` log list, newest first | — | `test_crm_sync_records_failure_and_retry` |
+| POST | `/crm/sync/preview` | writer | `200` dry-run plan, nothing written | `422 invalid_lead_ids` | `test_crm_sync_preview_is_dry_run` |
+| POST | `/crm/sync` | writer | **`501 crm_not_configured`** and a failure row in the sync log; with `"simulate": true`, `200 mode=simulated` for `upsert`, `sync_contact`, `update_stage`, `activity_log` | `422 invalid_provider`, `422 invalid_operation`, `422 invalid_lead_ids` | `test_crm_sync_records_failure_and_retry`, `test_crm_simulation_covers_contact_activity_and_stage`, `test_crm_sync_rejects_an_unknown_operation`, UAT-23, UAT-24 |
+| GET | `/crm/status` | any | `200` `connectivity`, `recent_syncs`, `recent_failures`, `failure_rate`, `providers`, `note` | — | UAT-24 |
+| GET | `/crm/sync-logs` | any | `200` log list, newest first, with `entity_type`, `operation`, `status`, `external_record_id` | — | `test_crm_sync_records_failure_and_retry`, UAT-23 |
 | POST | `/crm/sync-logs/{log_id}/retry` | writer | `200` retry result | `404 sync_log_not_found`, `409 already_succeeded` | `test_crm_sync_records_failure_and_retry` |
+
+A simulation never contacts Salesforce or HubSpot. The response carries
+`mode: "simulated"`, `simulated: true` and a note that says so, and the audit row records
+`request_metadata.mode = "simulated"`. The default (no `simulate`) remains the truthful
+`501`. The endpoint does not accept an operation outside the four documented values; a
+rejected operation writes no audit row.
 
 `conversion_rate` returns a value. `pipeline_value`, `average_response_time_days` and
 `average_sales_cycle_days` return `value: null` with `pending_definition: true` while SRS
@@ -144,7 +158,7 @@ endpoint returns a bare HTML error page.
 
 Import both files from [`../../postman/`](../../postman):
 
-* `SalesGenie-AI.postman_collection.json` - 40 requests grouped by module, with test
+* `SalesGenie-AI.postman_collection.json` - 46 requests grouped by module, with test
   scripts that assert status codes and key fields.
 * `SalesGenie-AI.postman_environment.json` - `base_url`, `email`, `password`, `token`,
   `lead_id`, `campaign_id`.
@@ -158,7 +172,8 @@ Suggested manual order:
 5. **Scoring → Score lead**, then **Latest score**.
 6. **Conversations → Summarize**.
 7. **Analytics → KPIs**, **Follow-ups**.
-8. **CRM → Providers**, **Preview**, **Sync** (expect `501`), **Sync logs**.
+8. **CRM → Providers**, **Field mappings**, **Preview**, **Sync** (expect `501`), **Sync**
+   with `"simulate": true` (expect `200 mode=simulated`), **Status**, **Sync logs**.
 
 The Postman collection is a manual/exploratory aid. The authoritative automated result is
 the pytest suite and the live UAT runner; Postman results are not counted as passing tests

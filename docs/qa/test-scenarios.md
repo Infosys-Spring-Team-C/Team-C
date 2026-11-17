@@ -196,10 +196,12 @@ stated. Evidence: `TC-M5-005`, `TC-M5-006`.
 
 ### SCN-M5-03 - CRM field mapping validation
 *Precondition:* an authenticated user.
-*Steps:* validate a valid mapping; validate an invalid one.
+*Steps:* read the documented field map for both providers; validate a valid mapping;
+validate an invalid one; request an unknown provider.
 *Acceptance:* `AC-024`
-*Verdict:* **PASS** - valid mappings are accepted, invalid ones are reported per field.
-Evidence: `TC-M5-007`.
+*Verdict:* **PASS** - Salesforce and HubSpot maps cover contact, activity and deal records;
+valid mappings are accepted, invalid ones are reported per field, and an unknown provider
+returns `422 invalid_provider`. Evidence: `TC-M5-007`, UAT-22.
 
 ### SCN-M5-04 - CRM sync failure is safe and logged
 *Precondition:* no CRM transport configured.
@@ -208,6 +210,34 @@ Evidence: `TC-M5-007`.
 *Verdict:* **PASS** - preview is a dry run, the real sync returns `501 crm_not_configured`,
 a failed attempt is written to the sync log, and the local record is untouched.
 Evidence: `TC-M5-008`, `TC-M5-009`, UAT-17.
+
+### SCN-M5-05 - Simulated sync covers the three CRM workflows
+*Precondition:* a prospect and no live CRM connector.
+*Steps:* run `sync_contact`, `activity_log` and `update_stage` with `simulate: true`; read
+the sync log.
+*Acceptance:* `AC-024`
+*Verdict:* **PASS** - each operation maps onto a provider-neutral contact, activity or deal
+record, returns `mode: simulated`, and writes an audit row carrying its `entity_type` and a
+successful outcome. The response states that no Salesforce or HubSpot request was made.
+Evidence: `TC-M5-010`, `TC-M5-011`, UAT-23.
+
+### SCN-M5-06 - An invalid CRM operation changes nothing
+*Precondition:* a prospect.
+*Steps:* request an unknown operation; read the sync log.
+*Acceptance:* `AC-024`
+*Verdict:* **PASS** - `422 invalid_operation` is returned and the audit log count is
+unchanged, so a typo cannot create a row that claims a sync happened. Evidence:
+`TC-M5-012`, UAT-24.
+
+### SCN-M5-07 - The Conversations page receives everything it renders
+*Precondition:* a stored conversation and at least one sync attempt.
+*Steps:* read the conversation list, CRM status, field map and sync logs through the same
+paths the page uses.
+*Acceptance:* `AC-023`
+*Verdict:* **PARTIAL** - the data contract is verified end to end and the adapter maps every
+field the page reads (`interaction_date` -> `created_at`). The page has not been walked
+through in a browser since the CRM sections were added. Evidence: `TC-M5-013`,
+`TC-M5-014`, UAT-25.
 
 ---
 

@@ -1,8 +1,8 @@
 # Test Cases
 
-**Date:** 26 October 2026
+**Date:** 17 November 2026 (Module 5 cases refreshed; earlier modules unchanged)
 **Author:** Mohamed Isharak M
-**Total cases:** 75
+**Total cases:** 80
 **Verdict key:** `PASS` executed and met · `PARTIAL` executed, requirement partly met ·
 `FAIL` executed, requirement not met · `BLOCKED` cannot execute yet ·
 `NOT RUN` designed but not executed
@@ -36,7 +36,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M2-001 | Analysis returns business needs, opportunities and industry context | Unit + API | FR-012, FR-013, FR-014 | `test_api_ai.py::test_insights_generate_persist_and_are_evidence_aware` | PASS |
 | TC-M2-002 | Qualification information is included and facts are separated from hypotheses | Unit | FR-015 | `test_intelligence.py::test_analysis_separates_facts_from_hypotheses` | PASS |
 | TC-M2-003 | Intelligence is stored against the lead and readable afterwards | API | FR-016 | `test_api_ai.py::test_insights_generate_persist_and_are_evidence_aware`, UAT-11 | PASS |
-| TC-M2-004 | Intelligence is displayed beside the lead in the UI | UAT | FR-017 | Not executable | NOT RUN - frontend absent |
+| TC-M2-004 | Intelligence is displayed beside the lead in the UI | UAT | FR-017 | Not executable | NOT RUN - page exists; browser walkthrough pending |
 | TC-M2-005 | Invalid AI output is rejected and not stored | Integration | FR-018, AC-010 | `test_external_adapter.py::test_invalid_package_output_is_rejected` | PASS |
 | TC-M2-006 | Provider failure surfaces a clear error without corrupting data | Integration | FR-018, AC-009 | `test_intelligence.py::test_external_backend_fails_loudly_when_package_is_absent`, `test_external_adapter.py::test_package_errors_become_intelligence_errors` | PASS |
 | TC-M2-007 | Missing information is reported instead of invented | Unit | FR-012, FR-018 | `test_intelligence.py::test_analysis_reports_missing_information_without_inventing` | PASS |
@@ -52,7 +52,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M3-003 | Changing tone, length and outreach type changes the output | Unit | FR-020, AC-012 | `test_intelligence.py::test_outreach_channel_mapping`, `::test_outreach_tone_and_length_change_the_body`, `test_external_adapter.py::test_outreach_request_is_translated_to_the_package_keys` | PASS |
 | TC-M3-004 | Refresh produces a new variant | API | FR-021, AC-013 | Not asserted | NOT RUN - coverage gap, no defect |
 | TC-M3-005 | A draft can be edited before use | API | FR-022 | `test_api_ai.py::test_outreach_draft_can_be_edited_and_marked_sent`, UAT-12 | PASS |
-| TC-M3-006 | Content can be copied to the clipboard | UAT | FR-023 | Not executable | NOT RUN - UI concern |
+| TC-M3-006 | Content can be copied to the clipboard | UAT | FR-023 | Not executable | NOT RUN - UI concern; browser walkthrough pending |
 | TC-M3-007 | Send action is refused visibly and never sends | API | FR-024, AC-015 | `test_api_ai.py::test_outreach_send_never_sends_and_reports_501`, UAT-13 | PASS |
 | TC-M3-008 | Campaigns are stored and retrievable per lead | API | FR-025, FR-026 | `test_api_ai.py::test_outreach_generation_persists_a_draft`, UAT-12 | PASS |
 | TC-M3-009 | Outreach does not invent industry-specific claims or pain points | Unit | FR-019, AC-011 | `test_intelligence.py::test_outreach_does_not_invent_industry_specific_claims`, `::test_outreach_without_pain_points_declares_the_assumption` | PASS |
@@ -74,7 +74,7 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 ---
 
-## Module 5 - Conversations and CRM (9 cases)
+## Module 5 - Conversations and CRM (14 cases)
 
 | ID | Case | Level | Req | Automated / method | Verdict |
 |---|---|---|---|---|---|
@@ -84,9 +84,14 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M5-004 | Sales interactions are stored and listed | API | FR-039, AC-023 | `test_api_ai.py::test_conversation_summary_persists_interaction`, UAT-16 | PASS |
 | TC-M5-005 | Empty or invalid notes produce a clear message | API | FR-036, AC-022 | `test_api_ai.py::test_conversation_requires_content`, `test_intelligence.py::test_conversation_summary_handles_empty_input` | PASS |
 | TC-M5-006 | No commitments are invented | Unit | AC-022 | `test_intelligence.py::test_conversation_summary_does_not_invent_commitments` | PASS |
-| TC-M5-007 | CRM field mapping is validated | API | FR-040 | `test_api_ai.py::test_crm_mapping_validation` | PASS |
-| TC-M5-008 | CRM sync is previewed and real sync fails safely | API | FR-041, FR-042, FR-043 | `test_api_ai.py::test_crm_sync_preview_is_dry_run`, `::test_crm_sync_records_failure_and_retry`, `::test_crm_sync_rejects_unknown_provider` | PASS as specified - live sync BLOCKED by D-06 |
-| TC-M5-009 | A failed sync preserves the local interaction and lead record | API + UAT | FR-045, AC-025 | `test_api_ai.py::test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |
+| TC-M5-007 | CRM field mappings are documented for both providers and validated | API | FR-040 | `test_api_ai.py::test_crm_field_mappings_are_documented_for_both_providers`, `::test_crm_mapping_validation`, UAT-22 | PASS - maps are documented, not confirmed against a live org |
+| TC-M5-008 | CRM sync is previewed and a real sync fails safely | API | FR-041, FR-042, FR-043 | `test_api_ai.py::test_crm_sync_preview_is_dry_run`, `::test_crm_sync_records_failure_and_retry`, `::test_crm_sync_rejects_unknown_provider`, UAT-17 | PASS as specified - live transport BLOCKED by D-06 |
+| TC-M5-009 | A failed sync preserves the local interaction and lead record | API + UAT | FR-045, AC-025 | `test_api_ai.py::test_failed_crm_sync_keeps_the_local_interaction`, UAT-17 | PASS |
+| TC-M5-010 | Simulated sync covers contact, activity and deal-stage workflows | API | FR-041, FR-042 | `test_api_ai.py::test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 | PASS - labelled `mode=simulated`; no external call |
+| TC-M5-011 | Every simulated sync writes an audit row with its entity type | API | FR-043, AC-024 | `test_api_ai.py::test_crm_simulation_covers_contact_activity_and_stage` (asserts `entity_type` per operation), UAT-23 | PASS |
+| TC-M5-012 | An unknown CRM operation is refused and not audited | API | FR-041, AC-024 | `test_api_ai.py::test_crm_sync_rejects_an_unknown_operation`, UAT-24 | PASS - `422 invalid_operation`, log count unchanged |
+| TC-M5-013 | The UI's CRM routes resolve to the canonical API | Frontend contract | FR-040, FR-044 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api` | PASS |
+| TC-M5-014 | The Conversations page receives every field it renders | API + UAT | FR-044, AC-023 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PASS - API contract verified; browser walkthrough pending |
 
 ---
 
@@ -98,8 +103,8 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M6-002 | Pipeline value is withheld while D-10 is open | API | FR-047 | `test_api_ai.py::test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
 | TC-M6-003 | Average response time is withheld while D-10 is open | API | FR-048 | `test_api_ai.py::test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
 | TC-M6-004 | Average sales cycle is withheld while D-10 is open | API | FR-049 | `test_api_ai.py::test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
-| TC-M6-005 | KPI cards render on the dashboard | UAT | FR-050, AC-026 | Not executable | NOT RUN - frontend absent |
-| TC-M6-006 | Kanban pipeline matches stored stages | UAT | FR-051, AC-028 | Not executable | NOT RUN - frontend absent; `pipeline_distribution` data is verified |
+| TC-M6-005 | KPI cards render on the dashboard | UAT | FR-050, AC-026 | Not executable | NOT RUN - page exists; browser walkthrough pending |
+| TC-M6-006 | Kanban pipeline matches stored stages | UAT | FR-051, AC-028 | Not executable | NOT RUN - page exists; `pipeline_distribution` data is verified |
 | TC-M6-007 | Follow-up panel data is derived from stored scores and excludes terminal leads | API | FR-052, AC-029 | `test_api_ai.py::test_follow_ups_are_derived_from_stored_scores`, `::test_terminal_leads_are_excluded_from_follow_ups`, UAT-19 | PASS |
 | TC-M6-008 | Analytics interpretation is labelled as observation | API | FR-053 | `test_api_ai.py::test_analytics_insights_are_labelled_observations`, `test_intelligence.py::test_analytics_interpretation_is_observation_only` | PASS |
 
@@ -165,9 +170,9 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 | ID | Case | Level | Req | Automated / method | Verdict |
 |---|---|---|---|---|---|
-| TC-E2E-001 | Full workflow against a live server and real PostgreSQL: create, import, analyse, generate, score, summarise, sync, dashboard, delete | E2E | AC-001 to AC-030 | `scripts/qa_uat.py` - 21 workflows | PASS - 20 passed, 1 partial |
+| TC-E2E-001 | Full workflow against a live server and real database: create, import, analyse, generate, score, summarise, sync, dashboard, delete | E2E | AC-001 to AC-030 | `scripts/qa_uat.py` - 25 workflows | PASS - 25 passed, 0 partial (17 Nov 2026, SQLite) |
 | TC-E2E-002 | Data survives an application restart | E2E | FR-009, AC-001 | Not implemented | NOT RUN |
-| TC-E2E-003 | A user completes the workflow through the Streamlit UI | E2E | NFR-003 | Not executable | BLOCKED - frontend absent |
+| TC-E2E-003 | A user completes the workflow through the Streamlit UI | E2E | NFR-003 | Not executable | BLOCKED - browser walkthrough pending (Docker unavailable on 17 Nov 2026) |
 
 ---
 
@@ -175,12 +180,13 @@ references use `file::test_name` and can be run directly with `pytest`.
 
 | Verdict | Count |
 |---|---|
-| PASS | 60 |
-| PARTIAL | 3 |
-| BLOCKED | 4 |
+| PASS | 68 |
+| PARTIAL | 2 |
+| BLOCKED | 2 |
 | NOT RUN | 8 |
 | FAIL | 0 |
-| **Total** | **75** |
+| **Total** | **80** |
 
 A `NOT RUN` case is a coverage gap, not a pass. Each is explained in the row above and
-carried into [`milestone-test-report.md`](milestone-test-report.md).
+carried into [`milestone-test-report.md`](milestone-test-report.md) and
+[`milestone3-test-report.md`](milestone3-test-report.md).

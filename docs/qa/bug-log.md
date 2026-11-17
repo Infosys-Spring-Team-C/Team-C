@@ -4,7 +4,7 @@
 **Author:** Mohamed Isharak M
 **Application:** SalesGenie AI (Team C)
 **Open defects:** 1 (0 Critical, 0 High, 0 Medium, 1 Low)
-**Closed defects:** 15
+**Closed defects:** 18
 
 **Severity** - Critical: cannot start / data loss Â· High: a Must requirement unmet or the
 system states something untrue Â· Medium: a Should requirement unmet or a degraded
@@ -35,6 +35,7 @@ workflow Â· Low: cosmetic, documentation or no user-visible impact.
 | BUG-016 | Clean install could not collect the frontend adapter tests (`requests` missing) | Medium | P2 | Closed (fixed) | Lead (build) |
 | BUG-017 | Outreach greeted titled contacts as "Hi Dr.," instead of their name | Low | P3 | Closed (fixed) | AI (Mahidhar) / Lead |
 | BUG-018 | `auto` provider selected a keyed provider whose SDK was absent, making the whole AI engine unavailable | High | P1 | Closed (fixed) | Lead (AI adapter) |
+| BUG-019 | Contributing the member archives broke bare `pytest` collection | High | P1 | Closed (fixed 17 November 2026) | QA / Lead |
 
 ---
 
@@ -518,13 +519,61 @@ stack. The UI header shows the same state.
 
 ---
 
+### BUG-019 - Contributing the member archives broke bare `pytest` collection
+
+| Field | Value |
+|---|---|
+| Severity / Priority | High / P1 |
+| Status | Closed - fixed 17 November 2026 |
+| Requirement | NFR-011 (reproducible build and regression suite) |
+| Found by | Milestone 3 QA run: `python -m pytest -q` at repository root |
+| Owner | QA / Lead |
+
+**Description.** The two contributor archives were added under `contributions/`
+with their own test suites. A bare `pytest` at the repository root recursed into
+them and aborted collection:
+
+```
+ERROR contributions/mahek-frontend-milestone3/tests/test_frontend_and_api.py
+  ModuleNotFoundError: No module named 'database'
+ERROR tests/test_scoring.py
+  import file mismatch:
+  imported module 'test_scoring' has this __file__ attribute ...
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
+```
+
+Two separate causes:
+
+1. Mahek's suite imports its own local `database` package, which is only on
+   `sys.path` when pytest starts inside that folder.
+2. Mahidhar's `tests/test_scoring.py` and the canonical `tests/test_scoring.py`
+   share a basename. Without `__init__.py` files pytest cannot import both into
+   one session.
+
+**Impact.** The documented regression command (`pytest -q`) failed before running a
+single test. A reviewer following `docs/qa/regression-suite.md` would have seen a
+collection error and concluded the application was broken. No application code was
+affected.
+
+**Resolution.** Added `pytest.ini` at the repository root with
+`norecursedirs = ... contributions ...`, so the canonical suite collects `tests/`
+only. Each contribution keeps its own `pyproject.toml` and is run from its own
+folder, as documented in `contributions/README.md`.
+
+**Verification.** `pytest --collect-only` collects **182 tests** (175 run + 7
+PostgreSQL-only). Full suite: **175 passed, 7 skipped**. Mahidhar's suite still
+passes from its folder: **86 passed**. Evidence:
+`docs/qa/evidence/2026-11-17-pytest-sqlite.txt`.
+
+---
+
 ## 4. Defect trend
 
 | Status | Count |
 |---|---|
-| Closed | 17 |
+| Closed | 18 |
 | Open | 1 |
-| **Total** | **18** |
+| **Total** | **19** |
 
 All 18 defects are listed in section 1 with the stage that found them. No defect has been
 reopened, and every closed defect has a verification reference in its entry.

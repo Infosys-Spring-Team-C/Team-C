@@ -1,7 +1,7 @@
 # QA / Test Engineering Pack
 
 **Owner:** Mohamed Isharak M - QA / Test Engineer and Project Lead
-**Date:** 26 October 2026
+**Date:** 17 November 2026 (Milestone 3 refresh)
 **Application:** SalesGenie AI (Team C)
 **Repository:** `Infosys-Spring-Team-C/Team-C`
 
@@ -25,7 +25,7 @@ estimated, inferred or copied from a plan.
 | Regression testing | [`regression-suite.md`](regression-suite.md) | Exact commands, expected counts, triggers, triage |
 | Bug tracking | [`bug-log.md`](bug-log.md) | 16 defects with severity, reproduction, status |
 | User acceptance testing | [`uat-plan.md`](uat-plan.md), [`uat-results.md`](uat-results.md) | Personas, workflows, live execution results |
-| Milestone reporting | [`milestone-test-report.md`](milestone-test-report.md) | Summary, coverage, limitations, evidence index, sign-off |
+| Milestone reporting | [`milestone-test-report.md`](milestone-test-report.md), [`milestone3-test-report.md`](milestone3-test-report.md) | Summary, coverage, limitations, evidence index, sign-off |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) | Requirement → test case → automated test → status |
 
 ---
@@ -34,25 +34,30 @@ estimated, inferred or copied from a plan.
 
 | Signal | Value | Source |
 |---|---|---|
-| Automated tests, SQLite | **150 passed, 6 skipped** | `evidence/2026-10-27-pytest-sqlite-final.txt` |
-| Automated tests, PostgreSQL 16 | **156 passed** | `evidence/2026-10-27-pytest-postgres-open-defects.txt` |
+| Automated tests, SQLite | **175 passed, 7 skipped** | `evidence/2026-11-17-pytest-sqlite.txt` |
+| Automated tests, PostgreSQL 16 | **177 passed** (6 Nov 2026; not re-run on 17 Nov - Docker unavailable) | `evidence/2026-11-06-pytest-postgres.txt` |
+| Module 5 focused tests | **14 passed** | `evidence/2026-11-17-pytest-module5-focused.txt` |
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
-| Live UAT workflows | **20 passed, 1 partial, 0 failed** | `evidence/2026-10-26-uat-live-postmerge.md` |
-| Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 | `evidence/2026-10-27-docker-compose-verification.txt` |
+| Live UAT workflows | **25 passed, 0 partial, 0 failed** | `evidence/2026-11-17-uat-live-milestone3.md` |
+| Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 (27 Oct 2026; not rebuilt 17 Nov) | `evidence/2026-10-27-docker-compose-verification.txt` |
 | Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
 | Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
+| Contributor AI suite | **86 passed** from its own folder | `contributions/mahidhar-ai-layer` |
 | Defects open | 1 (0 critical, 0 high, 0 medium, 1 low) | [`bug-log.md`](bug-log.md) |
-| Requirements fully verified | 35 of 53 FRs | [`traceability-matrix.md`](traceability-matrix.md) |
+| Requirements fully verified | 35 of 53 FRs (8 partial, 9 blocked, 1 not run) | [`traceability-matrix.md`](traceability-matrix.md) |
 
-The 6 skipped tests are the PostgreSQL-only module; they run whenever
-`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 156 instead
-of 150.
+The 7 skipped tests are the PostgreSQL-only module; they run whenever
+`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 182 instead
+of 175.
 
-These are the **final milestone** figures. The database contributor's branch
-(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026, the canonical
-schema was reconciled, and the AI and frontend packages were integrated on 27 October
-2026. See [`../database-merge-notes.md`](../database-merge-notes.md) and
-[`milestone-test-report.md`](milestone-test-report.md).
+These are the **current** figures. The Milestone 3 pass re-ran the canonical suite and the
+full 25-workflow live UAT on 17 November 2026; the PostgreSQL run and the Compose rebuild
+could not be repeated because Docker was unavailable. The database contributor's branch
+(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026, and the AI and
+frontend packages were integrated on 27 October 2026. See
+[`../database-merge-notes.md`](../database-merge-notes.md),
+[`milestone-test-report.md`](milestone-test-report.md) and
+[`milestone3-test-report.md`](milestone3-test-report.md).
 
 ---
 
@@ -79,6 +84,11 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 
 | File | Contents |
 |---|---|
+| `evidence/2026-11-17-environment.txt` | Python, package versions, OS and commit under test |
+| `evidence/2026-11-17-pytest-sqlite.txt` | Full pytest output, SQLite, after the Module 5 QA pass |
+| `evidence/2026-11-17-pytest-module5-focused.txt` | The 14 Module 5 tests, verbose |
+| `evidence/2026-11-17-uat-live-milestone3.md` | Live UAT, 25 workflows, human readable |
+| `evidence/2026-11-17-uat-live-milestone3.json` | Same run, machine readable |
 | `evidence/2026-10-26-environment.txt` | Python, package versions, PostgreSQL version, commit under test |
 | `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite (pre-merge baseline) |
 | `evidence/2026-10-26-pytest-postgres.txt` | Full pytest output, PostgreSQL 16 (pre-merge baseline) |

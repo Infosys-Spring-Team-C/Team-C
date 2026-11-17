@@ -1,5 +1,60 @@
 # User Acceptance Test Results
 
+## Milestone 3 re-run - 17 November 2026
+
+**Executed:** 17 November 2026, 14:08 UTC
+**Operator:** Mohamed Isharak M (`qa.admin@example.com`)
+**Target:** `http://127.0.0.1:8011`
+**Database:** SQLite, isolated file created for the run (`backend.cli init-db`)
+**AI backend:** `heuristic` (offline, deterministic)
+**Runner:** `scripts/qa_uat.py` (25 workflows)
+
+### Result: 25 passed, 0 partial, 0 failed
+
+Raw evidence:
+[`evidence/2026-11-17-uat-live-milestone3.md`](evidence/2026-11-17-uat-live-milestone3.md)
+and the JSON equivalent.
+
+| ID | Workflow | Status | Observed | ms |
+|---|---|---|---|---|
+| UAT-01 | Health and readiness | PASS | `status: ok`, `database: ok`, dialect `sqlite`, `ai_backend: heuristic`, `ai_status: ok`, `auth_enabled: true` | 5 |
+| UAT-02 | Administrator can sign in | PASS | Token issued, `expires_in: 7200`; `/me` returned `admin` | 246 |
+| UAT-03 | Wrong password is refused | PASS | `401 invalid_credentials` | 228 |
+| UAT-04 | Unauthenticated access is refused | PASS | `401 not_authenticated` | 5 |
+| UAT-05 | Create a prospect manually | PASS | Lead created, stage `qualified`, e-mail and website normalised | 20 |
+| UAT-06 | Duplicate detection | PASS | `409`; duplicate-check returned `is_duplicate: true` | 16 |
+| UAT-07 | List, search and paginate | PASS | Bare array, `X-Total-Count`, search found the lead | 22 |
+| UAT-08 | Move between lifecycle stages | PASS | Stage changed, derived status followed | 16 |
+| UAT-09 | Import a CSV | PASS | 2 imported, 1 duplicate reported | 23 |
+| UAT-10 | Invalid input rejected | PASS | `422` with per-field errors, nothing stored | 6 |
+| UAT-11 | Company intelligence | PASS | Needs, opportunities, qualification persisted | 22 |
+| UAT-12 | Outreach generated, edited, retrieved | PASS | Draft, edit and history all returned | 34 |
+| UAT-13 | Send is visibly unavailable | PASS | `501 email_transport_not_configured` | 6 |
+| UAT-14 | Score explainable and honest | PASS | Score, factors, `conversion_probability: null` | 22 |
+| UAT-15 | Next-best-action | PASS | Priority, timing, `suggested_channel` and draft | 7 |
+| UAT-16 | Conversation summarised and stored | PASS | Summary, points and actions; interaction stored | 21 |
+| UAT-17 | CRM sync fails safely | PASS | `501 crm_not_configured`, log grew by 1, lead intact | 38 |
+| UAT-18 | Dashboard KPIs honest | PASS | Conversion rate computed; three KPIs `null` + `pending_definition` | 14 |
+| UAT-19 | Follow-up panel data | PASS | Well-formed list | 11 |
+| UAT-20 | Role-based access control | PASS | Viewer read allowed; write and user-admin `403` | 466 |
+| UAT-21 | Delete a prospect | PASS | `204`, then `404` | 19 |
+| UAT-22 | CRM field mappings, both providers | PASS | Contact/activity/deal maps; unknown provider `422 invalid_provider` | 18 |
+| UAT-23 | Simulated CRM sync, three workflows | PASS | `sync_contact` → contact, `activity_log` → activity, `update_stage` → deal; `mode: simulated`; audit rows carry `entity_type` | 84 |
+| UAT-24 | Invalid CRM operation refused | PASS | `422 invalid_operation`; sync-log count unchanged; status `simulated` | 52 |
+| UAT-25 | Conversations page data contract | PASS | List rows carry id, lead, type, date, summary, key points, actions | 48 |
+
+The Module 5 workflows create and delete their own probe prospects, so they do not depend on
+the order of the other workflows and they leave no data behind.
+
+**Environment note.** The 26 October run used PostgreSQL 16. This re-run used SQLite because
+Docker and the PostgreSQL cluster were unavailable on the machine. The database-dependent
+behaviour is covered by `tests/test_postgres.py` (7 tests, last green on 6 November 2026),
+not by this run.
+
+---
+
+## 26 October 2026 baseline run
+
 **Executed:** 26 October 2026, 13:50:27 UTC
 **Operator:** Mohamed Isharak M (`qa.admin@example.com`)
 **Target:** `http://127.0.0.1:8011`
@@ -162,7 +217,7 @@ These are not defects; they are facts the Streamlit implementation must respect.
 
 | Role | Name | Statement |
 |---|---|---|
-| QA / Test Engineer | Mohamed Isharak M | 20 of 21 workflows accepted; 1 partial with a linked defect; 0 failures |
+| QA / Test Engineer | Mohamed Isharak M | 25 of 25 workflows accepted on 17 November 2026 (0 partial, 0 failed); the 26 October PostgreSQL run remains the database-backed baseline at 20 passed / 1 partial (BUG-006, since closed) |
 | Backend owner | M Doran | Pending review of this report |
-| Database owner | Marri Sai Surekha | Pending - UAT must be re-run after the schema merge |
-| Frontend owner | Maheksaba Akbar Shaikh | Pending - UI workflows not yet executable |
+| Database owner | Marri Sai Surekha | PostgreSQL run pending a Docker/cluster restart |
+| Frontend owner | Maheksaba Akbar Shaikh | Data contract accepted; browser walkthrough of the new Conversations sections pending |

@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-**Date:** 27 October 2026
+**Date:** 17 November 2026 (Module 5 rows re-verified for Milestone 3)
 **Author:** Mohamed Isharak M
 **Source of requirements:** [`../SRS.md`](../SRS.md) - functional requirements `FR-001` to
 `FR-053` and acceptance criteria `AC-001` to `AC-030`
@@ -15,17 +15,28 @@
 | Verdict | Functional requirements (53) | Acceptance criteria (30) |
 |---|---|---|
 | PASS | 35 | 19 |
-| PARTIAL | 5 | 7 |
-| BLOCKED | 12 | 4 |
+| PARTIAL | 8 | 7 |
+| BLOCKED | 9 | 4 |
 | NOT RUN | 1 | 0 |
 | FAIL | 0 | 0 |
 
 The frontend was scored before it was merged. It now exists, the adapter passes 12/12 live
 checks, and the scoring screen was exercised in a browser. Only the requirements that were
-directly observed end to end have moved to `PASS` (`FR-032`, `FR-033`, `AC-019`). Rows whose
-note still says "no UI" are **awaiting human acceptance**, not missing: the remaining
-`BLOCKED` rows are the CRM transport (SRS D-06), the undefined accuracy dataset (SRS D-13),
-or UI interactions that no one has clicked through yet. None is a hidden failure.
+directly observed end to end have moved to `PASS` (`FR-032`, `FR-033`, `AC-019`).
+
+**Milestone 3 update.** The three Module 5 rows that were `BLOCKED` for a missing UI or a
+missing sync path moved to `PARTIAL`, not `PASS`:
+
+* `FR-041`/`FR-042` now have a working, audited, clearly-labelled **simulator** for contact,
+  activity and deal-stage workflows. A simulator is not synchronisation with a real CRM, so
+  the live half stays open under Decision D-06.
+* `FR-044` has the Conversations page, including the CRM status, field-mapping and activity
+  sections. The API contract behind it is verified; a browser walkthrough of the new
+  sections is still outstanding.
+
+The remaining `BLOCKED` rows are the CRM transport (SRS D-06), the undefined accuracy
+dataset (SRS D-13), or UI interactions that no one has clicked through yet. None is a hidden
+failure.
 
 ---
 
@@ -38,7 +49,7 @@ or UI interactions that no one has clicked through yet. None is a hidden failure
 | FR-003 | Update a prospect | M1 | TC-M1-004 | `test_patch_lead_updates_fields_and_stage`, UAT-08 | PASS |
 | FR-004 | Delete a prospect | M1 | TC-M1-005 | `test_delete_requires_manager_role`, UAT-21 | PASS |
 | FR-005 | Lifecycle stages and stage movement | M1 | TC-M1-006 | `test_stage_aliases_are_accepted`, UAT-08 | PASS |
-| FR-006 | Add a lead manually through the Leads UI | M1 | TC-M1-001 | API path verified; no UI | BLOCKED |
+| FR-006 | Add a lead manually through the Leads UI | M1 | TC-M1-001 | API path verified; UI exists, walkthrough pending | BLOCKED |
 | FR-007 | Import leads from CSV | M1 | TC-M1-008 | `test_api_import.py` (12 tests), UAT-09 | PASS |
 | FR-008 | Detect and report duplicate leads | M1 | TC-M1-007, TC-M1-008 | `test_duplicate_email_returns_409_with_match`, UAT-06 | PASS |
 | FR-009 | Persist prospect data across sessions | M1 | TC-M1-009 | `test_orm_round_trip_and_cascade_on_postgres`; restart replay not run | PARTIAL |
@@ -49,17 +60,17 @@ or UI interactions that no one has clicked through yet. None is a hidden failure
 | FR-014 | Produce industry insights | M2 | TC-M2-001 | Same test; `industry_context` populated | PASS |
 | FR-015 | Produce lead qualification information | M2 | TC-M2-002 | `test_analysis_separates_facts_from_hypotheses` | PASS |
 | FR-016 | Store intelligence against the lead | M2 | TC-M2-003, TC-DB-005 | `test_insights_generate_persist_and_are_evidence_aware`, UAT-11 | PASS |
-| FR-017 | Display intelligence beside the lead in the UI | M2 | TC-M2-004 | API returns it; no UI | BLOCKED |
+| FR-017 | Display intelligence beside the lead in the UI | M2 | TC-M2-004 | API returns it; UI exists, walkthrough pending | BLOCKED |
 | FR-018 | Validate AI output and handle provider failure | M2 | TC-M2-005, TC-M2-006 | `test_invalid_package_output_is_rejected`, `test_package_errors_become_intelligence_errors` | PASS |
 | FR-019 | Generate personalised outreach | M3 | TC-M3-001, TC-M3-009 | `test_outreach_generation_persists_a_draft`, UAT-12 | PASS |
 | FR-020 | Accept the six prompt inputs | M3 | TC-M3-002, TC-M3-003 | `test_outreach_tone_and_length_change_the_body`, `test_outreach_channel_mapping` | PASS |
 | FR-021 | Refresh/regenerate for a new variant | M3 | TC-M3-004 | No test asserts a differing variant | NOT RUN |
 | FR-022 | Edit a generated outreach | M3 | TC-M3-005 | `test_outreach_draft_can_be_edited_and_marked_sent`, UAT-12 | PASS |
-| FR-023 | Copy outreach to the clipboard | M3 | TC-M3-006 | UI concern; no UI | BLOCKED |
+| FR-023 | Copy outreach to the clipboard | M3 | TC-M3-006 | UI concern; clipboard not exercised | BLOCKED |
 | FR-024 | Provide a send action | M3 | TC-M3-007 | `test_outreach_send_never_sends_and_reports_501`, UAT-13 | PASS (per AC-015) |
 | FR-025 | Store outreach campaigns | M3 | TC-M3-001, TC-M3-008 | `test_outreach_generation_persists_a_draft` | PASS |
 | FR-026 | Retrieve outreach history | M3 | TC-M3-008 | UAT-12 history read-back | PASS |
-| FR-027 | Outreach UI exposes generate/refresh/edit/copy/send | M3 | TC-M3-006 | No UI | BLOCKED |
+| FR-027 | Outreach UI exposes generate/refresh/edit/copy/send | M3 | TC-M3-006 | UI exists; walkthrough pending | BLOCKED |
 | FR-028 | Produce a lead score | M4 | TC-M4-001 | `test_score_is_bounded_deterministic_and_explainable` | PASS |
 | FR-029 | Produce a conversion-probability estimate | M4 | TC-M4-002 | `test_heuristic_never_returns_a_calibrated_probability` - returns `null` | PARTIAL |
 | FR-030 | Score on engagement, fit, intent, decision readiness | M4 | TC-M4-003 | `test_score_factor_bounds_are_validated`, UAT-14 | PASS |
@@ -72,11 +83,11 @@ or UI interactions that no one has clicked through yet. None is a hidden failure
 | FR-037 | Extract key discussion points | M5 | TC-M5-002 | `test_conversation_summary_extracts_only_supplied_action_items` | PASS |
 | FR-038 | Extract action items | M5 | TC-M5-003 | Same test; `action_items` asserted | PASS |
 | FR-039 | Store sales interactions | M5 | TC-M5-004 | `test_conversation_summary_persists_interaction`, UAT-16 | PASS |
-| FR-040 | CRM field mapping | M5 | TC-M5-007 | `test_crm_mapping_validation` | PASS (validation only) |
-| FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008 | Transport not configured, SRS D-06 | BLOCKED |
-| FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008 | Transport not configured, SRS D-06 | BLOCKED |
-| FR-043 | Record CRM sync logs | M5 | TC-M5-008 | `test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |
-| FR-044 | Conversations UI | M5 | TC-M5-001 | No UI | BLOCKED |
+| FR-040 | CRM field mapping | M5 | TC-M5-007 | `test_crm_field_mappings_are_documented_for_both_providers`, UAT-22 | PASS - maps documented for Salesforce and HubSpot; vendor confirmation pending |
+| FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
+| FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage` (`update_stage`), UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
+| FR-043 | Record CRM sync logs | M5 | TC-M5-008, TC-M5-011 | `test_crm_simulation_covers_contact_activity_and_stage`, `test_crm_sync_records_failure_and_retry`, UAT-23 | PASS - attempt, outcome, entity type, timestamp and error detail |
+| FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PARTIAL - page and data contract verified; browser walkthrough pending |
 | FR-045 | Handle CRM failure without losing the local record | M5 | TC-M5-009 | `test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |
 | FR-046 | Display conversion rate | M6 | TC-M6-001 | `test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
 | FR-047 | Display pipeline value | M6 | TC-M6-002 | `null` + `pending_definition` while D-10 is open | PARTIAL |
@@ -115,14 +126,14 @@ or UI interactions that no one has clicked through yet. None is a hidden failure
 | AC-020 | Scoring accuracy meets the agreed target | TC-M4-007 | BLOCKED - D-13 |
 | AC-021 | Notes produce summary, points and actions | TC-M5-001, TC-M5-002, TC-M5-003 | PASS |
 | AC-022 | Empty/invalid notes give a clear message, no fabrication | TC-M5-005, TC-M5-006 | PASS |
-| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004 | PARTIAL - stored and listed via API; UI blocked |
-| AC-024 | Sync attempts, successes and failures logged | TC-M5-008 | PASS |
+| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004, TC-M5-014 | PARTIAL - stored, listed and contract-verified; browser walkthrough pending |
+| AC-024 | Sync attempts, successes and failures logged | TC-M5-008, TC-M5-011, TC-M5-012 | PASS |
 | AC-025 | Failed sync does not delete or corrupt the local record | TC-M5-009 | PASS |
-| AC-026 | All four KPIs render with agreed definitions | TC-M6-001 to TC-M6-005 | BLOCKED - D-10 and no UI |
+| AC-026 | All four KPIs render with agreed definitions | TC-M6-001 to TC-M6-005 | BLOCKED - three definitions open (D-10); rendering not walked through |
 | AC-027 | KPI values match manual computation | TC-M6-001 | PARTIAL - conversion rate only; manual cross-check not performed |
-| AC-028 | Kanban matches M1 stage data | TC-M6-006 | BLOCKED - no UI |
-| AC-029 | Follow-up panel shows M4-derived recommendations | TC-M6-007 | PARTIAL - data verified, panel not rendered |
-| AC-030 | Dashboard renders with an empty database | TC-M6-007 | BLOCKED - no UI; API empty case verified |
+| AC-028 | Kanban matches M1 stage data | TC-M6-006 | BLOCKED - UI exists; browser walkthrough pending |
+| AC-029 | Follow-up panel shows M4-derived recommendations | TC-M6-007 | PARTIAL - data verified, panel not walked through |
+| AC-030 | Dashboard renders with an empty database | TC-M6-007 | BLOCKED - API empty case verified; empty-database render not exercised |
 
 ---
 
@@ -133,11 +144,11 @@ or UI interactions that no one has clicked through yet. None is a hidden failure
 | M1 Prospect management | 10 | 8 | 1 | 1 | 0 |
 | M2 Lead intelligence | 8 | 7 | 0 | 1 | 0 |
 | M3 Outreach | 9 | 6 | 0 | 2 | 1 |
-| M4 Scoring | 8 | 4 | 2 | 2 | 0 |
-| M5 Conversations and CRM | 10 | 7 | 0 | 3 | 0 |
+| M4 Scoring | 8 | 6 | 1 | 1 | 0 |
+| M5 Conversations and CRM | 10 | 7 | 3 | 0 | 0 |
 | M6 Analytics | 8 | 1 | 3 | 4 | 0 |
-| **Total** | **53** | **33** | **6** | **13** | **1** |
+| **Total** | **53** | **35** | **8** | **9** | **1** |
 
-M6 shows the lowest pass rate because four of its eight requirements are dashboard
-rendering, and the dashboard does not exist yet. The data behind every M6 widget is
-verified.
+M6 shows the lowest pass rate because four of its eight requirements depend on KPI
+definitions that are still open (SRS D-10) or on a dashboard walkthrough that has not been
+done. The data behind every M6 widget is verified.

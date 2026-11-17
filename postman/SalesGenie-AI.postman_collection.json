@@ -924,6 +924,31 @@
           }
         },
         {
+          "name": "Field mappings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('no live transport claimed', () => pm.expect(pm.response.json().live_transport_available).to.be.false);",
+                  "pm.test('both providers documented', () => pm.expect(Object.keys(pm.response.json().mappings).sort()).to.eql(['hubspot', 'salesforce']));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/field-mappings",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "field-mappings"]
+            }
+          }
+        },
+        {
           "name": "Validate mapping",
           "event": [
             {
@@ -1011,6 +1036,155 @@
               "raw": "{{base_url}}/api/v1/crm/sync",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Sync simulated - contact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('labelled simulated', () => pm.expect(pm.response.json().mode).to.eql('simulated'));",
+                  "pm.test('contact record type', () => pm.expect(pm.response.json().records[0].payload.record_type).to.eql('contact'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"salesforce\",\n  \"operation\": \"sync_contact\",\n  \"lead_ids\": [{{lead_id}}],\n  \"simulate\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Sync simulated - activity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('activity record type', () => pm.expect(pm.response.json().records[0].payload.record_type).to.eql('activity'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"hubspot\",\n  \"operation\": \"activity_log\",\n  \"lead_ids\": [{{lead_id}}],\n  \"simulate\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Sync simulated - deal stage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('deal record type', () => pm.expect(pm.response.json().records[0].payload.record_type).to.eql('deal'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"salesforce\",\n  \"operation\": \"update_stage\",\n  \"lead_ids\": [{{lead_id}}],\n  \"simulate\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Sync invalid operation (expect 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 Unprocessable', () => pm.response.to.have.status(422));",
+                  "pm.test('code names the problem', () => pm.expect(pm.response.json().code).to.eql('invalid_operation'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"hubspot\",\n  \"operation\": \"delete_everything\",\n  \"lead_ids\": [{{lead_id}}],\n  \"simulate\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "sync"]
+            }
+          }
+        },
+        {
+          "name": "Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('transport labelled simulated', () => pm.expect(pm.response.json().connectivity).to.eql('simulated'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/crm/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "crm", "status"]
             }
           }
         },
