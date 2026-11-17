@@ -31,9 +31,10 @@ canonical API, with the outreach and intelligence controls re-applied.
 | Email delivery | **Not implemented** - returns `501` by design (SRS D-05) | `POST /api/v1/outreach/send` |
 | Lead scoring + explainable factors | Implemented; AI package maps 8 factors onto the 4 SRS dimensions | `tests/test_merge_integration.py`, `tests/test_api_ai.py` |
 | Calibrated conversion probability | **Not implemented** - returns `null` | `lead_scores.conversion_probability` |
-| Conversation summaries | Implemented; default AI package, heuristic fallback | `tests/test_api_ai.py` |
+| Conversation summaries | Implemented; default AI package, heuristic fallback; stored in `sales_interactions` | `tests/test_api_ai.py` |
+| Conversations UI | Implemented; meeting summary, CRM sync status, field mapping, recent-activity feed and history | `frontend/app.py`, `tests/test_frontend_compat.py` |
 | Analytics + follow-ups | Implemented; undefined KPIs return `null` | `tests/test_api_ai.py` |
-| CRM synchronisation transport | **Not implemented** - dry-run, labelled simulator and failure logging (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py` |
+| CRM field mapping + sync audit | Implemented for contacts, activities and deal stages; provider-neutral simulator, `crm_sync_logs` and retry. **No live Salesforce/HubSpot transport** (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py`, `tests/test_api_ai.py` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
 | Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
@@ -234,10 +235,11 @@ Base prefix: `/api/v1`. All endpoints except `POST /auth/token` and `GET /health
 | GET | `/follow-ups` | Recommendations from stored scores |
 | GET | `/recommendations/{lead_id}` | Per-lead recommendation |
 | GET | `/crm/providers` | Configuration state |
+| GET | `/crm/field-mappings` | Documented Salesforce/HubSpot field map |
 | POST | `/crm/mappings/validate` | Validate a field mapping |
 | POST | `/crm/sync/preview` | Dry-run export |
-| POST | `/crm/sync` | Records failure, returns `501` |
-| GET | `/crm/sync-logs` | Sync history |
+| POST | `/crm/sync` | `501` without `simulate`; labelled simulated sync with it |
+| GET | `/crm/sync-logs` | Sync history, including entity type and outcome |
 | POST | `/crm/sync-logs/{id}/retry` | Increment attempt, returns failure |
 | GET | `/health` | Liveness/readiness summary |
 
@@ -349,9 +351,10 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
    labelled uncalibrated and the UI prints "No calibrated model configured".
 3. **Undefined KPIs are `null`.** `pipeline_value`, `average_response_time_days` and
    `average_sales_cycle_days` require decisions the schema cannot yet support (SRS D-10).
-4. **No live CRM transport.** Requests are validated, dry-run previews work, a clearly-labelled
-   simulator maps leads onto a provider-neutral payload, and failures are logged. The simulator
-   never contacts Salesforce or HubSpot.
+4. **No live CRM transport.** Field maps for Salesforce and HubSpot are documented, dry-run
+   previews work, and a clearly-labelled simulator covers contact, activity and deal-stage
+   workflows while writing `crm_sync_logs`. The simulator never contacts Salesforce or HubSpot,
+   and a real connector remains blocked by Decision D-06.
 5. **Live Groq calls are verified; OpenAI and Gemini are not.** The AI path runs the full agent
    workflow through Groq's OpenAI-compatible endpoint with `used_mock=false` when `GROQ_API_KEY`
    is configured. Without a key it uses the deterministic mock provider and reports
