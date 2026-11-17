@@ -1,0 +1,22 @@
+{
+  "weights": {
+    "engagement": 0.1508,
+    "fit": 0.245,
+    "intent": 0.4346,
+    "decision_readiness": 0.1696
+  },
+  "logistic_a": 0.12,
+  "logistic_b": 62.5,
+  "model_version": "m2-scoring-v1",
+  "metrics": {
+    "accuracy": 0.8906,
+    "roc_auc": 0.9401,
+    "log_loss": 0.3069,
+    "objective": 0.9154,
+    "baseline_accuracy": 0.8438,
+    "baseline_roc_auc": 0.9364,
+    "target_accuracy": 0.85,
+    "target_met": true
+  },
+  "tuned_at": "2026-11-05T14:00:30.281674Z"
+}

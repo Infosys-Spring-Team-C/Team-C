@@ -1,0 +1,92 @@
+{
+  "outreach_structural": [
+    {
+      "variant": "v1",
+      "passed": [
+        "asks for strict JSON output",
+        "injects the actual pain points",
+        "forbids invented facts/metrics",
+        "persona-aware framing",
+        "names the target stage/goal"
+      ],
+      "failed": [
+        "constrains subject length",
+        "constrains body length",
+        "requires a single CTA"
+      ],
+      "score": 0.625,
+      "prompt_chars": 386
+    },
+    {
+      "variant": "v2",
+      "passed": [
+        "asks for strict JSON output",
+        "constrains subject length",
+        "constrains body length",
+        "requires a single CTA",
+        "injects the actual pain points",
+        "forbids invented facts/metrics",
+        "persona-aware framing",
+        "names the target stage/goal"
+      ],
+      "failed": [],
+      "score": 1.0,
+      "prompt_chars": 775
+    },
+    {
+      "variant": "v3",
+      "passed": [
+        "asks for strict JSON output",
+        "constrains body length",
+        "requires a single CTA",
+        "injects the actual pain points",
+        "forbids invented facts/metrics",
+        "persona-aware framing",
+        "names the target stage/goal"
+      ],
+      "failed": [
+        "constrains subject length"
+      ],
+      "score": 0.875,
+      "prompt_chars": 840
+    }
+  ],
+  "summary_structural": [
+    {
+      "variant": "v1",
+      "passed": [
+        "asks for strict JSON output",
+        "explicit output schema"
+      ],
+      "failed": [
+        "forbids invented owners/dates",
+        "owner attribution rule",
+        "sentiment per point",
+        "injects numeric output bounds",
+        "internal-speaker awareness"
+      ],
+      "score": 0.286,
+      "prompt_chars": 728
+    },
+    {
+      "variant": "v2",
+      "passed": [
+        "asks for strict JSON output",
+        "explicit output schema",
+        "forbids invented owners/dates",
+        "owner attribution rule",
+        "sentiment per point",
+        "injects numeric output bounds",
+        "internal-speaker awareness"
+      ],
+      "failed": [],
+      "score": 1.0,
+      "prompt_chars": 1544
+    }
+  ],
+  "live": [],
+  "selected": {
+    "outreach": "v2",
+    "summary": "v2"
+  }
+}
