@@ -214,39 +214,26 @@ to show the three healthy services.
 
 ---
 
-## Slide 10 - What this gives the team
+## Slide 10 - Milestone 3 data-layer summary
 
 **On screen**
 
-- A schema that cannot drift silently: the check is in the suite and in CI.
-- An audit trail that survives lead deletion and records the sync mode.
-- A stack that rebuilds from the repository with one command.
-- A generated ER diagram and DDL that reviewers can read without a database.
-- A CI workflow that guards every push.
-
-**Speaker notes**
-
-The value is repeatability. Anyone can clone the repository, run the suite, regenerate the
-diagram and start the stack. The data layer does not depend on one person's machine.
-
----
-
-## Slide 11 - Next steps for the data layer
-
-**On screen**
-
-| Item | Plan |
+| Milestone 3 deliverable | Status |
 |---|---|
-| Migration policy after `0001` | Adopt expand/contract migrations before the next schema change |
-| Secret handling | Move from `.env` to a secrets manager for shared environments |
-| Backup and restore | Run a rehearsal round trip and attach the output to the runbook |
-| Query performance | Add an index review once production-sized data exists |
-| CI adoption | Branch protection so the workflow gates merges |
+| `sales_interactions` table and model | Delivered |
+| `crm_sync_logs` table and model | Delivered |
+| Migration `0001_canonical_schema` covering both | Delivered |
+| Generated DDL and ER diagram | Delivered |
+| Schema drift check in the suite and in CI | Delivered |
+| Three-service Compose baseline | Verified, 3 services healthy |
+| Schema, workspace and PostgreSQL test layers | 8 + 5 + 6 passed |
+| CI workflow for every push | Committed |
 
 **Speaker notes**
 
-These are planned improvements, not gaps in Milestone 3. The milestone deliverable - schema,
-migration, audit tables, deployment baseline and drift control - is in place.
+Close on repeatability. Anyone can clone the repository, run the suite, regenerate the diagram
+and start the stack. The Module 5 data layer - the two tables, the audit trail, the migration and
+the deployment baseline - is in place and verified.
 
 ---
 
