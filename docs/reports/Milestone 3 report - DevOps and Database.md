@@ -33,10 +33,10 @@ Verified in this pass:
 | Generated DDL vs Alembic migration | **identical** (object by object; only `alembic_version` differs) |
 | Schema and workspace tests | **13 passed** (`test_schema.py` 8, `test_db_workspace.py` 5) |
 | PostgreSQL-only tests | **6**, run in the PostgreSQL 16 job |
-| Full suite, PostgreSQL 16 (6 Nov 2026) | **177 passed, 0 skipped** |
+| Full suite, PostgreSQL 16 (6 Nov 2026) | **177 passed, 0 skipped** (177-test suite at the time) |
 | Full suite, SQLite (17 Nov 2026) | **175 passed, 7 skipped** |
 | Compose stack (27 Oct 2026) | **3 services healthy**, API on PostgreSQL 16 |
-| Clean install from declared dependencies (27 Oct 2026) | **37 passed** |
+| Clean install from declared dependencies (27 Oct 2026) | **37 frontend-adapter tests passed** |
 
 Four limits are stated openly and are **not** presented as achievements:
 
@@ -215,9 +215,9 @@ name contains `test`, because the fixture drops and recreates the `public` schem
 | Environment | Command | Result |
 |---|---|---|
 | SQLite (17 Nov 2026) | `python -m pytest -q` | **175 passed, 7 skipped** in 142.01 s |
-| PostgreSQL 16 (6 Nov 2026) | `python -m pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** in 83.29 s |
+| PostgreSQL 16 (6 Nov 2026) | `python -m pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** in 83.29 s (177-test suite at the time) |
 | Schema parity (26 Oct 2026) | scratch-database comparison | **identical** - 110 columns, 6 FKs, 31 indexes |
-| Clean install (27 Oct 2026) | fresh virtual environment, `requirements-dev.txt` | **37 passed** in 24.23 s |
+| Clean install (27 Oct 2026) | fresh virtual environment, `requirements-dev.txt` | **37 frontend-adapter tests passed** in 24.23 s |
 | Compose stack (27 Oct 2026) | `docker compose build; docker compose up -d` | **3 services healthy**, API reports `database_dialect: postgresql` |
 
 The 7 SQLite skips are 6 PostgreSQL-only tests and 1 opt-in LangGraph memory-checkpointer
@@ -242,7 +242,7 @@ test whose optional extra is not installed.
 | Generated DDL matches the migration | Verified | `docs/qa/evidence/2026-10-26-schema-parity.txt` |
 | PostgreSQL 16 migration and round-trip | Verified (6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
 | Compose stack starts and migrates PostgreSQL | Verified (27 Oct) | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
-| Clean install from declared dependencies | Verified (27 Oct) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
+| Clean install from declared dependencies | Verified (27 Oct; 37 frontend-adapter tests) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
 | Module 5 tables present in ORM and migration | Verified | `backend/db.py`, `alembic/versions/0001_canonical_schema.py` |
 | Compose rebuilt on 17 Nov | **Not run** | Docker daemon unavailable |
 | CI pipeline | **Not implemented** | No workflow file in the repository |

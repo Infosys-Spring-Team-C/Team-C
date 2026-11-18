@@ -18,11 +18,11 @@ with the AI/ML Engineer), Day 28 (draft the Milestone 3 test report with the Bac
 Developer) and Day 30 (report submission and sign-off with the Project Lead). This report
 records what was actually executed for those rows and what the evidence supports.
 
-The QA pack is complete for the milestone: a test plan, scenarios with acceptance criteria,
-81 test cases mapped to automated tests, API and database matrices, AI quality validation, a
-regression procedure, a 20-entry defect log, a 25-workflow live UAT, a traceability matrix
-and the formal Milestone 3 test report. Every result quoted here was produced by running a
-command in this repository; nothing is estimated or copied from a plan.
+The QA pack is complete as a deliverable set for the milestone: a test plan, scenarios with
+acceptance criteria, 81 test cases mapped to automated tests, API and database matrices, AI
+quality validation, a regression procedure, a 20-entry defect log, a 25-workflow live UAT, a
+traceability matrix and the formal Milestone 3 test report. Every result quoted here was
+produced by running a command in this repository; nothing is estimated or copied from a plan.
 
 Verified in this pass:
 
@@ -189,7 +189,7 @@ judged layout or styling, so `FR-044` and `AC-023` stay `PARTIAL`.
 |---|---|---|
 | SQLite (17 Nov 2026) | `python -m pytest -q` | **175 passed, 7 skipped** in 142.01 s |
 | Module 5 focus | `pytest ... -k "crm or conversation"` | **14 passed**, 45 deselected |
-| PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** - not repeated |
+| PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** (177-test suite at the time) - not repeated |
 | Contributor AI suite | `pytest -q` in `contributions/mahidhar-ai-layer` | **86 passed** |
 | Contributor backend suite | `pytest -q` in `contributions/team-c-doran` | **24 passed, 1 failed** - BUG-020 |
 | Conversations render | `python scripts/qa_conversations_render.py` | **PASS** - 7 sections, no exception |
@@ -240,7 +240,7 @@ the visual-acceptance reason above.
 | PostgreSQL 16 (177 passed, 6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
 | Compose verification (27 Oct) | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
 | Frontend integration gate (12/12, 27 Oct) | `docs/qa/evidence/2026-10-27-frontend-integration-gate.txt` |
-| Clean install (37 passed, 27 Oct) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
+| Clean install (37 frontend-adapter tests passed, 27 Oct) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
 
 ---
 
