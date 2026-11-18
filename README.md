@@ -438,6 +438,7 @@ Git identity. The CRM mapping/simulator and the AI package are credited to their
 | [`docs/pr-changes.md`](docs/pr-changes.md) | Exact file-level changes and commands per contributor |
 | [`docs/milestone-readiness.md`](docs/milestone-readiness.md) | What can be demonstrated |
 | [`docs/presentations/devops-database/presentation.md`](docs/presentations/devops-database/presentation.md) | Database / DevOps Milestone 3 write-up: schema design, Module 5 tables, drift control, deployment and evidence |
+| [`docs/presentations/qa/presentation.md`](docs/presentations/qa/presentation.md) | QA Milestone 3 write-up: test approach, Module 5 coverage, UAT, UI verification, defects and evidence |
 | [`docs/database-merge-notes.md`](docs/database-merge-notes.md) | Merge of the database contributor's branch and the column-by-column reconciliation |
 | [`salesgenie-db-workspace/README.md`](salesgenie-db-workspace/README.md) | Database deployment baseline: DDL, ER diagram, DB-only Compose |
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
