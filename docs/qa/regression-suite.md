@@ -13,8 +13,8 @@ result differs.
 
 | Suite | Location | Tests | Time (observed) | Needs a database server |
 |---|---|---|---|---|
-| Full automated suite | `tests/` | 182 collected (175 on SQLite + 7 PostgreSQL-only) | ~142 s | No (PostgreSQL module skipped) |
-| PostgreSQL module | `tests/test_postgres.py` | 7 | included | Yes |
+| Full automated suite | `tests/` | 182 collected (175 passed + 7 skipped on SQLite) | ~142 s | No (PostgreSQL module skipped) |
+| PostgreSQL module | `tests/test_postgres.py` | 6 | included | Yes |
 | Database workspace drift | `tests/test_db_workspace.py` | 5 | ~3 s | No |
 | Live UAT | `scripts/qa_uat.py` | 25 workflows | ~15 s | Yes, plus a running API |
 | Conversations page render | `scripts/qa_conversations_render.py` | 7 sections | ~10 s | Yes, plus a running API |
@@ -44,7 +44,8 @@ Expected:
 175 passed, 7 skipped
 ```
 
-The 7 skips are `tests/test_postgres.py`. They are not failures.
+Of the 7 skips, 6 are `tests/test_postgres.py` and 1 is the opt-in LangGraph
+memory-checkpointer test. They are not failures.
 
 ### 2.2 Full regression (PostgreSQL)
 
@@ -58,10 +59,15 @@ python -m pytest -q
 Expected:
 
 ```
-182 passed
+177 passed, 0 skipped   # last observed, 6 November 2026
+181 passed, 1 skipped   # expected with the current 182-test suite; not yet observed
 ```
 
-If the PostgreSQL port is not listening, the 7 tests error at fixture setup with
+The 181/1 line is arithmetic, not an observed run: 175 SQLite passes plus the 6 PostgreSQL
+tests, with the opt-in LangGraph test still skipping. Re-run on a host with PostgreSQL before
+quoting it as a result.
+
+If the PostgreSQL port is not listening, the 6 PostgreSQL tests error at fixture setup with
 `psycopg.errors.ConnectionTimeout`. That is an environment problem, not a code regression;
 start the database and re-run before logging a defect.
 
@@ -80,8 +86,9 @@ Expected:
 
 UAT-22 to UAT-25 cover the Module 5 CRM surface: field mappings for both providers, the
 three simulated sync workflows, the rejected-operation path and the Conversations page
-contract. A run that reports `0 failed` is the current known-good state: **182 passed** on
-PostgreSQL and **175 passed, 7 skipped** on SQLite.
+contract. A run that reports `0 failed` is the current known-good state: **177 passed** on
+PostgreSQL (6 November 2026, before the current 182-test suite) and **175 passed, 7 skipped**
+on SQLite (17 November 2026).
 
 ### 2.4 Conversations page render (headless)
 
@@ -105,12 +112,19 @@ render check, not a browser walkthrough: it does not judge layout or styling. A
 ### 2.5 External AI gate
 
 ```powershell
+# Live Groq (needs the optional openai SDK and a key in .env)
+$env:GROQ_API_KEY = "<key from .env>"
+$env:SALES_GENIE_LLM_PROVIDER = "groq"
+$env:SALES_GENIE_LLM_MODEL = "openai/gpt-oss-120b"
 python scripts/check_ai_integration.py
 ```
 
-Expected when the `ai` package is installed: `6/6 operations passed`.
-When it is absent the script exits `2` with an actionable SKIP message. That exit code is
-the current known state in this repository (**BUG-008**).
+Expected when the `ai` package and the `openai` SDK are installed with a live key:
+`6/6 operations passed`, every line reporting `engine=external` and `used_mock=False`.
+Verified on 17 November 2026 - see `evidence/2026-11-17-ai-integration-gate-live-groq.txt`.
+With no key the provider falls back to the deterministic mock and the script says so.
+When the `ai` package itself is absent the script exits `2` with an actionable SKIP message
+(**BUG-008**, closed: the package is installed and the gate now runs).
 
 ---
 
@@ -118,7 +132,7 @@ the current known state in this repository (**BUG-008**).
 
 | Date | Branch / commit | SQLite | PostgreSQL | UAT | Notes |
 |---|---|---|---|---|---|
-| 17 Nov 2026 | `main` @ `f0596cb` + Module 5 QA | 175 passed, 7 skipped | not run (Docker down) | 25/25 passed | **Current known-good baseline**; BUG-019 fixed |
+| 17 Nov 2026 | `main` @ `4509814` + live gate | 175 passed, 7 skipped | not run (Docker down) | 25/25 passed | **Current known-good baseline**; BUG-019 fixed, BUG-020 logged; live AI gate 6/6 (`used_mock=false`) |
 | 6 Nov 2026 | `main` @ `cf56b9f` + Groq provider | 171 passed, 6 skipped | 177 passed | 20 passed, 1 partial | Milestone 2 baseline |
 | 26 Oct 2026 | `feature/backend-integration` @ merge `fbe1fbc` + reconciliation | 116 passed, 6 skipped | 122 passed | 20 passed, 1 partial | Pre-Milestone 2 baseline |
 | 26 Oct 2026 | `feature/backend-integration` @ `711fee3` | 111 passed, 6 skipped | 117 passed | 20 passed, 1 partial | Pre-merge baseline |

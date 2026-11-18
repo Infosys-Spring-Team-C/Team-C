@@ -23,7 +23,7 @@ estimated, inferred or copied from a plan.
 | Integration testing | [`integration-test-plan.md`](integration-test-plan.md) | API↔DB, API↔AI, API↔frontend contract, container topology |
 | AI quality validation | [`ai-quality-validation.md`](ai-quality-validation.md) | Rubric, determinism, boundary and invalid-output handling |
 | Regression testing | [`regression-suite.md`](regression-suite.md) | Exact commands, expected counts, triggers, triage |
-| Bug tracking | [`bug-log.md`](bug-log.md) | 16 defects with severity, reproduction, status |
+| Bug tracking | [`bug-log.md`](bug-log.md) | 20 defects with severity, reproduction, status |
 | User acceptance testing | [`uat-plan.md`](uat-plan.md), [`uat-results.md`](uat-results.md) | Personas, workflows, live execution results |
 | Milestone reporting | [`milestone-test-report.md`](milestone-test-report.md), [`milestone3-test-report.md`](milestone3-test-report.md) | Summary, coverage, limitations, evidence index, sign-off |
 | Traceability | [`traceability-matrix.md`](traceability-matrix.md) | Requirement → test case → automated test → status |
@@ -40,6 +40,7 @@ estimated, inferred or copied from a plan.
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** | `evidence/2026-11-17-uat-live-milestone3.md` |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception | `evidence/2026-11-17-conversations-headless-render.txt` |
+| Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` | `evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
 | Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 (27 Oct 2026; not rebuilt 17 Nov) | `evidence/2026-10-27-docker-compose-verification.txt` |
 | Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
 | Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
@@ -48,15 +49,17 @@ estimated, inferred or copied from a plan.
 | Defects open | 2 (0 critical, 0 high, 0 medium, 2 low) | [`bug-log.md`](bug-log.md) |
 | Requirements fully verified | 35 of 53 FRs (8 partial, 9 blocked, 1 not run) | [`traceability-matrix.md`](traceability-matrix.md) |
 
-The 7 skipped tests are the PostgreSQL-only module; they run whenever
-`TEST_DATABASE_URL` is set and are the reason the PostgreSQL run collects 182 instead
-of 175.
+The 7 skipped tests are 6 PostgreSQL-only tests (they run whenever
+`TEST_DATABASE_URL` is set) and 1 opt-in LangGraph memory-checkpointer test whose optional
+extra is not installed. The SQLite run therefore passes 175 and skips 7. With the current
+182-test suite, enabling PostgreSQL is expected to give 181 passed and 1 skipped; the last
+observed PostgreSQL run, on the older 177-test suite, was 177 passed with no skips.
 
-These are the **current** figures. The Milestone 3 pass re-ran the canonical suite and the
-full 25-workflow live UAT on 17 November 2026; the PostgreSQL run and the Compose rebuild
-could not be repeated because Docker was unavailable. The database contributor's branch
-(`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026, and the AI and
-frontend packages were integrated on 27 October 2026. See
+These are the **current** figures. The Milestone 3 pass re-ran the canonical suite, the
+full 25-workflow live UAT and the live AI gate on 17 November 2026; the PostgreSQL run and
+the Compose rebuild could not be repeated because Docker was unavailable. The database
+contributor's branch (`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026,
+and the AI and frontend packages were integrated on 27 October 2026. See
 [`../database-merge-notes.md`](../database-merge-notes.md),
 [`milestone-test-report.md`](milestone-test-report.md) and
 [`milestone3-test-report.md`](milestone3-test-report.md).
@@ -82,6 +85,12 @@ python scripts/qa_uat.py --base-url http://127.0.0.1:8011 `
 # 4. Headless render of the Conversations page against the same server
 python scripts/qa_conversations_render.py --base-url http://127.0.0.1:8011 `
   --email qa.admin@example.com --password "<UAT password>"
+
+# 5. Live AI gate against Groq (needs the optional openai SDK and a key)
+$env:GROQ_API_KEY = "<key from .env>"
+$env:SALES_GENIE_LLM_PROVIDER = "groq"
+$env:SALES_GENIE_LLM_MODEL = "openai/gpt-oss-120b"
+python scripts/check_ai_integration.py
 ```
 
 ---
@@ -97,6 +106,7 @@ python scripts/qa_conversations_render.py --base-url http://127.0.0.1:8011 `
 | `evidence/2026-11-17-uat-live-milestone3.json` | Same run, machine readable |
 | `evidence/2026-11-17-conversations-headless-render.txt` | Headless Streamlit render of the Conversations page, 7 sections |
 | `evidence/2026-11-17-browser-walkthrough-attempt.md` | Browser walkthrough attempt, blocked by host memory |
+| `evidence/2026-11-17-ai-integration-gate-live-groq.txt` | Live AI gate, 6/6 operations against Groq, `used_mock=false` |
 | `evidence/2026-10-26-environment.txt` | Python, package versions, PostgreSQL version, commit under test |
 | `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite (pre-merge baseline) |
 | `evidence/2026-10-26-pytest-postgres.txt` | Full pytest output, PostgreSQL 16 (pre-merge baseline) |
@@ -119,3 +129,5 @@ python scripts/qa_conversations_render.py --base-url http://127.0.0.1:8011 `
 4. No accuracy, latency or satisfaction figure is quoted without a defined metric. Where
    the SRS decision is still open (D-10, D-11, D-12, D-13) the report says so.
 5. The heuristic engine is never described as a trained or calibrated model.
+6. A live model call is only claimed when a gate run recorded `used_mock=false`; a UAT run
+   on the heuristic engine is reported as such, not as a model call.

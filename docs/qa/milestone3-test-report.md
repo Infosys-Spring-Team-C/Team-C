@@ -24,6 +24,7 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Canonical pytest suite (SQLite) | **175 passed, 7 skipped** in 142.01 s |
 | Module 5 focused tests | **14 passed** |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
+| Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception |
 | Defects found this pass | 2 (BUG-019 closed; BUG-020 open) |
 | Defects open | 2 (BUG-011 and BUG-020, both Low) |
@@ -49,11 +50,11 @@ Three limits are stated openly and are **not** presented as achievements:
    No one has judged the visual layout of the CRM status, field-map, sync-form and
    activity-feed sections, so the verdict stays `PARTIAL`.
 
-A fourth honesty note: the UAT in this pass ran the deterministic heuristic engine so that
-the results are reproducible. Live Groq summarisation is evidenced by the 6 November 2026
-integration gate (6/6 operations, `used_mock=false`), not by a new call in this pass. The
-host virtual environment does not carry the optional `openai` SDK, so the gate returns a
-documented SKIP here; the container image installs it via `INSTALL_AI_EXTRAS`.
+A fourth honesty note: the UAT workflows in this pass ran the deterministic heuristic engine so
+that the results are reproducible. The live Groq path is proven separately: after installing
+the optional `openai` SDK, the integration gate returned **6/6 operations passed** with
+`used_mock=false` on 17 November 2026, including `summarize_conversation`. The UAT itself did
+not call the live model, and the report does not claim that it did.
 
 ---
 
@@ -69,6 +70,7 @@ documented SKIP here; the container image installs it via `INSTALL_AI_EXTRAS`.
 | Database - `sales_interactions`, `crm_sync_logs`, entity type, JSON metadata | `tests/test_schema.py`, `tests/test_postgres.py` | PASS (SQLite this pass) |
 | Integration - API to AI engine, API to database, API to frontend | suite + live UAT | PASS |
 | Live UAT - 25 workflows over HTTP | `scripts/qa_uat.py` | 25/25 PASS |
+| Live AI gate - six operations against Groq | `scripts/check_ai_integration.py` | 6/6 PASS, `used_mock=false` |
 | Regression - full suite after the QA changes | `pytest -q` | PASS |
 | Deployment - Docker build and Compose | not run | NOT RUN - daemon unavailable |
 
@@ -85,13 +87,20 @@ documented SKIP here; the container image installs it via `INSTALL_AI_EXTRAS`.
 | PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** - not repeated |
 | Contributor AI suite | `pytest -q` inside `contributions/mahidhar-ai-layer` | **86 passed** |
 | Conversations render | `python scripts/qa_conversations_render.py` | **PASS** - 7 sections, no exception |
+| Live AI gate (Groq) | `python scripts/check_ai_integration.py` | **6/6 operations**, `used_mock=false` |
 
-The 7 skips are the PostgreSQL-only module. The only warning is the deliberate short-key JWT
-test.
+Of the 7 skips, 6 are PostgreSQL-only tests and 1 is the opt-in LangGraph
+memory-checkpointer test whose optional extra is not installed. The only warning is the
+deliberate short-key JWT test.
+
+The AI gate ran with the optional `openai` SDK installed and
+`SALES_GENIE_LLM_PROVIDER=groq` / `SALES_GENIE_LLM_MODEL=openai/gpt-oss-120b`; every operation
+reported `engine=external`, `used_mock=False`, including `summarize_conversation`.
 
 Evidence: `docs/qa/evidence/2026-11-17-pytest-sqlite.txt`,
 `docs/qa/evidence/2026-11-17-pytest-module5-focused.txt`,
-`docs/qa/evidence/2026-11-17-conversations-headless-render.txt`.
+`docs/qa/evidence/2026-11-17-conversations-headless-render.txt`,
+`docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt`.
 
 ### 3.2 Live user acceptance
 
@@ -116,6 +125,10 @@ The Module 5 workflows create and delete their own probe prospects, so they are 
 independent and leave no residue.
 
 Evidence: `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` and `.json`.
+
+The UAT ran the deterministic heuristic engine (`SALES_GENIE_AI_BACKEND=heuristic`) so the
+results are reproducible. The live Groq path is proven separately by the integration gate
+(6/6 operations, `used_mock=false`) and not by this UAT run.
 
 ### 3.3 Module 5 requirement verdicts
 
@@ -223,10 +236,9 @@ check and an assertion on `created_at` where the API contract field is `interact
 | 3 | No visual browser walkthrough of the new Conversations sections | Host ran out of memory on 17 Nov 2026 (Streamlit OpenBLAS allocation error, Chromium `ERR_INSUFFICIENT_RESOURCES`); Docker daemon unavailable | FR-044 and AC-023 stay `PARTIAL`. The page renders headlessly with live data, so this is a visual-acceptance gap, not a functional one |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |
 | 5 | Compose stack not rebuilt this pass | Same | Last verification 27 October 2026 |
-| 6 | Live Groq summarisation not re-run this pass | Host venv lacks the optional `openai` SDK | Live-model evidence is the 6 November gate (6/6, `used_mock=false`) |
-| 7 | Summarisation quality not formally reviewed | No rubric or reviewer session | Output is checked for grounding and structure, not for sales-team usefulness |
-| 8 | No performance figure | Measurement conditions undefined (D-11) | No latency claim is made |
-| 9 | No UAT satisfaction score | Survey undefined (D-12) | No satisfaction percentage is claimed |
+| 6 | Summarisation quality not formally reviewed | No rubric or reviewer session | Output is checked for grounding and structure, not for sales-team usefulness |
+| 7 | No performance figure | Measurement conditions undefined (D-11) | No latency claim is made |
+| 8 | No UAT satisfaction score | Survey undefined (D-12) | No satisfaction percentage is claimed |
 
 ---
 
@@ -260,8 +272,8 @@ check and an assertion on `created_at` where the API contract field is `interact
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | A reviewer asks to see a real Salesforce/HubSpot sync | High | Medium | Explain D-06; show the labelled simulator, the field map and the audit rows |
-| A reviewer asks whether the UI was checked | Medium | Medium | Say plainly that the data contract is verified and the walkthrough is pending; open the page if Docker is available |
-| A reviewer asks for a live model call | Medium | Low | Show the 6 November gate (6/6, `used_mock=false`) and the health metadata; do not claim a call made today |
+| A reviewer asks whether the UI was checked | Medium | Medium | Say plainly that the data contract and a headless render are verified and the visual walkthrough is pending; open the page if Docker is available |
+| A reviewer asks for a live model call | Low | Low | Show the 17 November gate (6/6, `used_mock=false`, live Groq) and the health metadata |
 | A reviewer asks why PostgreSQL was not used | Medium | Low | Show `tests/test_postgres.py` and the 6 November run; state the environment limitation |
 | A summary omits an action item a reviewer expects | Medium | Low | The engine only extracts explicit commitments; demonstrate with a transcript that states them |
 | A typo in an operation name is sent | Low | Low | `422 invalid_operation`, no audit row - covered by UAT-24 |
@@ -279,7 +291,8 @@ check and an assertion on `created_at` where the API contract field is `interact
 | Live UAT, 25/25 (JSON) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.json` |
 | Conversations page headless render (PASS) | `docs/qa/evidence/2026-11-17-conversations-headless-render.txt` |
 | Browser walkthrough attempt (BLOCKED) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
-| AI integration gate attempt (documented SKIP) | `docs/qa/evidence/2026-11-17-ai-integration-gate.txt` |
+| AI integration gate attempt (documented SKIP, no SDK) | `docs/qa/evidence/2026-11-17-ai-integration-gate.txt` |
+| AI integration gate, 6/6 live Groq (17 Nov) | `docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
 | AI integration gate, 6/6 live Groq (6 Nov) | `docs/qa/evidence/2026-11-06-ai-integration-gate-live-groq.txt` |
 | Pytest, PostgreSQL 16 (177 passed, 6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
 | Docker Compose verification (27 Oct) | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |

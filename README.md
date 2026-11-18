@@ -277,7 +277,11 @@ OPENAI_API_KEY=
 * `SALES_GENIE_LLM_PROVIDER=grok` is accepted as a historical alias for `groq`; the canonical
   provider name reported by the health endpoint is `groq`.
 * The AI integration gate is `python scripts/check_ai_integration.py`; it exercises all six
-  operations and prints `6/6 operations passed`.
+  operations and prints `6/6 operations passed`. The live Groq run was repeated on
+  17 November 2026 with the optional `openai` SDK installed: every operation reported
+  `used_mock=False` (evidence:
+  `docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt`). Without the SDK the gate
+  exits `2` with an actionable SKIP rather than pretending to pass.
 * Attribution and the list of maintainer corrections: [`docs/ai-handoff.md`](docs/ai-handoff.md),
   [`CREDITS.md`](CREDITS.md).
 
@@ -295,13 +299,13 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgen
 python -m pytest -q
 ```
 
-Verified results in this environment (Python 3.14, 6 November 2026):
+Verified results:
 
-* SQLite only: **171 passed, 6 skipped** (the PostgreSQL module skips itself). This includes the
-  expanded frontend adapter/login/normaliser tests, the intelligence package tests, the Groq
-  provider tests and the merge-integration tests.
-* With PostgreSQL 16 (`TEST_DATABASE_URL` pointing at a `*test*` database): **177 passed,
-  0 skipped**, including schema, migration up/down and dialect-parity checks.
+* SQLite only (17 November 2026): **175 passed, 7 skipped** - 6 PostgreSQL-only tests and 1
+  opt-in LangGraph test. This includes the expanded frontend adapter/login/normaliser tests,
+  the intelligence package tests, the Groq provider tests and the merge-integration tests.
+* With PostgreSQL 16 (6 November 2026): **177 passed, 0 skipped**, including schema,
+  migration up/down and dialect-parity checks.
 
 The PostgreSQL module refuses to run unless the database name contains `test`, and it drops and
 recreates the `public` schema. Exact commands and output: [`docs/test-report.md`](docs/test-report.md).
@@ -431,6 +435,8 @@ Git identity. The CRM mapping/simulator and the AI package are credited to their
 | [`docs/qa/README.md`](docs/qa/README.md) | QA pack index: plan, cases, matrices, defects, UAT, milestone report |
 | [`docs/qa/milestone-test-report.md`](docs/qa/milestone-test-report.md) | Headline test report for the Milestone 2 review |
 | [`docs/qa/milestone3-test-report.md`](docs/qa/milestone3-test-report.md) | Milestone 3 test report for Module 5 (conversations and CRM) |
+| [`docs/reports/Milestone 3 report - QA.md`](docs/reports/Milestone%203%20report%20-%20QA.md) | Milestone 3 QA completion report for Module 5 |
+| [`docs/reports/Milestone 3 report - DevOps and Database.md`](docs/reports/Milestone%203%20report%20-%20DevOps%20and%20Database.md) | Milestone 3 database and deployment completion report for Module 5 |
 | [`docs/qa/bug-log.md`](docs/qa/bug-log.md) | 20 defects with severity, reproduction and status |
 | [`docs/qa/traceability-matrix.md`](docs/qa/traceability-matrix.md) | FR/AC to test case to automated test |
 | [`postman/SalesGenie-AI.postman_collection.json`](postman/SalesGenie-AI.postman_collection.json) | 46-request Postman collection |

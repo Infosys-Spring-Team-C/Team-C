@@ -18,7 +18,7 @@ review so the team does not overclaim.
 | Database schema + migration | **Ready to demonstrate** | `alembic upgrade head` verified on both engines; parity tests |
 | Authentication / RBAC | **Ready to demonstrate** | Login, expiry, forged token, role matrix tested; live with `AUTH_ENABLED=true` |
 | AI intelligence (heuristic) | **Ready to demonstrate** | Deterministic, offline, tested for honesty and validation |
-| AI intelligence (external package) | **Ready to demonstrate with the mock provider** | Package merged; six-operation gate passes |
+| AI intelligence (external package) | **Ready to demonstrate with a live Groq key** | Package merged; six-operation gate passes 6/6 with `used_mock=false` on 17 November 2026 |
 | Outreach generation | **Ready to demonstrate** | Draft generation and persistence tested |
 | Email sending | **Not implemented** | Returns `501` by design |
 | Lead scoring | **Ready to demonstrate as heuristic** | Four factors, explainable, no fake probability |
@@ -85,9 +85,9 @@ Suggested demo script (10 minutes):
 
 | Item | Why it is not claimed yet | Verification needed |
 |---|---|---|
-| Real provider calls (Grok/Gemini/OpenAI) | No credentials used | A controlled test with a real key in a non-production environment |
+| Real provider calls (Gemini/OpenAI) | No credentials used | A controlled test with a real key in a non-production environment. Groq itself is verified: 6/6 gate on 17 November 2026, `used_mock=false` |
 | Long-running/load behaviour | Not tested | Optional: a small load test on `/leads` |
-| Human usability of the UI | The browser check covered the scoring path, not every screen | A person completes login -> import -> intelligence -> outreach -> score -> dashboard |
+| Human usability of the UI | The browser check covered the scoring path, not every screen; the Conversations sections were rendered headlessly but not judged visually | A person completes login -> import -> intelligence -> outreach -> score -> dashboard -> conversations |
 
 ---
 
@@ -120,7 +120,7 @@ decision and the next step", not a demonstration of a stand-in.
 | FR-049..FR-051 CRM | Field maps, simulated sync and audit logs implemented; live transport not | `routers/analytics.py` |
 | FR-052..FR-053 analytics | Implemented; three KPIs pending definition | `services/analytics.py` |
 | NFR-005 auth/RBAC | Implemented, tested | `security.py`, `deps.py`, `routers/auth.py` |
-| NFR-009 testing | Implemented; 182 tests collected (175 SQLite + 7 PostgreSQL-only) | `tests/` |
+| NFR-009 testing | Implemented; 182 tests collected (175 passed + 7 skipped on SQLite) | `tests/` |
 | NFR-010 deployment | Verified: Compose stack builds and all three services are healthy | `Dockerfile`, `docker-compose.yml` |
 
 This snapshot is intentionally conservative; the detailed requirement text remains in

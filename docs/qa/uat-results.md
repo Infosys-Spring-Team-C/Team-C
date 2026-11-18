@@ -48,7 +48,7 @@ the order of the other workflows and they leave no data behind.
 
 **Environment note.** The 26 October run used PostgreSQL 16. This re-run used SQLite because
 Docker and the PostgreSQL cluster were unavailable on the machine. The database-dependent
-behaviour is covered by `tests/test_postgres.py` (7 tests, last green on 6 November 2026),
+behaviour is covered by `tests/test_postgres.py` (6 tests, last green on 6 November 2026),
 not by this run.
 
 ---

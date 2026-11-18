@@ -31,9 +31,10 @@ Milestone 2 delivered its two modules end to end:
   recommendation with timing, channel and content strategy, and the Lead Score and
   Outreach Strategy panels in the UI.
 
-There are **no test failures**. The single open defect is Low severity and an accepted
-scope decision: follow-ups cannot be dismissed (BUG-011), while FR-052 requires the panel,
-which works.
+There are **no test failures**. At the time of this Milestone 2 report the single open defect
+was Low severity and an accepted scope decision: follow-ups cannot be dismissed (BUG-011),
+while FR-052 requires the panel, which works. (The defect log has since gained BUG-020 from
+the Milestone 3 QA pass; see [`milestone3-test-report.md`](milestone3-test-report.md).)
 
 Two limits are stated openly and are not presented as achievements:
 
