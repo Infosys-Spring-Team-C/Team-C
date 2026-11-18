@@ -48,7 +48,7 @@ estimated, inferred or copied from a plan.
 | Contributor AI suite | **86 passed** from its own folder | `contributions/mahidhar-ai-layer` |
 | Contributor backend suite | **24 passed, 1 failed** - BUG-020 (test calls a protected route without a token) | `contributions/team-c-doran` |
 | Defects open | 2 (0 critical, 0 high, 0 medium, 2 low) | [`bug-log.md`](bug-log.md) |
-| Requirements fully verified | 35 of 53 FRs (8 partial, 9 blocked, 1 not run) | [`traceability-matrix.md`](traceability-matrix.md) |
+| Requirements fully verified | 36 of 53 FRs (7 partial, 9 blocked, 1 not run) | [`traceability-matrix.md`](traceability-matrix.md) |
 
 The 7 skipped tests are 6 PostgreSQL-only tests (they run whenever
 `TEST_DATABASE_URL` is set) and 1 opt-in LangGraph memory-checkpointer test whose optional
@@ -106,7 +106,8 @@ python scripts/check_ai_integration.py
 | `evidence/2026-11-17-uat-live-milestone3.md` | Live UAT, 25 workflows, human readable |
 | `evidence/2026-11-17-uat-live-milestone3.json` | Same run, machine readable |
 | `evidence/2026-11-17-conversations-headless-render.txt` | Headless Streamlit render of the Conversations page, 7 sections |
-| `evidence/2026-11-17-browser-walkthrough-attempt.md` | Browser walkthrough attempt, blocked by host memory |
+| `evidence/2026-11-18-browser-walkthrough.md` | Conversations page browser walkthrough: every section rendered with stored data, no console errors, no horizontal overflow |
+| `evidence/2026-11-17-browser-walkthrough-attempt.md` | Earlier browser walkthrough attempt, blocked by host memory |
 | `evidence/2026-11-17-ai-integration-gate-live-groq.txt` | Live AI gate, 6/6 operations against Groq, `used_mock=false` |
 | `evidence/2026-10-26-environment.txt` | Python, package versions, PostgreSQL version, commit under test |
 | `evidence/2026-10-26-pytest-sqlite.txt` | Full pytest output, SQLite (pre-merge baseline) |

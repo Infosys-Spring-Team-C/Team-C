@@ -234,11 +234,12 @@ unchanged, so a typo cannot create a row that claims a sync happened. Evidence:
 *Steps:* read the conversation list, CRM status, field map and sync logs through the same
 paths the page uses.
 *Acceptance:* `AC-023`
-*Verdict:* **PARTIAL** - the data contract is verified end to end and the adapter maps every
-field the page reads (`interaction_date` -> `created_at`). A headless Streamlit render then
-confirmed that all seven sections reach the rendered element tree with live data. The page
-has not been judged visually in a browser: the attempt on 17 November 2026 was blocked by
-host memory. Evidence: `TC-M5-013`, `TC-M5-014`, `TC-M5-015`, UAT-25.
+*Verdict:* **PASS** - the data contract is verified end to end and the adapter maps every
+field the page reads (`interaction_date` -> `created_at`). A headless Streamlit render confirmed
+that all seven sections reach the rendered element tree with live data, and the 18 November 2026
+browser walkthrough rendered every section with stored data, no console errors and no horizontal
+overflow. Pixel-level styling was not screenshotted. Evidence: `TC-M5-013`, `TC-M5-014`,
+`TC-M5-015`, UAT-25, `evidence/2026-11-18-browser-walkthrough.md`.
 
 ---
 

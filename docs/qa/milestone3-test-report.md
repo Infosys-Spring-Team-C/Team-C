@@ -30,8 +30,8 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Conversations page render (headless) | **PASS** - 7 sections, no exception |
 | Defects found this pass | 2 (BUG-019 closed; BUG-020 open) |
 | Defects open | 2 (BUG-011 and BUG-020, both Low) |
-| Requirements fully verified (FR-036 to FR-045) | 7 of 10 |
-| Requirements partly verified | 3 of 10 - two blocked by D-06, one awaiting a visual browser check |
+| Requirements fully verified (FR-036 to FR-045) | 8 of 10 |
+| Requirements partly verified | 2 of 10 - both blocked by D-06 (live CRM transport) |
 
 Three limits are stated openly and are **not** presented as achievements:
 
@@ -47,13 +47,13 @@ Three limits are stated openly and are **not** presented as achievements:
    on the test machine throughout 17 November 2026. The last PostgreSQL run (177 passed)
    and the last Compose verification are from 6 November and 27 October 2026 respectively
    and are cited as such.
-3. **The new Conversations sections have not been seen in a browser.** The page, its adapter
-   routes, the exact data contract it reads and the rendered element tree are verified by
-   tests, by the live UAT and by a headless Streamlit render. A browser walkthrough was
-   attempted on 17 November 2026 and blocked: the host ran out of memory, Streamlit aborted
-   with an OpenBLAS allocation error and Chromium reported `ERR_INSUFFICIENT_RESOURCES`.
-   No one has judged the visual layout of the CRM status, field-map, sync-form and
-   activity-feed sections, so the verdict stays `PARTIAL`.
+3. **The browser walkthrough was completed on 18 November 2026, after the 17 November
+   memory failure was cleared.** The Conversations page was opened in the in-app Chromium
+   browser against a running API and Streamlit server with real stored data: all sections
+   rendered, no console errors and no horizontal overflow. A pixel screenshot was not captured
+   because the desktop window was not visible to the screenshot tool, so styling at other
+   viewport sizes is still unjudged. Evidence:
+   `docs/qa/evidence/2026-11-18-browser-walkthrough.md`.
 
 A fourth honesty note: the UAT workflows in this pass ran the deterministic heuristic engine so
 that the results are reproducible. The live Groq path is proven separately: after installing
@@ -148,12 +148,11 @@ results are reproducible. The live Groq path is proven separately by the integra
 | FR-041 Sync contacts and activities | **PARTIAL** | Simulator covers `sync_contact`, `activity_log` and `upsert`; the opt-in live transport is implemented and unit-tested, but no sandbox run exists (D-06). `test_crm_simulation_covers_contact_activity_and_stage`, `tests/test_crm_transport.py`, UAT-23 |
 | FR-042 Sync deal stage | **PARTIAL** | Simulator covers `update_stage` -> deal record; the live transport maps deal stages and is unit-tested, but no sandbox run exists (D-06) |
 | FR-043 Record CRM sync logs | **PASS** | Attempt, outcome, entity type, timestamp, error detail and attempt count; `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 |
-| FR-044 Conversations UI | **PARTIAL** | Page exists with notes entry, summary, key points, action items, CRM status, field map, sync form, activity feed and history; data contract verified and the page renders all seven sections headlessly with live data; visual browser check still pending |
+| FR-044 Conversations UI | **PASS** | Page renders in a browser with notes entry, summary, key points, action items, CRM status, field map, sync form, activity feed and history; stored data displayed, no console errors, no horizontal overflow (`docs/qa/evidence/2026-11-18-browser-walkthrough.md`). Pixel-level styling at other viewports is unjudged |
 | FR-045 Failure keeps the local record | **PASS** | `test_failed_crm_sync_keeps_the_local_interaction`, UAT-17 |
 
-Acceptance criteria `AC-021` to `AC-025` are covered: `AC-021` to `AC-022` pass, `AC-024`
-and `AC-025` pass, `AC-023` is `PARTIAL` because no one has judged the page in a browser
-yet; the stored data and the rendered sections are both verified.
+Acceptance criteria `AC-021` to `AC-025` all pass. `AC-023` is supported by the stored data, the
+headless render and the 18 November browser walkthrough.
 
 ### 3.4 Module 5 schedule items
 
@@ -204,7 +203,7 @@ check and an assertion on `created_at` where the API contract field is `interact
 ### 3.6 Backend implementation status
 
 The canonical backend contains the full Module 5 API surface. This is an implementation
-statement, not a new verdict on `FR-041`, `FR-042` or `FR-044`, which stay `PARTIAL`.
+statement, not a new verdict on `FR-041` and `FR-042`, which stay `PARTIAL`.
 
 | Group | Routes | Notes |
 |---|---|---|
@@ -257,7 +256,7 @@ Full implementation detail: [`../reports/Milestone 3 report - Backend.md`](../re
 |---|---|---|---|
 | 1 | No verified live CRM synchronisation | Transport implemented; no sandbox or credentials supplied (D-06) | Simulator and audit rows verified; `FR-041`/`FR-042` stay `PARTIAL` |
 | 2 | Field maps not confirmed against a real org | No sandbox org available | Maps use documented vendor field names; a CRM admin must confirm custom fields |
-| 3 | No visual browser walkthrough of the new Conversations sections | Host ran out of memory on 17 Nov 2026 (Streamlit OpenBLAS allocation error, Chromium `ERR_INSUFFICIENT_RESOURCES`); Docker daemon unavailable | FR-044 and AC-023 stay `PARTIAL`. The page renders headlessly with live data, so this is a visual-acceptance gap, not a functional one |
+| 3 | Pixel-level visual styling at other viewport sizes was not judged | The 18 Nov browser walkthrough captured DOM text and layout metrics, but the desktop window was not visible to the screenshot tool | `FR-044`/`AC-023` pass on functional presentation; no claim is made about aesthetics or responsive styling |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |
 | 5 | Compose stack not rebuilt this pass | Same | Last verification 27 October 2026 |
 | 6 | Summarisation quality not formally reviewed | No rubric or reviewer session | Output is checked for grounding and structure, not for sales-team usefulness |
@@ -296,7 +295,7 @@ Full implementation detail: [`../reports/Milestone 3 report - Backend.md`](../re
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | A reviewer asks to see a real Salesforce/HubSpot sync | High | Medium | Explain D-06; show the labelled simulator, the field map and the audit rows |
-| A reviewer asks whether the UI was checked | Medium | Medium | Say plainly that the data contract and a headless render are verified and the visual walkthrough is pending; open the page if Docker is available |
+| A reviewer asks whether the UI was checked | Low | Low | Show the 18 November browser walkthrough (all sections rendered, no console errors, no overflow); say that pixel styling was not screenshotted |
 | A reviewer asks for a live model call | Low | Low | Show the 17 November gate (6/6, `used_mock=false`, live Groq) and the health metadata |
 | A reviewer asks why PostgreSQL was not used | Medium | Low | Show `tests/test_postgres.py` and the 6 November run; state the environment limitation |
 | A summary omits an action item a reviewer expects | Medium | Low | The engine only extracts explicit commitments; demonstrate with a transcript that states them |
@@ -314,7 +313,8 @@ Full implementation detail: [`../reports/Milestone 3 report - Backend.md`](../re
 | Live UAT, 25/25 (Markdown) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` |
 | Live UAT, 25/25 (JSON) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.json` |
 | Conversations page headless render (PASS) | `docs/qa/evidence/2026-11-17-conversations-headless-render.txt` |
-| Browser walkthrough attempt (BLOCKED) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
+| Browser walkthrough (PASS, 18 Nov) | `docs/qa/evidence/2026-11-18-browser-walkthrough.md` |
+| Browser walkthrough attempt (BLOCKED, 17 Nov) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
 | AI integration gate attempt (documented SKIP, no SDK) | `docs/qa/evidence/2026-11-17-ai-integration-gate.txt` |
 | AI integration gate, 6/6 live Groq (17 Nov) | `docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
 | AI integration gate, 6/6 live Groq (6 Nov) | `docs/qa/evidence/2026-11-06-ai-integration-gate-live-groq.txt` |
@@ -346,9 +346,9 @@ Conditions:
    audit rows and the `mode: simulated` note. Do not describe it as a live sync.
 4. Show the refused operation (`422 invalid_operation`) and the refused live sync (`501`).
    Both are deliberate and both are tested.
-5. Do not claim a visual browser walkthrough, a live CRM call, a PostgreSQL run or a live
-   model call that did not happen in this pass. The headless render may be described as a
-   render check, never as a browser walkthrough.
+5. Do not claim a live CRM call, a PostgreSQL run or a live model call that did not happen in
+   this pass. The 18 November browser walkthrough was executed and may be described as such;
+   pixel-level styling was not screenshotted, so do not claim a visual design review.
 6. Re-run the full suite, the UAT and the render check after any further merge, and update
    this report.
 
@@ -362,4 +362,4 @@ Conditions:
 | Backend owner | M Doran | Pending |
 | Database owner | Marri Sai Surekha | Pending - PostgreSQL re-run required |
 | AI owner | Mahidhar Reddy | Pending - summarisation quality review outstanding |
-| Frontend owner | Maheksaba Akbar Shaikh | Pending - visual browser check of the Conversations sections |
+| Frontend owner | Maheksaba Akbar Shaikh | Done - browser walkthrough 18 Nov 2026 (pixel styling not screenshotted) |

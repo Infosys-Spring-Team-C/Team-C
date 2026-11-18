@@ -36,7 +36,7 @@ Verified in this pass:
 | Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` |
 | Conversations page headless render | **PASS** - 7 sections, no exception |
 | Defects | **20 total** - 18 closed, 2 open (both Low) |
-| Requirements fully verified | **35 of 53** (8 `PARTIAL`, 9 `BLOCKED`, 1 `NOT RUN`) |
+| Requirements fully verified | **36 of 53** (7 `PARTIAL`, 9 `BLOCKED`, 1 `NOT RUN`) |
 | Postman collection | **46 requests** in 9 folders, JSON validated |
 
 Four honesty notes govern the numbers above:
@@ -48,9 +48,11 @@ Four honesty notes govern the numbers above:
    Decision D-06 still leaves CRM access unconfirmed. The transport is covered by 16 tests with
    the HTTP layer replaced by a fake, so mapping, retry and audit behaviour are proven, but
    vendor acceptance is not.
-3. **No one has judged the Conversations page visually in a browser.** The data contract and
-   a headless Streamlit render are verified; the browser attempt was blocked by host memory.
-   `FR-044` and `AC-023` therefore stay `PARTIAL`.
+3. **The Conversations page was walked in a browser on 18 November 2026.** The data contract
+   and a headless Streamlit render were already verified; the earlier browser attempt was
+   blocked by host memory. The retry rendered every section with real stored data, no console
+   errors and no horizontal overflow, so `FR-044` and `AC-023` move to `PASS`. A pixel
+   screenshot was not captured, so styling at other viewports is not claimed.
 4. **The 85% scoring-accuracy target is not claimed.** The metric and dataset are undefined
    (D-13). No accuracy, probability or satisfaction percentage is reported as achieved.
 
@@ -97,7 +99,7 @@ because it drops and recreates the `public` schema.
 * `docs/qa/test-cases.md` holds **81 cases**. Each row names the automated test or UAT
   workflow that proves it, so a verdict can be traced to an artefact.
 * `docs/qa/traceability-matrix.md` maps 53 functional requirements to cases, tests and a
-  verdict. Current split: **35 `PASS`, 8 `PARTIAL`, 9 `BLOCKED`, 1 `NOT RUN`**.
+  verdict. Current split: **36 `PASS`, 7 `PARTIAL`, 9 `BLOCKED`, 1 `NOT RUN`**.
 * `docs/qa/api-test-matrix.md` and `docs/qa/database-test-matrix.md` cover status codes,
   negative cases, constraints and migration behaviour; the importable Postman collection
   carries 46 requests.
@@ -157,10 +159,12 @@ route stops resolving. A headless `AppTest` run then creates a probe prospect wi
 summary and three simulated syncs and asserts that all seven Conversations sections reach the
 rendered element tree - **PASS**.
 
-This is a render check, not a browser walkthrough. The walkthrough was attempted three times
-on 17 November 2026 and blocked: the host ran out of memory, Streamlit aborted with an
-OpenBLAS allocation error and Chromium reported `ERR_INSUFFICIENT_RESOURCES`. No one has
-judged layout or styling, so `FR-044` and `AC-023` stay `PARTIAL`.
+The headless render was followed by a real browser walkthrough on 18 November 2026. The page
+was opened in the in-app Chromium browser against a running API and Streamlit server with one
+stored call summary and three simulated sync rows. Every section rendered, the stored data was
+visible, there were no console errors and no horizontal overflow. A screenshot was not captured
+because the desktop window was not visible to the tool, so pixel-level styling at other
+viewports is not claimed. Evidence: `docs/qa/evidence/2026-11-18-browser-walkthrough.md`.
 
 ### 3.7 Defect management
 
@@ -221,11 +225,11 @@ judged layout or styling, so `FR-044` and `AC-023` stay `PARTIAL`.
 | FR-041 Sync contacts and activities | **PARTIAL** | Simulator plus opt-in live transport implemented; no sandbox run captured (D-06) |
 | FR-042 Sync deal stage | **PARTIAL** | Simulator plus opt-in live transport implemented; no sandbox run captured (D-06) |
 | FR-043 Record CRM sync logs | **PASS** | Attempt, outcome, entity type, timestamp, error, attempt count |
-| FR-044 Conversations UI | **PARTIAL** | Page, contract and headless render verified; visual browser check pending |
+| FR-044 Conversations UI | **PASS** | Page, data contract and headless render verified; browser walkthrough on 18 Nov 2026 rendered every section with stored data, no console errors and no overflow. Pixel styling not screenshotted |
 | FR-045 Failure keeps the local record | **PASS** | Failure test, UAT-17 |
 
-Acceptance criteria `AC-021` to `AC-025` are covered: four pass; `AC-023` is `PARTIAL` for
-the visual-acceptance reason above.
+Acceptance criteria `AC-021` to `AC-025` all pass. `AC-023` is supported by the stored data, the
+headless render and the 18 November browser walkthrough.
 
 ### 4.4 Evidence index
 
@@ -238,7 +242,8 @@ the visual-acceptance reason above.
 | Live UAT, 25/25 (Markdown) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` |
 | Live UAT, 25/25 (JSON) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.json` |
 | Conversations headless render (PASS) | `docs/qa/evidence/2026-11-17-conversations-headless-render.txt` |
-| Browser walkthrough attempt (BLOCKED) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
+| Browser walkthrough (PASS, 18 Nov) | `docs/qa/evidence/2026-11-18-browser-walkthrough.md` |
+| Browser walkthrough attempt (BLOCKED, 17 Nov) | `docs/qa/evidence/2026-11-17-browser-walkthrough-attempt.md` |
 | AI gate attempt without SDK (documented SKIP) | `docs/qa/evidence/2026-11-17-ai-integration-gate.txt` |
 | AI gate, 6/6 live Groq (17 Nov) | `docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
 | Contributor backend suite (24 passed, 1 failed) | `docs/qa/evidence/2026-11-17-pytest-doran-contribution.txt` |
@@ -256,7 +261,7 @@ the visual-acceptance reason above.
 |---|---|---|---|
 | 1 | No verified live CRM synchronisation | Transport implemented; no sandbox or credentials supplied (D-06) | `FR-041`/`FR-042` stay `PARTIAL` until a captured live run |
 | 2 | Field maps not confirmed against a real org | No sandbox org available | Maps use documented vendor field names; a CRM admin must confirm custom fields |
-| 3 | No visual browser walkthrough of the Conversations sections | Host ran out of memory on 17 Nov (OpenBLAS allocation error, `ERR_INSUFFICIENT_RESOURCES`); Docker unavailable | `FR-044`/`AC-023` stay `PARTIAL`; the render check is not a substitute |
+| 3 | Pixel-level styling at other viewport sizes not judged | The 18 Nov browser walkthrough captured DOM text and layout metrics, but the desktop window was not visible to the screenshot tool | `FR-044`/`AC-023` pass on functional presentation; no aesthetic or responsive claim is made |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |
 | 5 | Compose stack not rebuilt this pass | Same | Last verification 27 October 2026 |
 | 6 | No accuracy or satisfaction figure | Metric and survey undefined (D-12, D-13) | The 85% targets are not claimed as achieved |
@@ -270,7 +275,7 @@ the visual-acceptance reason above.
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | A reviewer asks to see a real Salesforce/HubSpot sync | High | Medium | Explain D-06; show the labelled simulator, the field map and the audit rows |
-| A reviewer asks whether the UI was checked | Medium | Medium | Say plainly that the contract and a headless render are verified and the visual walkthrough is pending; open the page if Docker is available |
+| A reviewer asks whether the UI was checked | Low | Low | Show the 18 Nov browser walkthrough (all sections, stored data, no console errors); state that pixel styling was not screenshotted |
 | A reviewer asks for a live model call | Low | Low | Show the 17 November gate (6/6, `used_mock=false`, live Groq) and the health metadata |
 | A reviewer asks why PostgreSQL was not used | Medium | Low | Show `tests/test_postgres.py` and the 6 November run; state the environment limitation |
 | A summary omits an action item a reviewer expects | Medium | Low | The engine only extracts explicit commitments; demonstrate with a transcript that states them |
@@ -286,19 +291,21 @@ The QA deliverables for Module 5 are complete and evidenced:
 * the canonical suite green on SQLite, with a PostgreSQL result from 6 November;
 * a live AI gate at 6/6 with `used_mock=false`, and grounding tests that reject invented
   content;
-* a Conversations render check and an honest record of the blocked browser walkthrough;
+* a Conversations render check plus an 18 November browser walkthrough that rendered every
+  section with stored data, no console errors and no overflow;
 * 20 logged defects with 2 open, both Low, and neither hidden.
 
 What remains for the final phase is not new test design but closing the environment gaps:
 rebuild the Compose stack and re-run the PostgreSQL suite on a host with a working Docker
-daemon, walk the Conversations page in a browser and update `FR-044`/`AC-023`, obtain the
-D-12 and D-13 definitions before any accuracy or satisfaction figure is quoted, and complete
-the demo and sign-off rows that the schedule places on 9–10 November 2026.
+daemon, obtain the D-12 and D-13 definitions before any accuracy or satisfaction figure is
+quoted, capture a live CRM sandbox run, and complete the demo and sign-off rows that the
+schedule places on 9–10 November 2026.
 
 ---
 
 **Evidence note:** This report is based on the repository state on 18 November 2026
-(`main` at `4509814` plus these report files) and the captured artefacts under
+(`main` at `825cc1c` plus these report files) and the captured artefacts under
 `docs/qa/evidence/`. The UAT ran the deterministic heuristic engine; the live Groq result
-comes from the separate six-operation gate. No live CRM call, browser walkthrough,
-PostgreSQL re-run, accuracy percentage or satisfaction score is claimed for this pass.
+comes from the separate six-operation gate. The Conversations page was walked in a browser on
+18 November 2026, but no pixel screenshot was captured. No live CRM call, PostgreSQL re-run,
+accuracy percentage or satisfaction score is claimed for this pass.

@@ -87,7 +87,7 @@ Suggested demo script (10 minutes):
 |---|---|---|
 | Real provider calls (Gemini/OpenAI) | No credentials used | A controlled test with a real key in a non-production environment. Groq itself is verified: 6/6 gate on 17 November 2026, `used_mock=false` |
 | Long-running/load behaviour | Not tested | Optional: a small load test on `/leads` |
-| Human usability of the UI | The browser check covered the scoring path, not every screen; the Conversations sections were rendered headlessly but not judged visually | A person completes login -> import -> intelligence -> outreach -> score -> dashboard -> conversations |
+| Human usability of the UI | The browser check covered the scoring path and the Conversations page; pixel-level styling of other screens was not judged | A person completes login -> import -> intelligence -> outreach -> score -> dashboard -> conversations |
 
 ---
 
@@ -148,9 +148,9 @@ The milestone can be called complete when all of the following are true:
 - [x] Backend branch merged to `main` after review.
 - [x] `docker compose up --build` succeeds and `GET /api/v1/health` returns `status: ok`.
 - [x] The external AI engine has been exercised once with the merged `ai/` package (mock provider).
-- [x] The frontend is merged and the scoring path was completed in a browser; a full human
-      acceptance pass over every screen is still pending.
-- [ ] CI runs the test suite on every PR.
+- [x] The frontend is merged; the scoring path and the Conversations page were completed in a
+      browser. A full human acceptance pass over every screen is still pending.
+- [ ] CI runs the test suite on every PR (workflow added 18 November 2026, not yet executed).
 - [x] The documentation in `docs/` reflects the merged state.
 
 The accurate statement today is: **backend, database, AI integration, frontend and the Docker

@@ -278,8 +278,8 @@ and are recorded as limitations here rather than presented as done.
 ---
 
 **Evidence note:** This report is based on the repository state on 18 November 2026
-(`main` at `4509814` plus these report files) and the captured artefacts under
+(`main` at `825cc1c` plus these report files) and the captured artefacts under
 `docs/qa/evidence/`. The PostgreSQL result is from 6 November 2026 and the Compose result
-from 27 October 2026; neither was re-run on 17 November 2026 because the Docker daemon was
-unavailable. Scheduled tasks are not treated as evidence of completion, and no live
-Salesforce or HubSpot call is claimed.
+from 27 October 2026; neither was re-run on 18 November 2026 because the Docker daemon was
+unavailable. The CI workflow was added but not executed. Scheduled tasks are not treated as
+evidence of completion, and no live Salesforce or HubSpot call is claimed.

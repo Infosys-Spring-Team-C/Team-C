@@ -1,6 +1,6 @@
 # Requirements Traceability Matrix
 
-**Date:** 17 November 2026 (Module 5 rows re-verified for Milestone 3)
+**Date:** 18 November 2026 (Module 5 rows re-verified for Milestone 3; browser walkthrough added)
 **Author:** Mohamed Isharak M
 **Source of requirements:** [`../SRS.md`](../SRS.md) - functional requirements `FR-001` to
 `FR-053` and acceptance criteria `AC-001` to `AC-030`
@@ -14,8 +14,8 @@
 
 | Verdict | Functional requirements (53) | Acceptance criteria (30) |
 |---|---|---|
-| PASS | 35 | 19 |
-| PARTIAL | 8 | 7 |
+| PASS | 36 | 20 |
+| PARTIAL | 7 | 6 |
 | BLOCKED | 9 | 4 |
 | NOT RUN | 1 | 0 |
 | FAIL | 0 | 0 |
@@ -24,22 +24,23 @@ The frontend was scored before it was merged. It now exists, the adapter passes 
 checks, and the scoring screen was exercised in a browser. Only the requirements that were
 directly observed end to end have moved to `PASS` (`FR-032`, `FR-033`, `AC-019`).
 
-**Milestone 3 update.** The three Module 5 rows that were `BLOCKED` for a missing UI or a
-missing sync path moved to `PARTIAL`, not `PASS`:
+**Milestone 3 update.** The Module 5 rows that were `BLOCKED` for a missing UI or a missing
+sync path are now scored:
 
-* `FR-041`/`FR-042` now have a working, audited, clearly-labelled **simulator** for contact,
-  activity and deal-stage workflows, plus an opt-in live transport with retry and audit. The
-  transport has never been pointed at a real org, so the live half stays open under Decision
-  D-06.
-* `FR-044` has the Conversations page, including the CRM status, field-mapping and activity
-  sections. The API contract behind it is verified and a headless Streamlit render confirms
-  the seven sections reach the page with live data. A visual browser walkthrough was
-  attempted on 17 November 2026 and blocked by host memory, so the visual check is still
-  outstanding.
+* `FR-041`/`FR-042` moved to `PARTIAL`: a working, audited, clearly-labelled **simulator** for
+  contact, activity and deal-stage workflows, plus an opt-in live transport with retry and
+  audit. The transport has never been pointed at a real org, so the live half stays open under
+  Decision D-06.
+* `FR-044` and `AC-023` moved to `PASS`. The Conversations page, the API contract behind it and
+  a headless Streamlit render were already verified; on 18 November 2026 the page was then
+  walked in a browser with stored data, and every section rendered with no console errors and
+  no horizontal overflow. Evidence: `evidence/2026-11-18-browser-walkthrough.md`. Pixel-level
+  styling at other viewports is not claimed.
 
-The remaining `BLOCKED` rows are the CRM transport (SRS D-06), the undefined accuracy
-dataset (SRS D-13), or UI interactions that no one has clicked through yet. None is a hidden
-failure.
+The remaining `BLOCKED` rows are the undefined accuracy dataset (SRS D-13), the demo and
+sign-off ceremony, or UI interactions that no one has clicked through yet. The CRM transport
+rows are `PARTIAL`, not `BLOCKED`, because the code exists but no sandbox run was captured.
+None of these is a hidden failure.
 
 ---
 
@@ -90,7 +91,7 @@ failure.
 | FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage`, `tests/test_crm_transport.py`, UAT-23 | PARTIAL - simulator verified; live transport implemented and unit-tested, no sandbox run (D-06) |
 | FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage` (`update_stage`), `tests/test_crm_transport.py`, UAT-23 | PARTIAL - simulator verified; live transport implemented and unit-tested, no sandbox run (D-06) |
 | FR-043 | Record CRM sync logs | M5 | TC-M5-008, TC-M5-011 | `test_crm_simulation_covers_contact_activity_and_stage`, `test_crm_sync_records_failure_and_retry`, UAT-23 | PASS - attempt, outcome, entity type, timestamp and error detail |
-| FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014, TC-M5-015 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25, `scripts/qa_conversations_render.py` | PARTIAL - page, data contract and headless render verified; visual browser check pending |
+| FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014, TC-M5-015 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25, `scripts/qa_conversations_render.py`, browser walkthrough 18 Nov 2026 | PASS - page, data contract and headless render verified; browser walkthrough rendered every section with stored data, no console errors and no horizontal overflow (pixel styling not screenshotted) |
 | FR-045 | Handle CRM failure without losing the local record | M5 | TC-M5-009 | `test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |
 | FR-046 | Display conversion rate | M6 | TC-M6-001 | `test_analytics_returns_only_defensible_metrics`, UAT-18 | PASS |
 | FR-047 | Display pipeline value | M6 | TC-M6-002 | `null` + `pending_definition` while D-10 is open | PARTIAL |
@@ -129,7 +130,7 @@ failure.
 | AC-020 | Scoring accuracy meets the agreed target | TC-M4-007 | BLOCKED - D-13 |
 | AC-021 | Notes produce summary, points and actions | TC-M5-001, TC-M5-002, TC-M5-003 | PASS |
 | AC-022 | Empty/invalid notes give a clear message, no fabrication | TC-M5-005, TC-M5-006 | PASS |
-| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004, TC-M5-014, TC-M5-015 | PARTIAL - stored, listed, contract-verified and rendered headlessly; visual browser check pending |
+| AC-023 | Interactions stored and listed in the Conversations UI | TC-M5-004, TC-M5-014, TC-M5-015 | PASS - stored, listed, contract-verified, rendered headlessly and confirmed in the 18 Nov 2026 browser walkthrough |
 | AC-024 | Sync attempts, successes and failures logged | TC-M5-008, TC-M5-011, TC-M5-012 | PASS |
 | AC-025 | Failed sync does not delete or corrupt the local record | TC-M5-009 | PASS |
 | AC-026 | All four KPIs render with agreed definitions | TC-M6-001 to TC-M6-005 | BLOCKED - three definitions open (D-10); rendering not walked through |

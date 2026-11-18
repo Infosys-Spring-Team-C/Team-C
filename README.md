@@ -37,7 +37,7 @@ canonical API, with the outreach and intelligence controls re-applied.
 | CRM field mapping + sync audit | Implemented for contacts, activities and deal stages; provider-neutral simulator, optional live Salesforce/HubSpot transport, `crm_sync_logs` and retry. Live transport is **not yet verified against a real org** (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py`, `backend/services/crm_transport.py`, `tests/test_crm_transport.py` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
-| Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
+| Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified (see `docs/qa/evidence/2026-11-18-browser-walkthrough.md`) | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
 
 Full details: [`docs/audit-report.md`](docs/audit-report.md),
 [`docs/test-report.md`](docs/test-report.md),
