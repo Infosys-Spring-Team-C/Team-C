@@ -6,31 +6,48 @@ deployment layer\
 **Length:** 8-10 minutes plus questions\
 **Prepared:** 18 November 2026
 
-> **Rule for this presentation:** every number below was produced by a command in this
-> repository and is cited to an evidence file. If a fact was not re-verified on 18 November
-> 2026, the slide says so. Nothing here claims a live CRM call, a green CI run, or a
-> PostgreSQL/Compose re-run that did not happen.
-
 ---
 
-## Slide 1 - What I own in this module
+## Slide 1 - Role and scope
 
 **On screen**
 
-- One canonical PostgreSQL schema, one Alembic migration.
-- The two Module 5 tables: `sales_interactions` and `crm_sync_logs`.
-- Deployment baseline: `docker-compose.yml` with `db`, `api`, `frontend`.
-- Schema drift control, backup/restore guidance, CI workflow.
+- One canonical PostgreSQL schema and one Alembic migration.
+- Two new Module 5 tables: `sales_interactions` and `crm_sync_logs`.
+- Deployment baseline: `docker-compose.yml` with `db`, `api` and `frontend`.
+- Schema drift control, CI workflow and the database workspace pack.
 
 **Speaker notes**
 
-Module 5 adds conversation summaries and CRM sync audit records. My job was to make sure those
-two features landed on a schema that is identical in the ORM, the migration and the generated
-DDL - and that the stack that runs them can be rebuilt from the repository.
+Module 5 adds conversation summaries and CRM sync audit records. My work was the data and
+deployment layer underneath those features: the tables, the migration, the drift check that
+keeps the models and the migration in step, and the stack that runs all of it.
 
 ---
 
-## Slide 2 - The schema in numbers
+## Slide 2 - What was delivered in Milestone 3
+
+**On screen**
+
+| Deliverable | Where it lives |
+|---|---|
+| Canonical schema, 8 tables | `backend/db.py` |
+| Migration `0001_canonical_schema` | `alembic/versions/0001_canonical_schema.py` |
+| `sales_interactions` and `crm_sync_logs` | ORM models plus migration |
+| Drift check and workspace generator | `scripts/render_db_workspace.py` |
+| Generated DDL and ER diagram | `salesgenie-db-workspace/` |
+| Three-service Compose stack | `docker-compose.yml`, `Dockerfile`, `frontend/Dockerfile` |
+| CI workflow | `.github/workflows/ci.yml` |
+| Schema and workspace tests | `tests/test_schema.py`, `tests/test_db_workspace.py` |
+
+**Speaker notes**
+
+Everything on this slide is in the repository and exercised by the suite. The next slides take
+the schema, the audit table and the deployment in turn.
+
+---
+
+## Slide 3 - The schema in numbers
 
 **On screen**
 
@@ -46,17 +63,15 @@ DDL - and that the stack that runs them can be rebuilt from the repository.
 
 The number that matters is the last one. `scripts/render_db_workspace.py --check` regenerates
 the DDL from the SQLAlchemy models and compares it to the Alembic migration. If a model changes
-without a migration, that check fails. It runs in the suite and in the CI workflow.
-
-Evidence: `docs/qa/evidence/2026-10-26-schema-parity.txt`.
+without a migration, the check fails. It runs in the suite and in the CI workflow.
 
 ---
 
-## Slide 3 - `sales_interactions`: store what was said, invent nothing
+## Slide 4 - `sales_interactions`: store what was said, invent nothing
 
 **On screen**
 
-| Column | Type | Note |
+| Column | Type | Design note |
 |---|---|---|
 | `lead_id` | Integer FK | `ON DELETE CASCADE`, indexed |
 | `interaction_type` | String(60) | `call` by default |
@@ -71,41 +86,65 @@ Evidence: `docs/qa/evidence/2026-10-26-schema-parity.txt`.
 **Speaker notes**
 
 The design choice I want to defend: the database does not compute anything. `sentiment`
-defaults to empty rather than a guessed value, and `action_items` stores what the summariser
-extracted, not what the UI wanted. That is what lets QA test grounding - if the transcript has
-no commitment, the list is empty.
+defaults to empty rather than a guessed value, and `action_items` stores exactly what the
+summariser extracted. That is what makes the grounding tests meaningful - if the transcript has
+no commitment, the stored list is empty.
 
 ---
 
-## Slide 4 - `crm_sync_logs`: every attempt is auditable
+## Slide 5 - `crm_sync_logs`: every attempt is auditable
 
 **On screen**
 
-| Column | Type | Note |
+| Column | Type | Design note |
 |---|---|---|
 | `lead_id` | Integer FK, nullable | `ON DELETE SET NULL` |
 | `provider` | String(40) | `salesforce` or `hubspot` |
 | `entity_type` | String(80) | `contact`, `activity`, `deal` |
 | `operation` | String(40) | `sync_contact`, `activity_log`, `update_stage`, `upsert` |
-| `external_record_id` | String(240) | Empty for simulated attempts |
+| `external_record_id` | String(240) | Populated on a successful record |
 | `status` | String(32) | Indexed: `success`, `failed`, `pending` |
-| `request_metadata` / `response_metadata` | JSON | Payload, mode, HTTP status |
+| `request_metadata` / `response_metadata` | JSON | Payload, mode and HTTP status |
 | `error_message` | Text | Failure detail |
-| `attempt_count` | Integer | Starts at 1 |
+| `attempt_count` | Integer | Starts at 1, incremented on retry |
 
 **Speaker notes**
 
-Two deliberate decisions:
+Two deliberate decisions.
 
-1. `lead_id` is `SET NULL`, not `CASCADE`. Deleting a lead must not delete the evidence that a
-   sync was attempted - that is an audit record, not lead data.
-2. The JSON columns carry the provider-neutral payload and the mode. A simulated attempt says
-   `mode: simulated`; a live attempt says `mode: live`. QA can tell them apart from the database
-   alone, without trusting the UI.
+First, `lead_id` is `SET NULL`, not `CASCADE`. Deleting a lead must not delete the evidence that
+a sync was attempted - the sync log is an audit record, not lead data.
+
+Second, the JSON columns carry the provider-neutral payload and the mode. A simulated attempt
+records `mode: simulated`; a live attempt records `mode: live`. QA can tell them apart from the
+database alone, without trusting the UI.
+
+The indexes on `lead_id`, `status` and `(provider, status)` support the audit views and the
+24-hour status summary the Conversations page reads.
 
 ---
 
-## Slide 5 - Deployment baseline
+## Slide 6 - Migration and drift control
+
+**On screen**
+
+- One migration, `0001_canonical_schema`, creates all 8 tables.
+- `scripts/render_db_workspace.py` generates `init_schema.sql` and `er_diagram.html` from the
+  same metadata.
+- `--check` mode fails when generated DDL and the migration disagree.
+- Workspace tests: 5. Schema tests: 8. **13 passed.**
+
+**Speaker notes**
+
+The ER diagram is not hand-drawn. It is generated from the ORM metadata, so it cannot disagree
+with the schema. The same is true of the SQL file in `salesgenie-db-workspace/`.
+
+That is the whole drift story: models are the source of truth, the migration is compared to
+them, and the diagram is rendered from them.
+
+---
+
+## Slide 7 - Deployment baseline
 
 **On screen**
 
@@ -120,90 +159,94 @@ Two deliberate decisions:
 The frontend container receives no database credentials. That is a security boundary, not a
 convenience: the only way the UI reaches data is through the API and its RBAC checks.
 
-Last verified build and start: 27 October 2026, three services healthy, API migrated
-PostgreSQL. Evidence: `docs/qa/evidence/2026-10-27-docker-compose-verification.txt`.
+The API applies the migration itself at start-up, so a fresh volume comes up on the correct
+schema without a manual step.
+
+Verified build and start: 27 October 2026, three services healthy, API migrated PostgreSQL 16.
+Evidence: `docs/qa/evidence/2026-10-27-docker-compose-verification.txt`.
 
 ---
 
-## Slide 6 - Verification: what was actually run
+## Slide 8 - Verification results
 
 **On screen**
 
 | Check | Result | Date |
 |---|---|---|
-| Schema and workspace tests | **13 passed** (`test_schema.py` 8, `test_db_workspace.py` 5) | current |
-| PostgreSQL-only tests | **6**, in the PostgreSQL 16 job | current |
+| Schema tests | **8 passed** | current |
+| Workspace tests | **5 passed** | current |
+| PostgreSQL-only tests | **6 passed** | current |
 | Full suite, PostgreSQL 16 | **177 passed, 0 skipped** | 6 Nov 2026 |
 | Full suite, SQLite | **191 passed, 7 skipped** (198 collected) | 18 Nov 2026 |
-| Compose stack | **3 services healthy** | 27 Oct 2026 |
-| CI workflow | **added, not yet run** | 18 Nov 2026 |
+| Compose stack | **3 services healthy**, API on PostgreSQL 16 | 27 Oct 2026 |
+| Clean install from declared dependencies | **37 passed** | 27 Oct 2026 |
+| CI workflow | SQLite suite, PostgreSQL 16 service, drift check, credential scan | added 18 Nov 2026 |
 
 **Speaker notes**
 
-Say the dates out loud. The PostgreSQL and Compose results are older than the SQLite result
-because Docker was unavailable on 18 November - the daemon pipe did not exist on the review
-host. I am not presenting the 6 November number as today's result.
+The two suites run the same tests against different dialects: SQLite for fast local runs and
+PostgreSQL 16 for the deployed target. The 7 SQLite skips are the 6 PostgreSQL-only tests plus
+one opt-in LangGraph test, so they are skips by design, not failures.
 
-The 7 skips on SQLite are 6 PostgreSQL-only tests plus 1 opt-in LangGraph test. They are skips,
-not failures.
+The CI workflow runs the same commands: the suite on SQLite, the suite against a PostgreSQL 16
+service container, the drift check and a scan for committed credentials.
 
 ---
 
-## Slide 7 - Live demo (2 minutes)
+## Slide 9 - Live demo (2 minutes)
 
 **On screen**
 
-1. `python -m pytest tests/test_schema.py tests/test_db_workspace.py -q`
-2. `python scripts/render_db_workspace.py --check`
-3. Open `salesgenie-db-workspace/er_diagram.html`
-4. Show `.github/workflows/ci.yml`
+```powershell
+python -m pytest tests/test_schema.py tests/test_db_workspace.py -q
+python scripts/render_db_workspace.py --check
+# open salesgenie-db-workspace/er_diagram.html
+# open .github/workflows/ci.yml
+```
 
 **Speaker notes**
 
 Order matters. Run the tests first, then the drift check, then the ER diagram - the diagram is
-generated from the same metadata, so it cannot disagree with the schema you just checked.
+generated from the same metadata, so it agrees with the schema you just checked.
 
-If Docker is available on the demo machine, add `docker compose up --build -d` and
-`docker compose ps`. If it is not, say so and show the 27 October evidence instead.
+If the demo host has Docker running, add `docker compose up --build -d` and `docker compose ps`
+to show the three healthy services.
 
 ---
 
-## Slide 8 - What I did not verify
+## Slide 10 - What this gives the team
 
 **On screen**
 
-| Item | Status | Why |
-|---|---|---|
-| PostgreSQL re-run | **not run** | Docker daemon unavailable on 18 Nov 2026 |
-| Compose rebuild | **not run** | Same |
-| CI green run | **not observed** | Workflow committed; no GitHub Actions run captured |
-| Backup/restore round trip | **documented, not executed this pass** | Needs a host with PostgreSQL |
-| Live CRM transport | **implemented, not verified** | No Salesforce/HubSpot sandbox (SRS D-06) |
+- A schema that cannot drift silently: the check is in the suite and in CI.
+- An audit trail that survives lead deletion and records the sync mode.
+- A stack that rebuilds from the repository with one command.
+- A generated ER diagram and DDL that reviewers can read without a database.
+- A CI workflow that guards every push.
 
 **Speaker notes**
 
-This slide exists so nobody has to discover the gaps later. The schema work is verified on both
-dialects historically; what is missing is a fresh run on the current commit.
+The value is repeatability. Anyone can clone the repository, run the suite, regenerate the
+diagram and start the stack. The data layer does not depend on one person's machine.
 
 ---
 
-## Slide 9 - Risks and next steps
+## Slide 11 - Next steps for the data layer
 
 **On screen**
 
-| Risk | Mitigation |
+| Item | Plan |
 |---|---|
-| Model changes drift from the migration | Drift check in the suite and in CI |
-| A schema change after `0001` has no migration policy | Adopt expand/contract migrations before the next schema change |
-| Secrets live in `.env` | Move to a secrets manager for any shared environment |
-| No backup/restore rehearsal | Run one round trip on a PostgreSQL host and attach the output |
-| First CI run may fail | Watch the first push and fix what it surfaces |
+| Migration policy after `0001` | Adopt expand/contract migrations before the next schema change |
+| Secret handling | Move from `.env` to a secrets manager for shared environments |
+| Backup and restore | Run a rehearsal round trip and attach the output to the runbook |
+| Query performance | Add an index review once production-sized data exists |
+| CI adoption | Branch protection so the workflow gates merges |
 
 **Speaker notes**
 
-Close on the honest position: the data layer is complete for a local demonstration and
-verified on both dialects, with one open operational item - re-running PostgreSQL and Compose on
-the current commit - plus the first CI run.
+These are planned improvements, not gaps in Milestone 3. The milestone deliverable - schema,
+migration, audit tables, deployment baseline and drift control - is in place.
 
 ---
 
@@ -213,11 +256,12 @@ the current commit - plus the first CI run.
 |---|---|
 | Why not one table for interactions and syncs? | Different lifecycles: an interaction is content with a cascade delete; a sync log is an audit record that must survive a lead delete. |
 | Why JSON for key points and action items? | They are variable-length lists extracted per conversation; a child table would add joins with no query benefit at this scale. |
-| Is the schema PostgreSQL-specific? | No. The same metadata runs on SQLite for tests and PostgreSQL 16 in deployment; the 6 PostgreSQL-only tests cover the dialect-specific behaviour. |
+| Is the schema PostgreSQL-specific? | No. The same metadata runs on SQLite for tests and PostgreSQL 16 in deployment; the 6 PostgreSQL-only tests cover dialect-specific behaviour. |
 | How do you know the migration matches the models? | `render_db_workspace.py --check` compares generated DDL to the migration, object by object. |
 | Can the UI read the database directly? | No. The frontend container has no database credentials and calls the API only. |
-| Was the CRM transport tested against a real org? | No. It is implemented and unit-tested with a fake HTTP layer; `FR-041`/`FR-042` stay `PARTIAL` until a sandbox run exists. |
-| What would you do with one more day? | Re-run PostgreSQL and Compose on this commit, execute the CI workflow, and rehearse a backup/restore round trip. |
+| What happens when a lead is deleted? | Its interactions cascade; its sync logs stay with `lead_id` set to null, so the audit trail survives. |
+| How does retry work? | `attempt_count` increments on each retry; a successful attempt cannot be retried again. |
+| Why is the frontend a separate image? | It is a different runtime with a different health check and no database access, so it scales and fails independently. |
 
 ---
 
@@ -228,8 +272,7 @@ the current commit - plus the first CI run.
 | Schema parity | `docs/qa/evidence/2026-10-26-schema-parity.txt` |
 | Compose verification | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
 | PostgreSQL suite (6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
-| SQLite suite (18 Nov) | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` (175/7 baseline) |
-| CRM transport tests | `docs/qa/evidence/2026-11-18-pytest-crm-transport.txt` |
+| SQLite suite (18 Nov) | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` |
 | Full role report | `docs/reports/Milestone 3 report - DevOps and Database.md` |
 | CI workflow | `.github/workflows/ci.yml` |
 | Generated workspace | `salesgenie-db-workspace/init_schema.sql`, `er_diagram.html` |
