@@ -21,7 +21,8 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 
 | Signal | Result |
 |---|---|
-| Canonical pytest suite (SQLite) | **175 passed, 7 skipped** in 142.01 s |
+| Canonical pytest suite (SQLite) | **191 passed, 7 skipped** (18 Nov 2026) |
+| CRM live-transport tests | **16 passed**, no network |
 | Module 5 focused tests | **14 passed** - 10 CRM-related (9 API + 1 adapter), 4 conversation-related (3 API + 1 adapter) |
 | Module 5 backend routes | **12 implemented** - 8 CRM, 4 conversation |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
@@ -34,11 +35,14 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 
 Three limits are stated openly and are **not** presented as achievements:
 
-1. **No live Salesforce or HubSpot call exists.** Decision D-06 leaves CRM access
-   unconfirmed. What is delivered is a provider-neutral payload mapping, a documented field
-   map for both vendors, and a deterministic simulator that writes real audit rows. The
-   simulator is labelled `mode: "simulated"` in the response and in the database, and its
-   note says that no Salesforce or HubSpot request was made.
+1. **No live Salesforce or HubSpot call has been made.** Decision D-06 leaves CRM access
+   unconfirmed. A live transport is now implemented
+   (`backend/services/crm_transport.py`) and is opt-in behind `CRM_LIVE_ENABLED=true` plus
+   credentials, but it has never been pointed at a real org. What is verified is a
+   provider-neutral payload mapping, a documented field map for both vendors, a deterministic
+   simulator that writes real audit rows, and 16 transport tests with a fake HTTP layer. The
+   simulator is labelled `mode: "simulated"` in the response and in the database, and its note
+   says that no Salesforce or HubSpot request was made.
 2. **The PostgreSQL run and the Docker rebuild were not repeated.** Docker was unavailable
    on the test machine throughout 17 November 2026. The last PostgreSQL run (177 passed)
    and the last Compose verification are from 6 November and 27 October 2026 respectively
@@ -83,7 +87,8 @@ not call the live model, and the report does not claim that it did.
 
 | Environment | Command | Result |
 |---|---|---|
-| SQLite (this pass) | `python -m pytest -q` | **175 passed, 7 skipped** in 142.01 s |
+| SQLite (this pass) | `python -m pytest -q` | **191 passed, 7 skipped** (198 collected) on 18 Nov; the 17 Nov run was 175/7 before the transport tests |
+| CRM live transport | `pytest tests/test_crm_transport.py -q` | **16 passed**, fake HTTP layer, no network |
 | Module 5 focus | `pytest tests/test_api_ai.py tests/test_frontend_compat.py -k "crm or conversation"` | **14 passed**, 45 deselected |
 | PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** - not repeated |
 | Contributor AI suite | `pytest -q` inside `contributions/mahidhar-ai-layer` | **86 passed** |
@@ -140,8 +145,8 @@ results are reproducible. The live Groq path is proven separately by the integra
 | FR-038 Extract action items | **PASS** | Same test; `action_items` asserted, no invention |
 | FR-039 Store sales interactions | **PASS** | `test_conversation_summary_persists_interaction`, UAT-16, UAT-25 |
 | FR-040 CRM field mapping | **PASS** (documented) | `test_crm_field_mappings_are_documented_for_both_providers`, UAT-22. Vendor confirmation is still pending, so the map is documentation-grade, not org-validated |
-| FR-041 Sync contacts and activities | **PARTIAL** | Simulator covers `sync_contact`, `activity_log` and `upsert`; no live transport (D-06). `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 |
-| FR-042 Sync deal stage | **PARTIAL** | Simulator covers `update_stage` -> deal record; no live transport (D-06) |
+| FR-041 Sync contacts and activities | **PARTIAL** | Simulator covers `sync_contact`, `activity_log` and `upsert`; the opt-in live transport is implemented and unit-tested, but no sandbox run exists (D-06). `test_crm_simulation_covers_contact_activity_and_stage`, `tests/test_crm_transport.py`, UAT-23 |
+| FR-042 Sync deal stage | **PARTIAL** | Simulator covers `update_stage` -> deal record; the live transport maps deal stages and is unit-tested, but no sandbox run exists (D-06) |
 | FR-043 Record CRM sync logs | **PASS** | Attempt, outcome, entity type, timestamp, error detail and attempt count; `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 |
 | FR-044 Conversations UI | **PARTIAL** | Page exists with notes entry, summary, key points, action items, CRM status, field map, sync form, activity feed and history; data contract verified and the page renders all seven sections headlessly with live data; visual browser check still pending |
 | FR-045 Failure keeps the local record | **PASS** | `test_failed_crm_sync_keeps_the_local_interaction`, UAT-17 |
@@ -203,7 +208,7 @@ statement, not a new verdict on `FR-041`, `FR-042` or `FR-044`, which stay `PART
 
 | Group | Routes | Notes |
 |---|---|---|
-| CRM | `GET /crm/providers`, `GET /crm/field-mappings`, `POST /crm/mappings/validate`, `POST /crm/sync/preview`, `POST /crm/sync`, `GET /crm/status`, `GET /crm/sync-logs`, `POST /crm/sync-logs/{log_id}/retry` | 8 routes; sync and retry require `admin` or `manager`; live sync returns `501 crm_not_configured` by design |
+| CRM | `GET /crm/providers`, `GET /crm/field-mappings`, `POST /crm/mappings/validate`, `POST /crm/sync/preview`, `POST /crm/sync`, `GET /crm/status`, `GET /crm/sync-logs`, `POST /crm/sync-logs/{log_id}/retry` | 8 routes; sync and retry require the writer role; `POST /crm/sync` uses the simulator, an opt-in live transport, or `501 crm_not_configured` |
 | Conversations | `POST /conversations/summarize`, `POST /leads/{lead_id}/conversations`, `GET /leads/{lead_id}/conversations`, `GET /conversations/{interaction_id}` | 4 routes; writes require a writer role; reads are authenticated |
 
 The earlier backend snapshot under `contributions/team-c-doran/reports/` lists conversation
@@ -250,7 +255,7 @@ Full implementation detail: [`../reports/Milestone 3 report - Backend.md`](../re
 
 | # | Limitation | Why | Consequence |
 |---|---|---|---|
-| 1 | No live CRM synchronisation | Credentials and access unconfirmed (D-06) | Simulator and audit rows only; FR-041/FR-042 stay `PARTIAL` |
+| 1 | No verified live CRM synchronisation | Transport implemented; no sandbox or credentials supplied (D-06) | Simulator and audit rows verified; `FR-041`/`FR-042` stay `PARTIAL` |
 | 2 | Field maps not confirmed against a real org | No sandbox org available | Maps use documented vendor field names; a CRM admin must confirm custom fields |
 | 3 | No visual browser walkthrough of the new Conversations sections | Host ran out of memory on 17 Nov 2026 (Streamlit OpenBLAS allocation error, Chromium `ERR_INSUFFICIENT_RESOURCES`); Docker daemon unavailable | FR-044 and AC-023 stay `PARTIAL`. The page renders headlessly with live data, so this is a visual-acceptance gap, not a functional one |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |

@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sqlite:
+    name: SQLite suite and schema drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Generated DDL and ER diagram are current
+        run: python scripts/render_db_workspace.py --check
+      - name: Run the suite
+        env:
+          JWT_SECRET: ci-secret-value-0123456789
+          AUTH_ENABLED: "true"
+          SALES_GENIE_AI_BACKEND: heuristic
+          SALES_GENIE_LLM_PROVIDER: mock
+        run: python -m pytest -q
+
+  postgres:
+    name: PostgreSQL 16 suite
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: salesgenie_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run the suite against PostgreSQL
+        env:
+          JWT_SECRET: ci-secret-value-0123456789
+          AUTH_ENABLED: "true"
+          SALES_GENIE_AI_BACKEND: heuristic
+          SALES_GENIE_LLM_PROVIDER: mock
+          TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/salesgenie_test
+        run: python -m pytest -q
+
+  secrets:
+    name: No committed credentials
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan tracked files for provider keys
+        run: |
+          if git grep -nE '(gsk_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})' -- ':!docs/qa/evidence' ':!.github'; then
+            echo "A provider key is committed." >&2
+            exit 1
+          fi

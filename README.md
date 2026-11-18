@@ -34,7 +34,7 @@ canonical API, with the outreach and intelligence controls re-applied.
 | Conversation summaries | Implemented; default AI package, heuristic fallback; stored in `sales_interactions` | `tests/test_api_ai.py` |
 | Conversations UI | Implemented; meeting summary, CRM sync status, field mapping, recent-activity feed and history | `frontend/app.py`, `tests/test_frontend_compat.py` |
 | Analytics + follow-ups | Implemented; undefined KPIs return `null` | `tests/test_api_ai.py` |
-| CRM field mapping + sync audit | Implemented for contacts, activities and deal stages; provider-neutral simulator, `crm_sync_logs` and retry. **No live Salesforce/HubSpot transport** (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py`, `tests/test_api_ai.py` |
+| CRM field mapping + sync audit | Implemented for contacts, activities and deal stages; provider-neutral simulator, optional live Salesforce/HubSpot transport, `crm_sync_logs` and retry. Live transport is **not yet verified against a real org** (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py`, `backend/services/crm_transport.py`, `tests/test_crm_transport.py` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
 | Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
@@ -355,18 +355,22 @@ and compared object by object: identical 110 columns, 6 foreign keys and 31 inde
    labelled uncalibrated and the UI prints "No calibrated model configured".
 3. **Undefined KPIs are `null`.** `pipeline_value`, `average_response_time_days` and
    `average_sales_cycle_days` require decisions the schema cannot yet support (SRS D-10).
-4. **No live CRM transport.** Field maps for Salesforce and HubSpot are documented, dry-run
+4. **No verified live CRM sync.** Field maps for Salesforce and HubSpot are documented, dry-run
    previews work, and a clearly-labelled simulator covers contact, activity and deal-stage
-   workflows while writing `crm_sync_logs`. The simulator never contacts Salesforce or HubSpot,
-   and a real connector remains blocked by Decision D-06.
+   workflows while writing `crm_sync_logs`. A live transport is implemented
+   (`backend/services/crm_transport.py`) and is opt-in: it needs `CRM_LIVE_ENABLED=true` plus
+   provider credentials, retries `429`/`5xx` with backoff, and records a `mode: live` audit row.
+   It has **not** been exercised against a real Salesforce org or HubSpot portal, so `FR-041`
+   and `FR-042` stay `PARTIAL` until a sandbox run is captured.
 5. **Live Groq calls are verified; OpenAI and Gemini are not.** The AI path runs the full agent
    workflow through Groq's OpenAI-compatible endpoint with `used_mock=false` when `GROQ_API_KEY`
    is configured. Without a key it uses the deterministic mock provider and reports
    `ai_mode=offline-mock`. OpenAI and Gemini remain unverified.
 6. **Docker verified locally, not production-hardened.** The Compose stack builds and runs, but
    there is no TLS termination, secrets manager or orchestrator configuration.
-7. **No CI workflow.** Adding one requires a decision on the target database service; the exact
-   proposed workflow is in `docs/contributor-actions.md`.
+7. **CI workflow added, not yet observed running.** `.github/workflows/ci.yml` runs the SQLite
+   suite, the PostgreSQL 16 suite against a service container, the schema-drift check and a
+   credential scan. It has not been executed on GitHub yet, so no green badge is claimed.
 8. **No formal human usability acceptance of the UI.** The rewritten frontend was exercised in a
    browser end to end (generate, regenerate, save, record-as-sent, dispatch refusal, score,
    analyse, summarise, insights) and its adapter tests pass; the eight UI requirements have not

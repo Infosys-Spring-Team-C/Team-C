@@ -28,8 +28,9 @@ directly observed end to end have moved to `PASS` (`FR-032`, `FR-033`, `AC-019`)
 missing sync path moved to `PARTIAL`, not `PASS`:
 
 * `FR-041`/`FR-042` now have a working, audited, clearly-labelled **simulator** for contact,
-  activity and deal-stage workflows. A simulator is not synchronisation with a real CRM, so
-  the live half stays open under Decision D-06.
+  activity and deal-stage workflows, plus an opt-in live transport with retry and audit. The
+  transport has never been pointed at a real org, so the live half stays open under Decision
+  D-06.
 * `FR-044` has the Conversations page, including the CRM status, field-mapping and activity
   sections. The API contract behind it is verified and a headless Streamlit render confirms
   the seven sections reach the page with live data. A visual browser walkthrough was
@@ -86,8 +87,8 @@ failure.
 | FR-038 | Extract action items | M5 | TC-M5-003 | Same test; `action_items` asserted | PASS |
 | FR-039 | Store sales interactions | M5 | TC-M5-004 | `test_conversation_summary_persists_interaction`, UAT-16 | PASS |
 | FR-040 | CRM field mapping | M5 | TC-M5-007 | `test_crm_field_mappings_are_documented_for_both_providers`, UAT-22 | PASS - maps documented for Salesforce and HubSpot; vendor confirmation pending |
-| FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage`, UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
-| FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage` (`update_stage`), UAT-23 | PARTIAL - audited simulator only; live transport blocked by D-06 |
+| FR-041 | Sync contacts and activities to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage`, `tests/test_crm_transport.py`, UAT-23 | PARTIAL - simulator verified; live transport implemented and unit-tested, no sandbox run (D-06) |
+| FR-042 | Sync deal stage to the CRM | M5 | TC-M5-008, TC-M5-010 | `test_crm_simulation_covers_contact_activity_and_stage` (`update_stage`), `tests/test_crm_transport.py`, UAT-23 | PARTIAL - simulator verified; live transport implemented and unit-tested, no sandbox run (D-06) |
 | FR-043 | Record CRM sync logs | M5 | TC-M5-008, TC-M5-011 | `test_crm_simulation_covers_contact_activity_and_stage`, `test_crm_sync_records_failure_and_retry`, UAT-23 | PASS - attempt, outcome, entity type, timestamp and error detail |
 | FR-044 | Conversations UI | M5 | TC-M5-013, TC-M5-014, TC-M5-015 | `test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25, `scripts/qa_conversations_render.py` | PARTIAL - page, data contract and headless render verified; visual browser check pending |
 | FR-045 | Handle CRM failure without losing the local record | M5 | TC-M5-009 | `test_crm_sync_records_failure_and_retry`, UAT-17 | PASS |

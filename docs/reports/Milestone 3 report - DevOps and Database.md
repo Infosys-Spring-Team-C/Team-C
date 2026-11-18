@@ -34,7 +34,8 @@ Verified in this pass:
 | Schema and workspace tests | **13 passed** (`test_schema.py` 8, `test_db_workspace.py` 5) |
 | PostgreSQL-only tests | **6**, run in the PostgreSQL 16 job |
 | Full suite, PostgreSQL 16 (6 Nov 2026) | **177 passed, 0 skipped** (177-test suite at the time) |
-| Full suite, SQLite (17 Nov 2026) | **175 passed, 7 skipped** |
+| Full suite, SQLite (18 Nov 2026) | **191 passed, 7 skipped** (198 collected) |
+| CI workflow | **Added** on 18 Nov 2026; not yet executed on GitHub |
 | Compose stack (27 Oct 2026) | **3 services healthy**, API on PostgreSQL 16 |
 | Clean install from declared dependencies (27 Oct 2026) | **37 frontend-adapter tests passed** |
 
@@ -45,8 +46,9 @@ Four limits are stated openly and are **not** presented as achievements:
    verified build and start is 27 October 2026.
 2. **PostgreSQL was not re-run on 17 November 2026.** The 177-passed result is from
    6 November 2026. The SQLite result is current.
-3. **There is no CI pipeline in the repository.** The drift check exists as a test that a
-   human or a future pipeline can run; it is not wired to GitHub Actions.
+3. **The CI workflow is new and has not run yet.** `.github/workflows/ci.yml` now runs the
+   SQLite suite, the PostgreSQL 16 suite against a service container, the drift check and a
+   credential scan. It has not been executed on GitHub, so no green run is claimed.
 4. **The database layer is not production-operational.** There is no backup/restore
    procedure, no migration-per-change policy, no connection-pool tuning and no secret
    manager. The stack is a verified prototype deployment, not an operations runbook.
@@ -190,7 +192,7 @@ workspace kept its role as the deployment baseline. The review findings that mat
 | Two sources of DDL could drift | DDL and ER diagram are generated from the ORM; a drift test fails the suite |
 | Audit history was destroyed with the lead | `crm_sync_logs.lead_id` uses `ON DELETE SET NULL` |
 | Duplicate detection had no database support | Nullable unique `email_key` added; blank e-mails do not collide |
-| No tests and no CI | Tests added (`test_schema.py`, `test_db_workspace.py`, `test_postgres.py`); CI is still absent and is listed as a limitation |
+| No tests and no CI | Tests added (`test_schema.py`, `test_db_workspace.py`, `test_postgres.py`); a CI workflow was added on 18 November 2026 but has not run yet |
 
 Full mapping, column by column: `docs/database-merge-notes.md`. Full review:
 `docs/database-review.md`.
@@ -214,7 +216,7 @@ name contains `test`, because the fixture drops and recreates the `public` schem
 
 | Environment | Command | Result |
 |---|---|---|
-| SQLite (17 Nov 2026) | `python -m pytest -q` | **175 passed, 7 skipped** in 142.01 s |
+| SQLite (18 Nov 2026) | `python -m pytest -q` | **191 passed, 7 skipped** (198 collected) |
 | PostgreSQL 16 (6 Nov 2026) | `python -m pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** in 83.29 s (177-test suite at the time) |
 | Schema parity (26 Oct 2026) | scratch-database comparison | **identical** - 110 columns, 6 FKs, 31 indexes |
 | Clean install (27 Oct 2026) | fresh virtual environment, `requirements-dev.txt` | **37 frontend-adapter tests passed** in 24.23 s |
@@ -245,7 +247,7 @@ test whose optional extra is not installed.
 | Clean install from declared dependencies | Verified (27 Oct; 37 frontend-adapter tests) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
 | Module 5 tables present in ORM and migration | Verified | `backend/db.py`, `alembic/versions/0001_canonical_schema.py` |
 | Compose rebuilt on 17 Nov | **Not run** | Docker daemon unavailable |
-| CI pipeline | **Not implemented** | No workflow file in the repository |
+| CI pipeline | **Added, not yet run** | `.github/workflows/ci.yml` (SQLite, PostgreSQL 16, drift check, credential scan) |
 | Live CRM transport | **Out of scope** | SRS D-06; simulated path only |
 
 The honest demo position is: the schema and the migration are verified on both dialects, and
@@ -267,11 +269,11 @@ The database and deployment layer is complete for a prototype milestone:
 * a three-service Compose stack that was built, started and health-checked on 27 October
   2026.
 
-The work that remains is operational hardening, not feature work: a CI pipeline that runs
-the drift check and the PostgreSQL job on every push, a migration policy for schema changes
-after `0001`, backup/restore and retention procedures, secret management instead of `.env`,
-and a rebuild of the stack on a host with a working Docker daemon. Those items belong to the
-final-phase handoff and are recorded as limitations here rather than presented as done.
+The work that remains is operational hardening, not feature work: watching the first CI run
+and fixing whatever it surfaces, a migration policy for schema changes after `0001`,
+backup/restore and retention procedures, secret management instead of `.env`, and a rebuild of
+the stack on a host with a working Docker daemon. Those items belong to the final-phase handoff
+and are recorded as limitations here rather than presented as done.
 
 ---
 

@@ -22,15 +22,19 @@ now implements all of it:
 | CRM API tests | **9 passed** |
 | Conversation and interaction tests | **4 passed** |
 | Module 5 focused tests | **14 passed**, 45 deselected |
-| Full suite, SQLite | **175 passed, 7 skipped** |
+| CRM live-transport tests | **16 passed** (`tests/test_crm_transport.py`, no network) |
+| Full suite, SQLite | **191 passed, 7 skipped** |
 | Live UAT | **25/25 workflows passed**, including UAT-22 to UAT-25 |
 | Live AI gate (Groq) | **6/6 operations**, `used_mock=false`, including `summarize_conversation` |
 
 Two limits are stated openly and are **not** presented as achievements:
 
-1. **There is no live Salesforce or HubSpot transport.** SRS Decision D-06 leaves CRM
-   credentials and access unconfirmed. The sync path is a deterministic simulator with real
-   audit rows and an explicit `mode: simulated` response.
+1. **The live Salesforce/HubSpot transport is implemented but never exercised against a real
+   org.** SRS Decision D-06 still leaves CRM access unconfirmed. The transport
+   (`backend/services/crm_transport.py`) performs real HTTP calls when
+   `CRM_LIVE_ENABLED=true` and credentials are present, and it is covered by 16 tests with the
+   HTTP layer replaced by a fake. Until a sandbox run is captured, `FR-041` and `FR-042` stay
+   `PARTIAL`.
 2. **The demo and sign-off rows were not completed.** The scheduled evaluation dates passed
    without a recorded session. This report records the implemented and tested backend, not a
    ceremony that did not happen.
@@ -94,13 +98,27 @@ The field maps use documented vendor names for both providers (`Account.Name` an
 `dealstage` are asserted in the tests). They are documentation-grade: no sandbox org was
 available to confirm custom fields.
 
-### 3.3 Sync engine and audit
+### 3.3 Sync engine, live transport and audit
 
 `simulate_sync` is deterministic and performs no network I/O. It returns the provider-neutral
-record plus `mode: simulated` and an explicit no-external-call note. The endpoint:
+record plus `mode: simulated` and an explicit no-external-call note.
+
+`backend/services/crm_transport.py` adds the live path:
+
+| Concern | Implementation |
+|---|---|
+| Activation | `CRM_LIVE_ENABLED=true` **and** provider credentials; a token alone only changes the reported `configured` state |
+| Salesforce | `POST /services/data/v{version}/sobjects/{Lead,Task,Opportunity}/` with a bearer token; payloads omit empty fields and map the lifecycle stage onto documented picklist values |
+| HubSpot | `POST /crm/v3/objects/{contacts,tasks,deals}` with `{"properties": {...}}` |
+| Retry | `429` and `5xx` retried with exponential backoff, honouring `Retry-After`, up to `CRM_MAX_ATTEMPTS`; `4xx` fails immediately |
+| Timeout | `CRM_TIMEOUT_SECONDS` per request |
+| Audit | one row per attempt with `mode: live`, HTTP status, attempt count and external record id; the credential is never written |
+| Outcome | `200` with per-record status on full or partial success; `502 crm_sync_failed` when every record fails |
+
+The endpoint:
 
 * refuses an unknown provider or operation with `422` and writes no audit row;
-* refuses a live sync with `501 crm_not_configured` rather than pretending to connect;
+* refuses an unconfigured sync with `501 crm_not_configured` rather than pretending to connect;
 * persists provider, entity type, operation, status, request/response metadata, error message
   and attempt count for every attempt;
 * increments the attempt count on retry and refuses to retry a success;
@@ -108,6 +126,9 @@ record plus `mode: simulated` and an explicit no-external-call note. The endpoin
 
 `crm_sync_logs.lead_id` uses `ON DELETE SET NULL`, so deleting a lead preserves the audit
 history that a sync was attempted.
+
+The live transport has not been pointed at a real org. The 16 tests replace the HTTP layer with
+a fake, which proves the mapping, retry and audit behaviour but not vendor acceptance.
 
 ### 3.4 Conversation summarisation and storage
 
@@ -148,26 +169,29 @@ Module 5 writes to two tables, both covered in the DevOps/database report:
 | Module 5 focused suite | **14 passed** | `tests/test_api_ai.py`, `tests/test_frontend_compat.py` |
 | CRM API tests | **9 passed** | `tests/test_api_ai.py` |
 | Conversation and interaction tests | **4 passed** | `tests/test_api_ai.py` |
-| Full suite, SQLite | **175 passed, 7 skipped** | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` |
+| Full suite, SQLite | **191 passed, 7 skipped** | 18 November 2026 run |
+| CRM live-transport tests | **16 passed**, no network | `docs/qa/evidence/2026-11-18-pytest-crm-transport.txt` |
 | Live UAT | **25/25**, including UAT-22 to UAT-25 | `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` |
 | Live AI gate | **6/6**, `used_mock=false` | `docs/qa/evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
-| Live CRM transport | **Not implemented** (D-06) | Simulator only |
+| Live CRM transport | **Implemented, not verified against a real org** | `backend/services/crm_transport.py`; D-06 still open |
 | Demo and sign-off | **Not completed** | No recording, minutes or sign-off row |
 
 ---
 
 ## 6. Conclusion and transition to Milestone 4
 
-The backend work that the repository can complete without external CRM credentials is done:
-all twelve Module 5 routes exist, the three sync workflows are implemented and audited, the
-conversation summary is stored and readable, and the focused suite passes. The remaining
-backend work is external integration: provider-specific Salesforce and HubSpot adapters,
-credential handling, sandbox verification and production retry/rate-limit controls. Those
-depend on Decision D-06 and are correctly recorded as `PARTIAL`, not claimed as complete.
+The backend work is complete in code: all twelve Module 5 routes exist, the three sync
+workflows run through either the simulator or the live transport, the conversation summary is
+stored and readable, retries and audit rows are implemented, and the suite is green.
+
+What remains is verification against a real CRM, not implementation: a Salesforce developer org
+or HubSpot sandbox, confirmation of custom fields, and a captured live run. Until that exists,
+`FR-041` and `FR-042` stay `PARTIAL` and no live call is claimed.
 
 ---
 
-**Evidence note:** This report describes the canonical backend at `main` (`cc708a9` plus
-these report files). The earlier contribution snapshot remains in
-`contributions/team-c-doran/` as an attributable source. No live Salesforce or HubSpot call,
-demo session or sign-off is claimed.
+**Evidence note:** This report describes the canonical backend on 18 November 2026, including
+`backend/services/crm_transport.py` and `tests/test_crm_transport.py`. The earlier contribution
+snapshot remains in `contributions/team-c-doran/` as an attributable source. The live transport
+is unit-tested against a fake HTTP layer only; no live Salesforce or HubSpot call, demo session
+or sign-off is claimed.

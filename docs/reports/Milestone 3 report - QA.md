@@ -29,7 +29,8 @@ Verified in this pass:
 | Signal | Result |
 |---|---|
 | Test cases | **81** - 69 `PASS`, 2 `PARTIAL`, 2 `BLOCKED`, 8 `NOT RUN` |
-| Automated suite, SQLite | **175 passed, 7 skipped** (182 collected) in 142.01 s |
+| Automated suite, SQLite | **191 passed, 7 skipped** (198 collected), 18 Nov 2026; the 17 Nov run was 175/7 before the 16 transport tests |
+| CRM live-transport tests | **16 passed**, no network call |
 | Module 5 focused tests | **14 passed**, 45 deselected |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
 | Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` |
@@ -43,8 +44,10 @@ Four honesty notes govern the numbers above:
 1. **The UAT ran the deterministic heuristic engine**, not the live model, so the result is
    reproducible. The live Groq path is proven separately by the integration gate
    (6/6, `used_mock=false`) and is not claimed as part of the UAT run.
-2. **There is no live Salesforce or HubSpot call.** SRS Decision D-06 leaves CRM access
-   unconfirmed. The sync path is a clearly-labelled simulator with real audit rows.
+2. **The live CRM transport is implemented but has never been pointed at a real org.** SRS
+   Decision D-06 still leaves CRM access unconfirmed. The transport is covered by 16 tests with
+   the HTTP layer replaced by a fake, so mapping, retry and audit behaviour are proven, but
+   vendor acceptance is not.
 3. **No one has judged the Conversations page visually in a browser.** The data contract and
    a headless Streamlit render are verified; the browser attempt was blocked by host memory.
    `FR-044` and `AC-023` therefore stay `PARTIAL`.
@@ -187,7 +190,9 @@ judged layout or styling, so `FR-044` and `AC-023` stay `PARTIAL`.
 
 | Environment | Command | Result |
 |---|---|---|
-| SQLite (17 Nov 2026) | `python -m pytest -q` | **175 passed, 7 skipped** in 142.01 s |
+| SQLite (18 Nov 2026) | `python -m pytest -q` | **191 passed, 7 skipped** (198 collected) |
+| CRM live transport | `pytest tests/test_crm_transport.py -q` | **16 passed**, fake HTTP layer, no network |
+| SQLite (17 Nov 2026) | `python -m pytest -q` | **175 passed, 7 skipped** (182 collected) in 142.01 s |
 | Module 5 focus | `pytest ... -k "crm or conversation"` | **14 passed**, 45 deselected |
 | PostgreSQL 16 (6 Nov 2026) | `pytest -q` with `TEST_DATABASE_URL` | **177 passed, 0 skipped** (177-test suite at the time) - not repeated |
 | Contributor AI suite | `pytest -q` in `contributions/mahidhar-ai-layer` | **86 passed** |
@@ -213,8 +218,8 @@ judged layout or styling, so `FR-044` and `AC-023` stay `PARTIAL`.
 | FR-038 Extract action items | **PASS** | Explicit commitments only; no invention |
 | FR-039 Store sales interactions | **PASS** | Persistence test, UAT-16, UAT-25 |
 | FR-040 CRM field mapping | **PASS** (documented) | Both providers mapped; vendor confirmation still pending |
-| FR-041 Sync contacts and activities | **PARTIAL** | Simulator covers contact, activity and upsert; no live transport (D-06) |
-| FR-042 Sync deal stage | **PARTIAL** | Simulator covers `update_stage`; no live transport (D-06) |
+| FR-041 Sync contacts and activities | **PARTIAL** | Simulator plus opt-in live transport implemented; no sandbox run captured (D-06) |
+| FR-042 Sync deal stage | **PARTIAL** | Simulator plus opt-in live transport implemented; no sandbox run captured (D-06) |
 | FR-043 Record CRM sync logs | **PASS** | Attempt, outcome, entity type, timestamp, error, attempt count |
 | FR-044 Conversations UI | **PARTIAL** | Page, contract and headless render verified; visual browser check pending |
 | FR-045 Failure keeps the local record | **PASS** | Failure test, UAT-17 |
@@ -229,6 +234,7 @@ the visual-acceptance reason above.
 | Environment and versions | `docs/qa/evidence/2026-11-17-environment.txt` |
 | Pytest, SQLite (175 passed) | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` |
 | Pytest, Module 5 focused (14 passed) | `docs/qa/evidence/2026-11-17-pytest-module5-focused.txt` |
+| Pytest, CRM live transport (16 passed) | `docs/qa/evidence/2026-11-18-pytest-crm-transport.txt` |
 | Live UAT, 25/25 (Markdown) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.md` |
 | Live UAT, 25/25 (JSON) | `docs/qa/evidence/2026-11-17-uat-live-milestone3.json` |
 | Conversations headless render (PASS) | `docs/qa/evidence/2026-11-17-conversations-headless-render.txt` |
@@ -248,7 +254,7 @@ the visual-acceptance reason above.
 
 | # | Limitation | Why | Consequence |
 |---|---|---|---|
-| 1 | No live CRM synchronisation | Credentials and access unconfirmed (D-06) | Simulator and audit rows only; `FR-041`/`FR-042` stay `PARTIAL` |
+| 1 | No verified live CRM synchronisation | Transport implemented; no sandbox or credentials supplied (D-06) | `FR-041`/`FR-042` stay `PARTIAL` until a captured live run |
 | 2 | Field maps not confirmed against a real org | No sandbox org available | Maps use documented vendor field names; a CRM admin must confirm custom fields |
 | 3 | No visual browser walkthrough of the Conversations sections | Host ran out of memory on 17 Nov (OpenBLAS allocation error, `ERR_INSUFFICIENT_RESOURCES`); Docker unavailable | `FR-044`/`AC-023` stay `PARTIAL`; the render check is not a substitute |
 | 4 | PostgreSQL not re-run this pass | Docker and the local cluster unavailable | SQLite result is current; PostgreSQL evidence is from 6 November 2026 |

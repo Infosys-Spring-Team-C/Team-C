@@ -1,7 +1,6 @@
 """Analytics, follow-ups and CRM integration surface (Modules 5-6)."""
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -23,6 +22,12 @@ from backend.services.crm import (
     build_standardized_payload,
     field_mappings,
     simulate_sync,
+)
+from backend.services.crm_transport import (
+    CRMTransportError,
+    credentials_present,
+    send_with_retry,
+    transport_for,
 )
 from backend.services.leads import lead_to_dict
 
@@ -114,15 +119,11 @@ def analytics_insights(
 def crm_providers(_: Principal = Depends(get_current_user)) -> list[dict[str, Any]]:
     return [
         {
-            "provider": "salesforce",
-            "configured": bool(os.getenv("SALESFORCE_ACCESS_TOKEN")),
-            "live_sync_available": False,
-        },
-        {
-            "provider": "hubspot",
-            "configured": bool(os.getenv("HUBSPOT_ACCESS_TOKEN")),
-            "live_sync_available": False,
-        },
+            "provider": provider,
+            "configured": credentials_present(provider),
+            "live_sync_available": transport_for(provider) is not None,
+        }
+        for provider in ("salesforce", "hubspot")
     ]
 
 
@@ -133,15 +134,18 @@ def crm_field_mappings(
 ) -> dict[str, Any]:
     """Return the documented canonical-to-CRM field map.
 
-    The map is descriptive: the simulator sends a provider-neutral payload and
-    no Salesforce/HubSpot request is made (SRS D-06). Keeping the map in one
-    place lets the UI and the test suite agree on the field names.
+    The map is descriptive: it is used by the simulator and by the live
+    transport, which applies the documented vendor field names. A live request
+    is only made when ``CRM_LIVE_ENABLED=true`` and provider credentials are
+    configured; otherwise the simulator path is used (SRS D-06).
     """
     try:
         return {
             "mappings": field_mappings(provider),
             "supported_operations": list(SUPPORTED_OPERATIONS),
-            "live_transport_available": False,
+            "live_transport_available": any(
+                transport_for(name) is not None for name in ("salesforce", "hubspot")
+            ),
         }
     except ValueError as exc:
         raise ApiError(422, "invalid_provider", str(exc)) from exc
@@ -201,10 +205,17 @@ def crm_sync(
 ) -> dict[str, Any]:
     """Synchronise leads with a CRM.
 
-    The default remains a truthful ``501`` because no live connector exists
-    (SRS D-06).  Passing ``"simulate": true`` runs Doran's provider-neutral
-    payload mapping and deterministic simulator, persisting an audit row whose
-    ``mode`` is ``simulated``.  A simulation is never reported as a live sync.
+    Three outcomes, in order:
+
+    * ``"simulate": true`` runs the provider-neutral mapper and deterministic
+      simulator and writes an audit row whose ``mode`` is ``simulated``.
+    * A configured live transport (``CRM_LIVE_ENABLED=true`` plus provider
+      credentials) sends the mapped record to Salesforce or HubSpot and writes
+      a ``mode: live`` audit row per attempt.
+    * Otherwise the request is refused with ``501`` and a failed audit row,
+      because no connector is configured (SRS D-06).
+
+    A simulation is never reported as a live sync.
     """
     provider = str(body.get("provider", "")).lower()
     if provider not in {"salesforce", "hubspot"}:
@@ -289,6 +300,119 @@ def crm_sync(
             ),
         }
 
+    transport = transport_for(provider)
+    if transport is not None:
+        if not raw_ids:
+            raise ApiError(
+                422, "invalid_lead_ids", "Provide at least one lead_id to synchronise."
+            )
+        if len(raw_ids) > 500:
+            raise ApiError(422, "invalid_lead_ids", "lead_ids must contain at most 500 IDs.")
+
+        record_type = ACTION_TO_RECORD_TYPE.get(operation, "contact")
+        live_records: list[dict[str, Any]] = []
+        live_log_ids: list[int] = []
+        for item in raw_ids:
+            try:
+                lead = db.get(Lead, int(item))
+            except (TypeError, ValueError):
+                lead = None
+            if lead is None:
+                live_records.append(
+                    {"lead_id": item, "status": "failed", "error": "Lead not found"}
+                )
+                continue
+
+            payload = build_standardized_payload(lead, operation)
+            log = CRMSyncLog(
+                lead_id=lead.id,
+                provider=provider,
+                entity_type=record_type,
+                operation=operation,
+                status="pending",
+                request_metadata={
+                    "mode": "live",
+                    "requested_by": principal.email,
+                    "payload": payload,
+                },
+            )
+            db.add(log)
+            db.flush()
+            live_log_ids.append(log.id)
+            try:
+                result = send_with_retry(transport, record_type, payload)
+            except CRMTransportError as exc:
+                log.status = "failed"
+                log.attempt_count = max(1, int(exc.attempts or 1))
+                log.error_message = str(exc)[:2000]
+                log.response_metadata = {
+                    "mode": "live",
+                    "status": "failed",
+                    "http_status": exc.status_code,
+                    "attempts": log.attempt_count,
+                }
+                live_records.append(
+                    {
+                        "lead_id": lead.id,
+                        "status": "failed",
+                        "error": str(exc),
+                        "http_status": exc.status_code,
+                        "attempts": log.attempt_count,
+                    }
+                )
+                continue
+
+            log.status = "success"
+            log.external_record_id = str(result.get("external_record_id") or "")
+            log.error_message = ""
+            log.attempt_count = max(1, int(result.get("attempts") or 1))
+            log.response_metadata = {
+                "mode": "live",
+                "status": "success",
+                "http_status": result.get("http_status"),
+                "attempts": log.attempt_count,
+            }
+            live_records.append(
+                {
+                    "lead_id": lead.id,
+                    "status": "success",
+                    "external_record_id": log.external_record_id,
+                    "http_status": result.get("http_status"),
+                    "attempts": log.attempt_count,
+                }
+            )
+
+        db.commit()
+        failed = sum(1 for record in live_records if record["status"] != "success")
+        overall = (
+            "success"
+            if failed == 0
+            else ("failed" if failed == len(live_records) else "partial")
+        )
+        if overall == "failed":
+            raise ApiError(
+                502,
+                "crm_sync_failed",
+                "The CRM transport rejected every record. The attempts are recorded "
+                "in the sync log; no local lead data was changed.",
+                meta={
+                    "provider": provider,
+                    "operation": operation,
+                    "records": live_records,
+                    "sync_log_ids": live_log_ids,
+                },
+            )
+        return {
+            "provider": provider,
+            "operation": operation,
+            "mode": "live",
+            "simulated": False,
+            "status": overall,
+            "records": live_records,
+            "sync_log_ids": live_log_ids,
+            "note": "Records were sent to the configured CRM transport.",
+        }
+
     log = CRMSyncLog(
         provider=provider,
         entity_type=ACTION_TO_RECORD_TYPE.get(operation, "contact"),
@@ -317,7 +441,7 @@ def crm_sync(
 def crm_status(
     _: Principal = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> dict[str, Any]:
-    """Report CRM connectivity mode and 24-hour simulated-sync health.
+    """Report CRM connectivity mode and 24-hour sync health.
 
     Endpoint pattern adapted from M Doran's ``GET /crm/status`` (team-c-doran).
     """
@@ -331,19 +455,25 @@ def crm_status(
             CRMSyncLog.status == "failed",
         )
     ) or 0
+    live = {
+        provider: transport_for(provider) is not None
+        for provider in ("salesforce", "hubspot")
+    }
     return {
-        "connectivity": "simulated",
-        "live_transport_available": False,
+        "connectivity": "live" if any(live.values()) else "simulated",
+        "live_transport_available": any(live.values()),
         "recent_window_hours": 24,
         "recent_syncs": int(recent_syncs),
         "recent_failures": int(recent_failures),
         "failure_rate": round(recent_failures / recent_syncs, 4) if recent_syncs else 0.0,
         "providers": {
-            "salesforce": "simulated" if os.getenv("SALESFORCE_ACCESS_TOKEN") else "not_configured",
-            "hubspot": "simulated" if os.getenv("HUBSPOT_ACCESS_TOKEN") else "not_configured",
+            provider: "live" if configured else "not_configured"
+            for provider, configured in live.items()
         },
         "note": (
-            "Live CRM transport is not implemented (SRS D-06). The simulator builds a "
+            "A live transport is configured and enabled for at least one provider."
+            if any(live.values())
+            else "Live CRM transport is not enabled. The simulator builds a "
             "provider-neutral payload and records the attempt; it does not contact a CRM."
         ),
     }

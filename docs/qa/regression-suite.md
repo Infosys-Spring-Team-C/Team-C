@@ -13,7 +13,7 @@ result differs.
 
 | Suite | Location | Tests | Time (observed) | Needs a database server |
 |---|---|---|---|---|
-| Full automated suite | `tests/` | 182 collected (175 passed + 7 skipped on SQLite) | ~142 s | No (PostgreSQL module skipped) |
+| Full automated suite | `tests/` | 198 collected (191 passed + 7 skipped on SQLite) | ~8 min | No (PostgreSQL module skipped) |
 | PostgreSQL module | `tests/test_postgres.py` | 6 | included | Yes |
 | Database workspace drift | `tests/test_db_workspace.py` | 5 | ~3 s | No |
 | Live UAT | `scripts/qa_uat.py` | 25 workflows | ~15 s | Yes, plus a running API |
@@ -41,7 +41,7 @@ python -m pytest -q
 Expected:
 
 ```
-175 passed, 7 skipped
+191 passed, 7 skipped
 ```
 
 Of the 7 skips, 6 are `tests/test_postgres.py` and 1 is the opt-in LangGraph
@@ -60,10 +60,10 @@ Expected:
 
 ```
 177 passed, 0 skipped   # last observed, 6 November 2026
-181 passed, 1 skipped   # expected with the current 182-test suite; not yet observed
+197 passed, 1 skipped   # expected with the current 198-test suite; not yet observed
 ```
 
-The 181/1 line is arithmetic, not an observed run: 175 SQLite passes plus the 6 PostgreSQL
+The 197/1 line is arithmetic, not an observed run: 191 SQLite passes plus the 6 PostgreSQL
 tests, with the opt-in LangGraph test still skipping. Re-run on a host with PostgreSQL before
 quoting it as a result.
 
@@ -87,8 +87,8 @@ Expected:
 UAT-22 to UAT-25 cover the Module 5 CRM surface: field mappings for both providers, the
 three simulated sync workflows, the rejected-operation path and the Conversations page
 contract. A run that reports `0 failed` is the current known-good state: **177 passed** on
-PostgreSQL (6 November 2026, before the current 182-test suite) and **175 passed, 7 skipped**
-on SQLite (17 November 2026).
+PostgreSQL (6 November 2026, before the current 198-test suite) and **191 passed, 7 skipped**
+on SQLite (18 November 2026).
 
 ### 2.4 Conversations page render (headless)
 
@@ -132,7 +132,8 @@ When the `ai` package itself is absent the script exits `2` with an actionable S
 
 | Date | Branch / commit | SQLite | PostgreSQL | UAT | Notes |
 |---|---|---|---|---|---|
-| 17 Nov 2026 | `main` @ `4509814` + live gate | 175 passed, 7 skipped | not run (Docker down) | 25/25 passed | **Current known-good baseline**; BUG-019 fixed, BUG-020 logged; live AI gate 6/6 (`used_mock=false`) |
+| 18 Nov 2026 | `main` + CRM live transport | 191 passed, 7 skipped | not run (Docker down) | not re-run | **Current known-good baseline**; 16 new transport tests, CI workflow added |
+| 17 Nov 2026 | `main` @ `4509814` + live gate | 175 passed, 7 skipped | not run (Docker down) | 25/25 passed | BUG-019 fixed, BUG-020 logged; live AI gate 6/6 (`used_mock=false`) |
 | 6 Nov 2026 | `main` @ `cf56b9f` + Groq provider | 171 passed, 6 skipped | 177 passed | 20 passed, 1 partial | Milestone 2 baseline |
 | 26 Oct 2026 | `feature/backend-integration` @ merge `fbe1fbc` + reconciliation | 116 passed, 6 skipped | 122 passed | 20 passed, 1 partial | Pre-Milestone 2 baseline |
 | 26 Oct 2026 | `feature/backend-integration` @ `711fee3` | 111 passed, 6 skipped | 117 passed | 20 passed, 1 partial | Pre-merge baseline |

@@ -91,6 +91,21 @@ class Settings:
     openai_api_key: str = ""
     openai_base_url: str = ""
 
+    # --- CRM integration (Module 5) ------------------------------------
+    # Live transport is opt-in: a token in .env is not enough, because a demo
+    # or test must never mutate a real CRM by accident. With the flag off (or
+    # credentials missing) the API keeps the labelled simulator and the 501
+    # path documented under SRS D-06.
+    crm_live_enabled: bool = False
+    salesforce_instance_url: str = ""
+    salesforce_access_token: str = ""
+    salesforce_api_version: str = "60.0"
+    hubspot_access_token: str = ""
+    hubspot_base_url: str = "https://api.hubapi.com"
+    crm_timeout_seconds: float = 10.0
+    crm_max_attempts: int = 3
+    crm_backoff_seconds: float = 0.5
+
     # --- Limits ---------------------------------------------------------
     max_csv_bytes: int = 5_000_000
     max_csv_rows: int = 5000
@@ -109,6 +124,12 @@ class Settings:
             )
         if len(self.jwt_secret) and len(self.jwt_secret) < 16:
             raise RuntimeError("JWT_SECRET must be at least 16 characters long.")
+        if self.crm_max_attempts < 1:
+            raise RuntimeError("CRM_MAX_ATTEMPTS must be at least 1.")
+        if self.crm_timeout_seconds <= 0:
+            raise RuntimeError("CRM_TIMEOUT_SECONDS must be greater than 0.")
+        if self.crm_backoff_seconds < 0:
+            raise RuntimeError("CRM_BACKOFF_SECONDS must be zero or greater.")
 
 
 @lru_cache(maxsize=1)
@@ -134,6 +155,15 @@ def get_settings() -> Settings:
         google_api_key=_str("GOOGLE_API_KEY"),
         openai_api_key=_str("OPENAI_API_KEY"),
         openai_base_url=_str("OPENAI_BASE_URL"),
+        crm_live_enabled=_bool("CRM_LIVE_ENABLED", False),
+        salesforce_instance_url=_str("SALESFORCE_INSTANCE_URL"),
+        salesforce_access_token=_str("SALESFORCE_ACCESS_TOKEN"),
+        salesforce_api_version=_str("SALESFORCE_API_VERSION", "60.0"),
+        hubspot_access_token=_str("HUBSPOT_ACCESS_TOKEN"),
+        hubspot_base_url=_str("HUBSPOT_BASE_URL", "https://api.hubapi.com"),
+        crm_timeout_seconds=_float("CRM_TIMEOUT_SECONDS", 10.0),
+        crm_max_attempts=_int("CRM_MAX_ATTEMPTS", 3),
+        crm_backoff_seconds=_float("CRM_BACKOFF_SECONDS", 0.5),
         max_csv_bytes=_int("MAX_CSV_BYTES", 5_000_000),
         max_csv_rows=_int("MAX_CSV_ROWS", 5000),
         default_page_size=_int("DEFAULT_PAGE_SIZE", 50),

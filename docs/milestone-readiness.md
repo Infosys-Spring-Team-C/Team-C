@@ -24,7 +24,7 @@ review so the team does not overclaim.
 | Lead scoring | **Ready to demonstrate as heuristic** | Four factors, explainable, no fake probability |
 | Conversion probability | **Not implemented** | `null` with an uncalibrated band |
 | Analytics / dashboard data | **Ready to demonstrate, with null KPIs** | Undefined metrics flagged |
-| CRM integration | **Simulator ready; no live transport** | Field maps for Salesforce/HubSpot, simulated contact/activity/deal sync, audit rows (SRS D-06) |
+| CRM integration | **Simulator ready; live transport implemented, not verified** | Field maps for Salesforce/HubSpot, simulated contact/activity/deal sync, audit rows, opt-in live transport with retry (SRS D-06 still open) |
 | Docker packaging | **Ready to demonstrate** | Built and started; db, api and frontend healthy |
 | Streamlit frontend | **Ready to demonstrate; human acceptance pending** | Merged UI, 12/12 gate, AppTest and a browser check |
 | CI pipeline | **Not implemented** | Proposed in contributor actions |
@@ -98,7 +98,7 @@ Suggested demo script (10 minutes):
 | Email delivery | `POST /outreach/send` -> `501` | D-05 |
 | Calibrated conversion probability | `conversion_probability = null`; uncalibrated band | FR-041, D-10 |
 | Pipeline value, response time, sales cycle | `null` + `pending_definition = true` | FR-046..FR-053, D-10 |
-| Live CRM sync | Refused with `501`; `"simulate": true` runs a labelled simulator and writes audit rows | D-06 |
+| Live CRM sync | Opt-in transport (`CRM_LIVE_ENABLED=true` + credentials); otherwise `501`; `"simulate": true` runs a labelled simulator and writes audit rows | D-06 |
 | Follow-up status updates | Read-only derived list (BUG-011) | FR-052 |
 | CI pipeline | No workflow file | NFR-009 |
 | Trained ML model / accuracy metrics | None; heuristic only | FR-035..FR-043 |
@@ -117,10 +117,10 @@ decision and the next step", not a demonstration of a stand-in.
 | FR-026..FR-034 outreach | Implemented except delivery | `routers/outreach.py` |
 | FR-035..FR-043 scoring | Implemented as heuristic; no calibrated model | `routers/scoring.py` |
 | FR-044..FR-048 conversation intelligence | Implemented, stored in `sales_interactions` | `routers/conversations.py` |
-| FR-049..FR-051 CRM | Field maps, simulated sync and audit logs implemented; live transport not | `routers/analytics.py` |
+| FR-049..FR-051 CRM | Field maps, simulated sync, audit logs and an opt-in live transport implemented; live run not verified | `routers/analytics.py`, `services/crm_transport.py` |
 | FR-052..FR-053 analytics | Implemented; three KPIs pending definition | `services/analytics.py` |
 | NFR-005 auth/RBAC | Implemented, tested | `security.py`, `deps.py`, `routers/auth.py` |
-| NFR-009 testing | Implemented; 182 tests collected (175 passed + 7 skipped on SQLite) | `tests/` |
+| NFR-009 testing | Implemented; 198 tests collected (191 passed + 7 skipped on SQLite) | `tests/` |
 | NFR-010 deployment | Verified: Compose stack builds and all three services are healthy | `Dockerfile`, `docker-compose.yml` |
 
 This snapshot is intentionally conservative; the detailed requirement text remains in

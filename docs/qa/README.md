@@ -34,7 +34,8 @@ estimated, inferred or copied from a plan.
 
 | Signal | Value | Source |
 |---|---|---|
-| Automated tests, SQLite | **175 passed, 7 skipped** | `evidence/2026-11-17-pytest-sqlite.txt` |
+| Automated tests, SQLite | **191 passed, 7 skipped** (18 Nov 2026 run) | `evidence/2026-11-17-pytest-sqlite.txt` (175/7 baseline) |
+| CRM live-transport tests | **16 passed**, no network | `evidence/2026-11-18-pytest-crm-transport.txt` |
 | Automated tests, PostgreSQL 16 | **177 passed** (6 Nov 2026; not re-run on 17 Nov - Docker unavailable) | `evidence/2026-11-06-pytest-postgres.txt` |
 | Module 5 focused tests | **14 passed** | `evidence/2026-11-17-pytest-module5-focused.txt` |
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
@@ -51,8 +52,8 @@ estimated, inferred or copied from a plan.
 
 The 7 skipped tests are 6 PostgreSQL-only tests (they run whenever
 `TEST_DATABASE_URL` is set) and 1 opt-in LangGraph memory-checkpointer test whose optional
-extra is not installed. The SQLite run therefore passes 175 and skips 7. With the current
-182-test suite, enabling PostgreSQL is expected to give 181 passed and 1 skipped; the last
+extra is not installed. The SQLite run therefore passes 191 and skips 7 in the current
+198-test suite. Enabling PostgreSQL is expected to give 197 passed and 1 skipped; the last
 observed PostgreSQL run, on the older 177-test suite, was 177 passed with no skips.
 
 These are the **current** figures. The Milestone 3 pass re-ran the canonical suite, the

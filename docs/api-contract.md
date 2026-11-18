@@ -676,23 +676,31 @@ Runs the engine for one lead. `200`:
 
 ---
 
-## 9. CRM surface (Module 5, simulated transport - SRS D-06)
+## 9. CRM surface (Module 5 - simulator and opt-in live transport, SRS D-06)
 
 | Endpoint | Behaviour |
 |---|---|
-| `GET /crm/providers` | `[{"provider":"salesforce","configured":false,"live_sync_available":false}, ...]` |
+| `GET /crm/providers` | `[{"provider":"salesforce","configured":false,"live_sync_available":false}, ...]`; `configured` means credentials are present, `live_sync_available` means the transport is enabled *and* configured |
 | `GET /crm/field-mappings?provider=` | Documented canonical-to-CRM field map for `salesforce` and `hubspot` (contact, activity, deal) |
 | `POST /crm/mappings/validate` | Validates target fields against the lead contract; never persists |
 | `POST /crm/sync/preview` | Dry run; returns each lead's export payload or an error |
-| `POST /crm/sync` | Without `simulate`, records a failed `crm_sync_logs` row and returns `501 crm_not_configured`. With `"simulate": true`, maps contacts/activities/deal stages onto the provider-neutral payload and records a `mode=simulated` audit row |
+| `POST /crm/sync` | Three paths: `"simulate": true` records a `mode=simulated` audit row; a configured live transport sends the mapped record and records `mode=live`; otherwise a failed `crm_sync_logs` row and `501 crm_not_configured` |
 | `GET /crm/sync-logs` | Last 250 attempts, including `entity_type`, `operation`, `status` and `external_record_id` |
-| `POST /crm/sync-logs/{id}/retry` | Increments `attempt_count`, records that transport is unavailable; `409` if already successful |
+| `POST /crm/sync-logs/{id}/retry` | Increments `attempt_count`; `409` if already successful |
 
 Supported operations are `upsert`, `sync_contact`, `update_stage` and `activity_log`; an unknown
 operation returns `422 invalid_operation`. A simulation returns
 `mode: "simulated"`, `simulated: true` and a note stating that no Salesforce or HubSpot request
-was made. No CRM credentials are used because no transport is implemented.
-`SALESFORCE_ACCESS_TOKEN` and `HUBSPOT_ACCESS_TOKEN` are read only to report `configured` state.
+was made.
+
+A live call requires **both** `CRM_LIVE_ENABLED=true` and the provider credentials
+(`SALESFORCE_INSTANCE_URL` + `SALESFORCE_ACCESS_TOKEN`, or `HUBSPOT_ACCESS_TOKEN`). With the flag
+off, a token alone changes only the reported `configured` state, so a demo cannot mutate a real
+CRM by accident. Live calls retry `429` and `5xx` with exponential backoff (honouring
+`Retry-After`) up to `CRM_MAX_ATTEMPTS`, and every attempt writes a `mode: live` audit row.
+`502 crm_sync_failed` is returned when every record fails; partial success returns `200` with a
+per-record status. The transport has not been verified against a real org, so no live result is
+claimed.
 
 ---
 
