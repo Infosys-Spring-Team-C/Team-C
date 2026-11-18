@@ -22,7 +22,8 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Signal | Result |
 |---|---|
 | Canonical pytest suite (SQLite) | **175 passed, 7 skipped** in 142.01 s |
-| Module 5 focused tests | **14 passed** |
+| Module 5 focused tests | **14 passed** - 10 CRM-related (9 API + 1 adapter), 4 conversation-related (3 API + 1 adapter) |
+| Module 5 backend routes | **12 implemented** - 8 CRM, 4 conversation |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
 | Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception |
@@ -194,6 +195,24 @@ No Module 5 functional defect was found. The two failures seen during the first 
 were defects in the new UAT assertions, not in the application: a case-sensitive substring
 check and an assertion on `created_at` where the API contract field is `interaction_date`
 (the adapter maps it). Both assertions were corrected and the run is green.
+
+### 3.6 Backend implementation status
+
+The canonical backend contains the full Module 5 API surface. This is an implementation
+statement, not a new verdict on `FR-041`, `FR-042` or `FR-044`, which stay `PARTIAL`.
+
+| Group | Routes | Notes |
+|---|---|---|
+| CRM | `GET /crm/providers`, `GET /crm/field-mappings`, `POST /crm/mappings/validate`, `POST /crm/sync/preview`, `POST /crm/sync`, `GET /crm/status`, `GET /crm/sync-logs`, `POST /crm/sync-logs/{log_id}/retry` | 8 routes; sync and retry require `admin` or `manager`; live sync returns `501 crm_not_configured` by design |
+| Conversations | `POST /conversations/summarize`, `POST /leads/{lead_id}/conversations`, `GET /leads/{lead_id}/conversations`, `GET /conversations/{interaction_id}` | 4 routes; writes require a writer role; reads are authenticated |
+
+The earlier backend snapshot under `contributions/team-c-doran/reports/` lists conversation
+storage and the Conversations UI as missing. That is true of that standalone snapshot and
+not of the canonical repository, where `sales_interactions`, the four conversation routes and
+the page are present and tested. No `TODO`, `FIXME` or `NotImplementedError` remains in the
+Module 5 backend modules.
+
+Full implementation detail: [`../reports/Milestone 3 report - Backend.md`](../reports/Milestone%203%20report%20-%20Backend.md).
 
 ---
 
