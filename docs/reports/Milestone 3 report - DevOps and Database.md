@@ -41,10 +41,10 @@ Verified in this pass:
 
 Four limits are stated openly and are **not** presented as achievements:
 
-1. **The Compose stack was not rebuilt on 17 November 2026.** The Docker daemon on the
+1. **The Compose stack was not rebuilt on 18 November 2026.** The Docker daemon on the
    review host was unavailable (`npipe:////./pipe/dockerDesktopLinuxEngine`). The last
    verified build and start is 27 October 2026.
-2. **PostgreSQL was not re-run on 17 November 2026.** The 177-passed result is from
+2. **PostgreSQL was not re-run on 18 November 2026.** The 177-passed result is from
    6 November 2026. The SQLite result is current.
 3. **The CI workflow is new and has not run yet.** `.github/workflows/ci.yml` now runs the
    SQLite suite, the PostgreSQL 16 suite against a service container, the drift check and a
@@ -62,9 +62,9 @@ Four limits are stated openly and are **not** presented as achievements:
 | Day 20 · Sat, Oct 31 | Buffer / Review | Close open Milestone 2 items; study CRM mapping; prepare transcripts | Backend + AI/ML | Not a database-owned row. Dependency checked: the canonical schema already declares `sales_interactions` and `crm_sync_logs`, so no schema change was raised. |
 | Day 23 · Tue, Nov 3 | Development | Contact, activity and deal-stage sync with `CRM_Sync_Logs` | Backend + Database/DevOps | `crm_sync_logs` is defined in `backend/db.py` and created by `alembic/versions/0001_canonical_schema.py`; the table carries the provider, entity type, operation, external record id, status, request/response metadata, error message and attempt count, with indexes on `lead_id`, `status` and `(provider, status)`. |
 | Day 26 · Fri, Nov 6 | Testing & QA | Finalise external endpoints; exercise the three workflows; prepare test notes | Backend + QA | Supporting evidence: PostgreSQL 16 job **177 passed, 0 skipped**; schema-parity check **identical** (110 columns, 6 FKs, 31 indexes). |
-| Day 28 · Sun, Nov 8 | Buffer / Review | Prepare demo, fix CRM issues, draft the test report | QA + Backend | Deployment readiness re-checked from the 27 October Compose evidence. The stack was not rebuilt on 17 November (daemon unavailable). |
+| Day 28 · Sun, Nov 8 | Buffer / Review | Prepare demo, fix CRM issues, draft the test report | QA + Backend | Deployment readiness re-checked from the 27 October Compose evidence. The stack was not rebuilt on 18 November (daemon unavailable). |
 | Day 29 · Mon, Nov 9 | Milestone Evaluation | Demo CRM integration and call summaries | Full Team | No demo build, recording, minutes or evaluation result exists in the repository. This report does not claim a session occurred. |
-| Day 30 · Tue, Nov 10 | Submission / Sign-off | Report submission and sign-off | Project Lead + QA | QA re-ran the suite, the UAT and the schema checks on 17 November; the sign-off row is still pending. |
+| Day 30 · Tue, Nov 10 | Submission / Sign-off | Report submission and sign-off | Project Lead + QA | QA re-ran the suite, the UAT and the schema checks on 17-18 November; the sign-off row is still pending. |
 
 The database-owned deliverable for this milestone is therefore the **schema and deployment
 baseline that Module 5 runs on**, not a new set of tables. Claiming otherwise would overstate
@@ -246,9 +246,9 @@ test whose optional extra is not installed.
 | Compose stack starts and migrates PostgreSQL | Verified (27 Oct) | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
 | Clean install from declared dependencies | Verified (27 Oct; 37 frontend-adapter tests) | `docs/qa/evidence/2026-10-27-clean-install.txt` |
 | Module 5 tables present in ORM and migration | Verified | `backend/db.py`, `alembic/versions/0001_canonical_schema.py` |
-| Compose rebuilt on 17 Nov | **Not run** | Docker daemon unavailable |
+| Compose rebuilt on 18 Nov | **Not run** | Docker daemon unavailable |
 | CI pipeline | **Added, not yet run** | `.github/workflows/ci.yml` (SQLite, PostgreSQL 16, drift check, credential scan) |
-| Live CRM transport | **Out of scope** | SRS D-06; simulated path only |
+| Live CRM transport | **Implemented, not verified against a real org** | `backend/services/crm_transport.py`; SRS D-06 still open |
 
 The honest demo position is: the schema and the migration are verified on both dialects, and
 the container topology was verified on 27 October 2026. A reviewer who asks for a live

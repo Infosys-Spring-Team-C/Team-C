@@ -26,12 +26,13 @@ review so the team does not overclaim.
 | Analytics / dashboard data | **Ready to demonstrate, with null KPIs** | Undefined metrics flagged |
 | CRM integration | **Simulator ready; live transport implemented, not verified** | Field maps for Salesforce/HubSpot, simulated contact/activity/deal sync, audit rows, opt-in live transport with retry (SRS D-06 still open) |
 | Docker packaging | **Ready to demonstrate** | Built and started; db, api and frontend healthy |
-| Streamlit frontend | **Ready to demonstrate; human acceptance pending** | Merged UI, 12/12 gate, AppTest and a browser check |
-| CI pipeline | **Not implemented** | Proposed in contributor actions |
+| Streamlit frontend | **Ready to demonstrate; human acceptance pending** | Merged UI, 12/12 gate, AppTest and an 18 Nov 2026 browser walkthrough of the Conversations page |
+| CI pipeline | **Added, not yet executed** | `.github/workflows/ci.yml`: SQLite suite, PostgreSQL 16 service, drift check, credential scan |
 
 **Bottom line:** the project is **end-to-end ready for a local demonstration**: the frontend
-is merged, the Docker stack runs, and the full suite passes on both databases. Production
-hardening (TLS, secrets manager, real e-mail/CRM providers, CI) is still pending.
+is merged, the Docker stack runs, the full suite passes on both databases, and the CI workflow
+is committed. Production hardening (TLS, secrets manager, real e-mail transport, verified live
+CRM sync) and the first CI run are still pending.
 
 ---
 
@@ -132,7 +133,7 @@ This snapshot is intentionally conservative; the detailed requirement text remai
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Reviewer expects a working UI | Low | Low | Open `http://127.0.0.1:8501` from the Compose stack; state that human acceptance is pending |
+| Reviewer expects a working UI | Low | Low | Open `http://127.0.0.1:8501` from the Compose stack; the scoring path and Conversations page are browser-verified, a full human acceptance pass is pending |
 | Reviewer expects AI-generated email to be sent | Medium | Medium | Show the `501` and the SRS D-05 rationale |
 | Reviewer expects a trained model / accuracy | Medium | High | Show the heuristic methodology note; the UI shows the engine name, not an accuracy figure |
 | Docker build fails on the review machine | Low | Medium | The stack was built and run here; rebuild before the review |
@@ -153,6 +154,7 @@ The milestone can be called complete when all of the following are true:
 - [ ] CI runs the test suite on every PR (workflow added 18 November 2026, not yet executed).
 - [x] The documentation in `docs/` reflects the merged state.
 
-The accurate statement today is: **backend, database, AI integration, frontend and the Docker
-stack are complete and verified for a local demonstration; CI and production hardening are
-pending.**
+The accurate statement today is: **backend, database, AI integration, frontend, the CRM
+simulator with its opt-in live transport, and the Docker stack are complete and verified for a
+local demonstration. The CI workflow is committed but has not run on GitHub; the live CRM
+transport has not been exercised against a real org; and production hardening is pending.**

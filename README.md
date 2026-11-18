@@ -37,6 +37,7 @@ canonical API, with the outreach and intelligence controls re-applied.
 | CRM field mapping + sync audit | Implemented for contacts, activities and deal stages; provider-neutral simulator, optional live Salesforce/HubSpot transport, `crm_sync_logs` and retry. Live transport is **not yet verified against a real org** (SRS D-06) | `/api/v1/crm/*`, `backend/services/crm.py`, `backend/services/crm_transport.py`, `tests/test_crm_transport.py` |
 | Alembic migration | Implemented, verified on SQLite and PostgreSQL 16 | `alembic/versions/0001_canonical_schema.py` |
 | Docker packaging | Built and run with Docker 29.7.2: `db`, `api` and `frontend` all healthy; API migrated PostgreSQL | `Dockerfile`, `docker-compose.yml`, `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
+| CI workflow | Added 18 Nov 2026: SQLite suite, PostgreSQL 16 service, schema-drift check and committed-credential scan. **Not yet executed on GitHub** | `.github/workflows/ci.yml` |
 | Streamlit frontend | Rewritten peach/cream UI integrated from the updated main archive; login, lead directory, intelligence, outreach studio, conversations and analytics; browser-verified (see `docs/qa/evidence/2026-11-18-browser-walkthrough.md`) | `frontend/`, `tests/test_frontend_compat.py`, `docs/today-review.md` |
 
 Full details: [`docs/audit-report.md`](docs/audit-report.md),
@@ -301,9 +302,11 @@ python -m pytest -q
 
 Verified results:
 
-* SQLite only (17 November 2026): **175 passed, 7 skipped** - 6 PostgreSQL-only tests and 1
-  opt-in LangGraph test. This includes the expanded frontend adapter/login/normaliser tests,
-  the intelligence package tests, the Groq provider tests and the merge-integration tests.
+* SQLite only (18 November 2026): **191 passed, 7 skipped** - 6 PostgreSQL-only tests and 1
+  opt-in LangGraph test. This includes the 16 CRM live-transport tests added on 18 November,
+  the expanded frontend adapter/login/normaliser tests, the intelligence package tests, the
+  Groq provider tests and the merge-integration tests. The 17 November run was 175 passed,
+  7 skipped before the transport tests existed.
 * With PostgreSQL 16 (6 November 2026): **177 passed, 0 skipped**, including schema,
   migration up/down and dialect-parity checks.
 

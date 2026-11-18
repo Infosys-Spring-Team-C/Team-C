@@ -1,7 +1,7 @@
 # QA / Test Engineering Pack
 
 **Owner:** Mohamed Isharak M - QA / Test Engineer and Project Lead
-**Date:** 17 November 2026 (Milestone 3 refresh)
+**Date:** 18 November 2026 (Milestone 3 refresh; CRM live transport and browser walkthrough added)
 **Application:** SalesGenie AI (Team C)
 **Repository:** `Infosys-Spring-Team-C/Team-C`
 
@@ -36,13 +36,14 @@ estimated, inferred or copied from a plan.
 |---|---|---|
 | Automated tests, SQLite | **191 passed, 7 skipped** (18 Nov 2026 run) | `evidence/2026-11-17-pytest-sqlite.txt` (175/7 baseline) |
 | CRM live-transport tests | **16 passed**, no network | `evidence/2026-11-18-pytest-crm-transport.txt` |
-| Automated tests, PostgreSQL 16 | **177 passed** (6 Nov 2026; not re-run on 17 Nov - Docker unavailable) | `evidence/2026-11-06-pytest-postgres.txt` |
+| Automated tests, PostgreSQL 16 | **177 passed** (6 Nov 2026; not re-run on 18 Nov - Docker unavailable) | `evidence/2026-11-06-pytest-postgres.txt` |
 | Module 5 focused tests | **14 passed** | `evidence/2026-11-17-pytest-module5-focused.txt` |
 | Generated DDL vs Alembic schema | **identical** (110 columns, 6 FKs, 31 indexes) | `evidence/2026-10-26-schema-parity.txt` |
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** | `evidence/2026-11-17-uat-live-milestone3.md` |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception | `evidence/2026-11-17-conversations-headless-render.txt` |
+| Conversations page browser walkthrough | **PASS** - every section rendered, 0 console errors, no horizontal overflow | `evidence/2026-11-18-browser-walkthrough.md` |
 | Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` | `evidence/2026-11-17-ai-integration-gate-live-groq.txt` |
-| Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 (27 Oct 2026; not rebuilt 17 Nov) | `evidence/2026-10-27-docker-compose-verification.txt` |
+| Docker Compose stack | **3 services healthy**, API on PostgreSQL 16 (27 Oct 2026; not rebuilt 18 Nov) | `evidence/2026-10-27-docker-compose-verification.txt` |
 | Frontend integration gate | **12/12** with authentication enabled | `evidence/2026-10-27-frontend-integration-gate.txt` |
 | Clean install from declared deps | **37 passed** in a fresh virtual environment | `evidence/2026-10-27-clean-install.txt` |
 | Contributor AI suite | **86 passed** from its own folder | `contributions/mahidhar-ai-layer` |
@@ -57,8 +58,9 @@ extra is not installed. The SQLite run therefore passes 191 and skips 7 in the c
 observed PostgreSQL run, on the older 177-test suite, was 177 passed with no skips.
 
 These are the **current** figures. The Milestone 3 pass re-ran the canonical suite, the
-full 25-workflow live UAT and the live AI gate on 17 November 2026; the PostgreSQL run and
-the Compose rebuild could not be repeated because Docker was unavailable. The database
+full 25-workflow live UAT and the live AI gate on 17 November 2026, then added 16 CRM
+live-transport tests and a Conversations browser walkthrough on 18 November 2026. The
+PostgreSQL run and the Compose rebuild could not be repeated because Docker was unavailable. The database
 contributor's branch (`origin/team_c_sai`, commit `d4f7fd7`) was merged on 26 October 2026,
 and the AI and frontend packages were integrated on 27 October 2026. See
 [`../database-merge-notes.md`](../database-merge-notes.md),

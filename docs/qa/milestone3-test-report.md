@@ -2,12 +2,13 @@
 
 **Project:** SalesGenie AI - AI Sales Assistant and Lead Intelligence Platform
 **Team:** Team C (Infosys Springboard)
-**Report date:** 17 November 2026
+**Report date:** 18 November 2026 (first issued 17 November 2026; CRM live transport and
+browser walkthrough added on 18 November)
 **Prepared by:** Mohamed Isharak M - QA / Test Engineer
 **Repository:** `Infosys-Spring-Team-C/Team-C`
-**Build under test:** `main` at `f0596cb`, plus the QA tooling and documentation added in
-this pass (`pytest.ini`, the four Module 5 UAT workflows and the refreshed QA pack). No
-application code changed during this pass.
+**Build under test:** `main` at `825cc1c` (CRM live transport, 16 new tests, CI workflow),
+plus the QA tooling and documentation added in this pass (`pytest.ini`, the four Module 5 UAT
+workflows and the refreshed QA pack).
 **Milestone:** M3 evaluation (Module 5 demonstrated; Modules 1-6 integrated)
 
 ---
@@ -28,6 +29,7 @@ for contacts, activities and deal stages, and writes an audit row for every atte
 | Live UAT workflows | **25 passed, 0 partial, 0 failed** |
 | Live AI integration gate (Groq) | **6/6 operations**, `used_mock=false` |
 | Conversations page render (headless) | **PASS** - 7 sections, no exception |
+| Conversations page browser walkthrough | **PASS** - every section rendered, 0 console errors, no horizontal overflow (18 Nov 2026) |
 | Defects found this pass | 2 (BUG-019 closed; BUG-020 open) |
 | Defects open | 2 (BUG-011 and BUG-020, both Low) |
 | Requirements fully verified (FR-036 to FR-045) | 8 of 10 |
@@ -44,7 +46,7 @@ Three limits are stated openly and are **not** presented as achievements:
    simulator is labelled `mode: "simulated"` in the response and in the database, and its note
    says that no Salesforce or HubSpot request was made.
 2. **The PostgreSQL run and the Docker rebuild were not repeated.** Docker was unavailable
-   on the test machine throughout 17 November 2026. The last PostgreSQL run (177 passed)
+   on the test machine on 17 and 18 November 2026. The last PostgreSQL run (177 passed)
    and the last Compose verification are from 6 November and 27 October 2026 respectively
    and are cited as such.
 3. **The browser walkthrough was completed on 18 November 2026, after the 17 November

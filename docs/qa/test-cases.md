@@ -91,8 +91,8 @@ references use `file::test_name` and can be run directly with `pytest`.
 | TC-M5-011 | Every simulated sync writes an audit row with its entity type | API | FR-043, AC-024 | `test_api_ai.py::test_crm_simulation_covers_contact_activity_and_stage` (asserts `entity_type` per operation), UAT-23 | PASS |
 | TC-M5-012 | An unknown CRM operation is refused and not audited | API | FR-041, AC-024 | `test_api_ai.py::test_crm_sync_rejects_an_unknown_operation`, UAT-24 | PASS - `422 invalid_operation`, log count unchanged |
 | TC-M5-013 | The UI's CRM routes resolve to the canonical API | Frontend contract | FR-040, FR-044 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api` | PASS |
-| TC-M5-014 | The Conversations page receives every field it renders | API + UAT | FR-044, AC-023 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PASS - API contract verified; browser walkthrough pending |
-| TC-M5-015 | The Conversations page renders its sections with live data | Frontend render | FR-044, AC-023 | `scripts/qa_conversations_render.py` (Streamlit `AppTest`, headless) | PASS - 7 sections, no exception, simulated-transport disclaimer present; visual browser walkthrough still pending |
+| TC-M5-014 | The Conversations page receives every field it renders | API + UAT | FR-044, AC-023 | `test_frontend_compat.py::test_crm_endpoints_are_mapped_to_the_canonical_api`, UAT-25 | PASS - API contract verified; browser walkthrough completed 18 Nov 2026 |
+| TC-M5-015 | The Conversations page renders its sections with live data | Frontend render | FR-044, AC-023 | `scripts/qa_conversations_render.py` (Streamlit `AppTest`, headless) | PASS - 7 sections headless, no exception, simulated-transport disclaimer present; 18 Nov 2026 browser walkthrough rendered every section with 0 console errors |
 
 ---
 
