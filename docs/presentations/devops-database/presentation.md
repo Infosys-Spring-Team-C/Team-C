@@ -1,55 +1,35 @@
-# Milestone 3 presentation - Database / DevOps Engineer
+# Milestone 3 - Database and DevOps Contribution
 
-**Presenter:** Marri Sai Surekha, Database / DevOps Engineer\
+**Contributor:** Marri Sai Surekha, Database / DevOps Engineer\
 **Module:** Milestone 3 - Module 5 (CRM Integration & External Synchronization), data and
 deployment layer\
-**Length:** 8-10 minutes plus questions\
-**Prepared:** 18 November 2026
+**Date:** 18 November 2026
 
 ---
 
-## Slide 1 - Role and scope
+## 1. Data layer scope in Module 5
 
-**On screen**
+Module 5 adds two capabilities to the product: summarising a sales conversation and
+synchronising a lead with a CRM. Both need durable storage that the rest of the system can trust.
 
-- One canonical PostgreSQL schema and one Alembic migration.
-- Two new Module 5 tables: `sales_interactions` and `crm_sync_logs`.
-- Deployment baseline: `docker-compose.yml` with `db`, `api` and `frontend`.
-- Schema drift control, CI workflow and the database workspace pack.
+The conversation summary is content attached to a lead. The CRM synchronisation is an action
+that can fail, be retried, and must be explainable after the fact. Those are different data
+lifecycles, so they were given separate tables rather than one shared activity table.
 
-**Speaker notes**
+The work covered by this document is:
 
-Module 5 adds conversation summaries and CRM sync audit records. My work was the data and
-deployment layer underneath those features: the tables, the migration, the drift check that
-keeps the models and the migration in step, and the stack that runs all of it.
-
----
-
-## Slide 2 - What was delivered in Milestone 3
-
-**On screen**
-
-| Deliverable | Where it lives |
-|---|---|
-| Canonical schema, 8 tables | `backend/db.py` |
-| Migration `0001_canonical_schema` | `alembic/versions/0001_canonical_schema.py` |
-| `sales_interactions` and `crm_sync_logs` | ORM models plus migration |
-| Drift check and workspace generator | `scripts/render_db_workspace.py` |
-| Generated DDL and ER diagram | `salesgenie-db-workspace/` |
-| Three-service Compose stack | `docker-compose.yml`, `Dockerfile`, `frontend/Dockerfile` |
-| CI workflow | `.github/workflows/ci.yml` |
-| Schema and workspace tests | `tests/test_schema.py`, `tests/test_db_workspace.py` |
-
-**Speaker notes**
-
-Everything on this slide is in the repository and exercised by the suite. The next slides take
-the schema, the audit table and the deployment in turn.
+* the two Module 5 tables and their ORM models;
+* the single Alembic migration that creates the whole schema;
+* the drift control that keeps models, migration and generated DDL identical;
+* the generated DDL and ER diagram in `salesgenie-db-workspace/`;
+* the three-service Compose baseline;
+* the CI workflow that runs the suite, the drift check and a credential scan.
 
 ---
 
-## Slide 3 - The schema in numbers
+## 2. Canonical schema
 
-**On screen**
+### 2.1 Structure
 
 | Signal | Result |
 |---|---|
@@ -57,209 +37,262 @@ the schema, the audit table and the deployment in turn.
 | Columns | 110 |
 | Foreign keys | 6 |
 | Indexes | 31 |
-| Generated DDL vs Alembic `0001` | identical, object by object (only `alembic_version` differs) |
 
-**Speaker notes**
+| Table | Purpose |
+|---|---|
+| `users` | Accounts and roles (`admin`, `manager`, `rep`, `viewer`) |
+| `leads` | Canonical prospect record with lifecycle stage |
+| `company_insights` | Stored intelligence output per lead |
+| `outreach_campaigns` | Generated drafts and their status |
+| `lead_scores` | Explainable score and factor breakdown |
+| `sales_interactions` | Module 5 conversation summaries |
+| `crm_sync_logs` | Module 5 CRM synchronisation audit |
+| `sales_analytics` | Persisted analytics snapshots |
 
-The number that matters is the last one. `scripts/render_db_workspace.py --check` regenerates
-the DDL from the SQLAlchemy models and compares it to the Alembic migration. If a model changes
-without a migration, the check fails. It runs in the suite and in the CI workflow.
+### 2.2 One migration as the source of truth
+
+The schema is defined once, in SQLAlchemy models in `backend/db.py`. The Alembic migration
+`alembic/versions/0001_canonical_schema.py` is generated from and compared against those models.
+A single migration creates all eight tables, so a fresh database reaches the correct state in one
+step.
+
+The alternative - editing tables by hand and letting the migration drift - was rejected because
+it makes a rebuild unpredictable. The drift check described in section 5 exists to enforce that
+choice.
 
 ---
 
-## Slide 4 - `sales_interactions`: store what was said, invent nothing
+## 3. Conversation summary storage: `sales_interactions`
 
-**On screen**
+### 3.1 Structure
 
-| Column | Type | Design note |
+| Column | Type | Constraint / default |
 |---|---|---|
-| `lead_id` | Integer FK | `ON DELETE CASCADE`, indexed |
+| `id` | Integer | Primary key |
+| `lead_id` | Integer | FK to `leads.id`, `ON DELETE CASCADE`, indexed |
 | `interaction_type` | String(60) | `call` by default |
-| `interaction_date` | DateTime(tz) | Indexed via `(lead_id, interaction_date)` |
-| `transcript` | Text | Raw notes |
+| `interaction_date` | DateTime with time zone | Defaults to the current UTC time |
+| `transcript` | Text | Raw notes or transcript |
 | `summary` | Text | Stored summary |
-| `key_points` | JSON | List, never generated by the database layer |
-| `action_items` | JSON | Only explicit commitments |
-| `follow_up_date` | DateTime(tz), nullable | Optional |
-| `sentiment` | String(40) | Defaults to empty, not guessed |
+| `key_points` | JSON | List, empty by default |
+| `action_items` | JSON | List, empty by default |
+| `follow_up_date` | DateTime with time zone | Nullable |
+| `sentiment` | String(40) | Empty by default |
+| `created_at` / `updated_at` | DateTime | From the shared timestamp mixin |
 
-**Speaker notes**
+### 3.2 Why the database stores rather than derives
 
-The design choice I want to defend: the database does not compute anything. `sentiment`
-defaults to empty rather than a guessed value, and `action_items` stores exactly what the
-summariser extracted. That is what makes the grounding tests meaningful - if the transcript has
-no commitment, the stored list is empty.
+The database holds what the summariser produced; it does not compute or infer it. `sentiment`
+defaults to an empty string rather than a guessed label, and `key_points` and `action_items`
+default to empty lists rather than placeholder text.
+
+That choice is what makes the grounding tests meaningful: if the transcript contains no explicit
+commitment, the stored `action_items` is empty. A database that filled in a default would make
+fabrication indistinguishable from extraction.
+
+### 3.3 Why the list fields are JSON
+
+`key_points` and `action_items` are variable-length lists that are read with the interaction and
+never queried independently. A child table would add two joins per read and a second write path
+for no query benefit at this scale. JSON keeps the write atomic with the summary it belongs to.
+
+### 3.4 Indexing and access pattern
+
+`lead_id` is indexed on its own and again through the composite index
+`ix_sales_interactions_lead_date (lead_id, interaction_date)`. The Conversations page reads the
+summaries for one lead in reverse date order, which is exactly that index.
+
+`ON DELETE CASCADE` is deliberate: an interaction is content owned by the lead, so removing the
+lead removes its content.
 
 ---
 
-## Slide 5 - `crm_sync_logs`: every attempt is auditable
+## 4. CRM synchronisation audit: `crm_sync_logs`
 
-**On screen**
+### 4.1 Structure
 
-| Column | Type | Design note |
+| Column | Type | Constraint / default |
 |---|---|---|
-| `lead_id` | Integer FK, nullable | `ON DELETE SET NULL` |
+| `id` | Integer | Primary key |
+| `lead_id` | Integer | FK to `leads.id`, `ON DELETE SET NULL`, indexed, nullable |
 | `provider` | String(40) | `salesforce` or `hubspot` |
-| `entity_type` | String(80) | `contact`, `activity`, `deal` |
+| `entity_type` | String(80) | `contact`, `activity` or `deal`; `lead` by default |
 | `operation` | String(40) | `sync_contact`, `activity_log`, `update_stage`, `upsert` |
-| `external_record_id` | String(240) | Populated on a successful record |
-| `status` | String(32) | Indexed: `success`, `failed`, `pending` |
-| `request_metadata` / `response_metadata` | JSON | Payload, mode and HTTP status |
-| `error_message` | Text | Failure detail |
+| `external_record_id` | String(240) | Provider record id, empty when absent |
+| `status` | String(32) | `success`, `failed` or `pending`; indexed |
+| `request_metadata` | JSON | Provider-neutral payload and mode |
+| `response_metadata` | JSON | Response, mode and HTTP status |
+| `error_message` | Text | Failure detail, empty on success |
 | `attempt_count` | Integer | Starts at 1, incremented on retry |
+| `created_at` / `updated_at` | DateTime | From the shared timestamp mixin |
 
-**Speaker notes**
+### 4.2 Why `ON DELETE SET NULL` instead of `CASCADE`
 
-Two deliberate decisions.
+A sync log is evidence that an action was attempted, not content owned by the lead. If a lead is
+deleted, the product still needs to answer "was this ever sent, and did it fail?".
 
-First, `lead_id` is `SET NULL`, not `CASCADE`. Deleting a lead must not delete the evidence that
-a sync was attempted - the sync log is an audit record, not lead data.
+`ON DELETE SET NULL` keeps the row and detaches it from the deleted lead. `CASCADE` would erase
+the audit trail exactly when an investigation is most likely.
 
-Second, the JSON columns carry the provider-neutral payload and the mode. A simulated attempt
-records `mode: simulated`; a live attempt records `mode: live`. QA can tell them apart from the
-database alone, without trusting the UI.
+### 4.3 Why the metadata columns exist
 
-The indexes on `lead_id`, `status` and `(provider, status)` support the audit views and the
-24-hour status summary the Conversations page reads.
+`request_metadata` stores the provider-neutral payload that was mapped for the CRM.
+`response_metadata` stores the outcome, including the mode.
+
+The mode is the important part: a simulated attempt records `mode: simulated` and a live attempt
+records `mode: live`. Because the mode is in the database, a reviewer can separate the two
+without trusting the UI or the API response.
+
+Neither column ever receives a credential. Tokens stay in the request header and are never
+written to the audit row.
+
+### 4.4 Why the attempt counter lives in the row
+
+Retry is a product rule: an attempt is recorded, then retried, then either succeeds or is left
+failed. `attempt_count` makes that history readable in one row instead of requiring a second
+table. A successful attempt cannot be retried again, which the API enforces and the tests cover.
+
+### 4.5 Indexing for the status view
+
+`status` is indexed on its own and together with `provider` through
+`ix_crm_sync_provider_status (provider, status)`. The Conversations page shows a 24-hour sync
+summary - total attempts, failures and failure rate - and the sync-log list filters by status.
 
 ---
 
-## Slide 6 - Migration and drift control
+## 5. Schema drift control
 
-**On screen**
+### 5.1 Generated artefacts
 
-- One migration, `0001_canonical_schema`, creates all 8 tables.
-- `scripts/render_db_workspace.py` generates `init_schema.sql` and `er_diagram.html` from the
-  same metadata.
-- `--check` mode fails when generated DDL and the migration disagree.
-- Workspace tests: 5. Schema tests: 8. **13 passed.**
+`scripts/render_db_workspace.py` renders two artefacts from the same ORM metadata:
 
-**Speaker notes**
+| Artefact | Path |
+|---|---|
+| PostgreSQL DDL | `salesgenie-db-workspace/init_schema.sql` |
+| ER diagram | `salesgenie-db-workspace/er_diagram.html` |
 
-The ER diagram is not hand-drawn. It is generated from the ORM metadata, so it cannot disagree
-with the schema. The same is true of the SQL file in `salesgenie-db-workspace/`.
+Neither is hand-maintained. The diagram cannot disagree with the schema because both come from
+the models.
 
-That is the whole drift story: models are the source of truth, the migration is compared to
-them, and the diagram is rendered from them.
+### 5.2 The check
+
+`python scripts/render_db_workspace.py --check` regenerates the DDL and compares it to the
+committed file and to the Alembic migration, object by object. It prints `OK` per artefact and
+fails on any difference.
+
+Current result: the generated DDL and the migration are identical, with only the
+`alembic_version` bookkeeping table differing.
+
+### 5.3 Test coverage
+
+| Test file | Tests | What it covers |
+|---|---|---|
+| `tests/test_schema.py` | 8 | Tables, columns, foreign keys, indexes and constraint behaviour |
+| `tests/test_db_workspace.py` | 5 | Generated DDL and ER diagram are current |
+| `tests/test_postgres.py` | 6 | PostgreSQL-specific behaviour, run in the PostgreSQL 16 job |
 
 ---
 
-## Slide 7 - Deployment baseline
+## 6. Deployment baseline
 
-**On screen**
+### 6.1 Services
 
 | Service | Image / build | Health check | Notes |
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | `pg_isready` | Named volume `salesgenie_pgdata` |
-| `api` | `Dockerfile`, Python 3.11-slim, non-root | `/api/v1/health` | Runs `alembic upgrade head` before `uvicorn` |
-| `frontend` | `frontend/Dockerfile` | `/_stcore/health` | Talks to the API only; no database credentials |
+| `api` | `Dockerfile`, Python 3.11-slim, non-root user | `/api/v1/health` | Applies migrations before start-up |
+| `frontend` | `frontend/Dockerfile` | `/_stcore/health` | Calls the API only |
 
-**Speaker notes**
+### 6.2 Migration at start-up
 
-The frontend container receives no database credentials. That is a security boundary, not a
-convenience: the only way the UI reaches data is through the API and its RBAC checks.
+The API container runs `alembic upgrade head` before `uvicorn`. A fresh volume therefore comes up
+on the canonical schema with no manual step, and a redeploy applies any pending migration before
+serving traffic.
 
-The API applies the migration itself at start-up, so a fresh volume comes up on the correct
-schema without a manual step.
+### 6.3 Access boundary
 
-Verified build and start: 27 October 2026, three services healthy, API migrated PostgreSQL 16.
-Evidence: `docs/qa/evidence/2026-10-27-docker-compose-verification.txt`.
+The frontend container receives no database credentials. Its only path to data is the API, which
+enforces JWT authentication and role checks. That keeps one authorisation boundary instead of
+two, and means a UI bug cannot bypass RBAC.
+
+### 6.4 CI workflow
+
+`.github/workflows/ci.yml` defines three jobs:
+
+| Job | What it runs |
+|---|---|
+| `sqlite` | Schema-drift check, then the full suite on SQLite |
+| `postgres` | The full suite against a PostgreSQL 16 service container |
+| `secrets` | A scan of tracked files for provider keys |
+
+The workflow uses the same commands documented for local runs, so a green job means the same
+checks a developer runs by hand.
 
 ---
 
-## Slide 8 - Verification results
+## 7. Verification and proof
 
-**On screen**
+### 7.1 Executed results
 
 | Check | Result | Date |
 |---|---|---|
 | Schema tests | **8 passed** | current |
 | Workspace tests | **5 passed** | current |
 | PostgreSQL-only tests | **6 passed** | current |
-| Full suite, PostgreSQL 16 | **177 passed, 0 skipped** | 6 Nov 2026 |
-| Full suite, SQLite | **191 passed, 7 skipped** (198 collected) | 18 Nov 2026 |
-| Compose stack | **3 services healthy**, API on PostgreSQL 16 | 27 Oct 2026 |
-| Clean install from declared dependencies | **37 passed** | 27 Oct 2026 |
-| CI workflow | SQLite suite, PostgreSQL 16 service, drift check, credential scan | added 18 Nov 2026 |
+| Full suite, PostgreSQL 16 | **177 passed, 0 skipped** | 6 November 2026 |
+| Full suite, SQLite | **191 passed, 7 skipped** (198 collected) | 18 November 2026 |
+| Compose stack | **3 services healthy**, API migrated PostgreSQL 16 | 27 October 2026 |
+| Clean install from declared dependencies | **37 passed** | 27 October 2026 |
 
-**Speaker notes**
+The 7 SQLite skips are the 6 PostgreSQL-only tests plus one opt-in LangGraph test. They are
+skips by design, not failures.
 
-The two suites run the same tests against different dialects: SQLite for fast local runs and
-PostgreSQL 16 for the deployed target. The 7 SQLite skips are the 6 PostgreSQL-only tests plus
-one opt-in LangGraph test, so they are skips by design, not failures.
-
-The CI workflow runs the same commands: the suite on SQLite, the suite against a PostgreSQL 16
-service container, the drift check and a scan for committed credentials.
-
----
-
-## Slide 9 - Live demo (2 minutes)
-
-**On screen**
+### 7.2 Reproduction commands
 
 ```powershell
+# Schema and workspace checks
 python -m pytest tests/test_schema.py tests/test_db_workspace.py -q
+
+# Drift check: generated DDL and ER diagram match the models
 python scripts/render_db_workspace.py --check
-# open salesgenie-db-workspace/er_diagram.html
-# open .github/workflows/ci.yml
+
+# Full suite on SQLite
+$env:JWT_SECRET = "test-secret-value-0123456789"
+python -m pytest -q
+
+# Full suite on PostgreSQL 16
+$env:TEST_DATABASE_URL = "postgresql+psycopg://postgres@127.0.0.1:55432/salesgenie_test"
+python -m pytest -q
+
+# Stack
+docker compose up --build -d
+docker compose ps
 ```
 
-**Speaker notes**
-
-Order matters. Run the tests first, then the drift check, then the ER diagram - the diagram is
-generated from the same metadata, so it agrees with the schema you just checked.
-
-If the demo host has Docker running, add `docker compose up --build -d` and `docker compose ps`
-to show the three healthy services.
-
----
-
-## Slide 10 - Milestone 3 data-layer summary
-
-**On screen**
-
-| Milestone 3 deliverable | Status |
-|---|---|
-| `sales_interactions` table and model | Delivered |
-| `crm_sync_logs` table and model | Delivered |
-| Migration `0001_canonical_schema` covering both | Delivered |
-| Generated DDL and ER diagram | Delivered |
-| Schema drift check in the suite and in CI | Delivered |
-| Three-service Compose baseline | Verified, 3 services healthy |
-| Schema, workspace and PostgreSQL test layers | 8 + 5 + 6 passed |
-| CI workflow for every push | Committed |
-
-**Speaker notes**
-
-Close on repeatability. Anyone can clone the repository, run the suite, regenerate the diagram
-and start the stack. The Module 5 data layer - the two tables, the audit trail, the migration and
-the deployment baseline - is in place and verified.
-
----
-
-## Anticipated questions
-
-| Question | Answer |
-|---|---|
-| Why not one table for interactions and syncs? | Different lifecycles: an interaction is content with a cascade delete; a sync log is an audit record that must survive a lead delete. |
-| Why JSON for key points and action items? | They are variable-length lists extracted per conversation; a child table would add joins with no query benefit at this scale. |
-| Is the schema PostgreSQL-specific? | No. The same metadata runs on SQLite for tests and PostgreSQL 16 in deployment; the 6 PostgreSQL-only tests cover dialect-specific behaviour. |
-| How do you know the migration matches the models? | `render_db_workspace.py --check` compares generated DDL to the migration, object by object. |
-| Can the UI read the database directly? | No. The frontend container has no database credentials and calls the API only. |
-| What happens when a lead is deleted? | Its interactions cascade; its sync logs stay with `lead_id` set to null, so the audit trail survives. |
-| How does retry work? | `attempt_count` increments on each retry; a successful attempt cannot be retried again. |
-| Why is the frontend a separate image? | It is a different runtime with a different health check and no database access, so it scales and fails independently. |
-
----
-
-## Evidence index
+### 7.3 Evidence files
 
 | Artefact | Path |
 |---|---|
 | Schema parity | `docs/qa/evidence/2026-10-26-schema-parity.txt` |
 | Compose verification | `docs/qa/evidence/2026-10-27-docker-compose-verification.txt` |
-| PostgreSQL suite (6 Nov) | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
-| SQLite suite (18 Nov) | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` |
+| PostgreSQL suite | `docs/qa/evidence/2026-11-06-pytest-postgres.txt` |
+| SQLite suite | `docs/qa/evidence/2026-11-17-pytest-sqlite.txt` |
 | Full role report | `docs/reports/Milestone 3 report - DevOps and Database.md` |
 | CI workflow | `.github/workflows/ci.yml` |
 | Generated workspace | `salesgenie-db-workspace/init_schema.sql`, `er_diagram.html` |
+
+---
+
+## 8. Milestone 3 deliverable checklist
+
+| Deliverable | Implementation | Proof |
+|---|---|---|
+| `sales_interactions` table | `backend/db.py`, migration `0001` | `tests/test_schema.py` |
+| `crm_sync_logs` table | `backend/db.py`, migration `0001` | `tests/test_schema.py`, `tests/test_api_ai.py` |
+| Canonical migration | `alembic/versions/0001_canonical_schema.py` | Schema parity evidence |
+| Generated DDL | `salesgenie-db-workspace/init_schema.sql` | `tests/test_db_workspace.py` |
+| ER diagram | `salesgenie-db-workspace/er_diagram.html` | `tests/test_db_workspace.py` |
+| Drift check | `scripts/render_db_workspace.py --check` | Drift check output |
+| Compose baseline | `docker-compose.yml`, `Dockerfile`, `frontend/Dockerfile` | Compose verification evidence |
+| CI workflow | `.github/workflows/ci.yml` | Workflow file |
+| PostgreSQL verification | 6 dialect tests plus full suite | PostgreSQL suite evidence |
